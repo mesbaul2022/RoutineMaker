@@ -730,9 +730,11 @@
       "kind": "theory",
       "room_kind": "year1_theory",
       "periods_per_week": 3,
+      "teacher1_id": "md_dulal_hossain",
+      "teacher2_id": "md_hasanuzzaman",
       "teachers": {
         "A": "md_dulal_hossain",
-        "B": "md_dulal_hossain"
+        "B": "md_hasanuzzaman"
       }
     },
     {

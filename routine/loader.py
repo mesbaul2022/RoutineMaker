@@ -100,6 +100,33 @@ def _make_teacher(t: dict, grid: TimeGrid) -> Teacher:
 
 
 def _make_course(c: dict) -> Course:
+    t1 = c.get("teacher1_id")
+    t2 = c.get("teacher2_id")
+    teachers_dict = c.get("teachers", {})
+    if (not t1 or not t2) and isinstance(teachers_dict, dict):
+        if c.get("kind") == "theory":
+            vals = [v for v in teachers_dict.values() if isinstance(v, str)]
+            uniq = list(dict.fromkeys(vals))
+            if not t1 and len(uniq) > 0:
+                t1 = uniq[0]
+            if not t2 and len(uniq) > 1:
+                t2 = uniq[1]
+        else:
+            # Sessional
+            lab_vals = []
+            for sec_val in teachers_dict.values():
+                if isinstance(sec_val, dict):
+                    for grp_val in sec_val.values():
+                        if isinstance(grp_val, list):
+                            lab_vals.extend(grp_val)
+                        elif isinstance(grp_val, str):
+                            lab_vals.append(grp_val)
+            uniq = list(dict.fromkeys(lab_vals))
+            if not t1 and len(uniq) > 0:
+                t1 = uniq[0]
+            if not t2 and len(uniq) > 1:
+                t2 = uniq[1]
+
     return Course(
         code=c["code"],
         title=c["title"],
@@ -110,9 +137,9 @@ def _make_course(c: dict) -> Course:
         blocks_per_week=c.get("blocks_per_week", 0),
         credit=c.get("credit", 3.0 if c["kind"] == "theory" else (1.5 if c.get("blocks_per_week", 1) == 1 else 3.0)),
         paired_course_id=c.get("paired_course_id"),
-        teacher1_id=c.get("teacher1_id"),
-        teacher2_id=c.get("teacher2_id"),
-        teachers=c.get("teachers", {}),
+        teacher1_id=t1,
+        teacher2_id=t2,
+        teachers=teachers_dict,
     )
 
 

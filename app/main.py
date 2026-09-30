@@ -638,6 +638,15 @@ def save_assignment_slot(payload: AssignmentSlotSave, db: Session = Depends(get_
                 )
             )
 
+    if course.kind == "theory":
+        assigns = db.query(AssignmentModel).filter_by(course_id=course.id).all()
+        tids = list(dict.fromkeys(a.teacher_id for a in assigns if a.teacher_id))
+        if len(tids) > 0:
+            course.teacher1_id = tids[0]
+        if len(tids) > 1:
+            course.teacher2_id = tids[1]
+        _sync_course_assignments(course, db)
+
     db.commit()
     return {"ok": True, "course_id": payload.course_id, "section": payload.section, "group": payload.group}
 

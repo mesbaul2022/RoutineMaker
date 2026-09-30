@@ -717,7 +717,7 @@ function renderCourseAssignmentCard(batch, course, assignMap) {
     : "";
 
   const ruleHint = isTheory
-    ? `<b>Department Co-teaching Model:</b> Both teachers take Section A and Section B. In a week: 1 personal class by Teacher 1, 1 personal class by Teacher 2, and 1 shared class (T1/T2) for each section.`
+    ? `<b>Co-teaching Model (Both Section A & B):</b> Teachers are assigned to the whole course, not per-section. Both sections receive 3 periods/week: 1 personal class by Teacher 1, 1 personal class by Teacher 2, and 1 shared class (T1/T2) for each section.`
     : (is075
         ? `<b>0.75 Credit Bi-weekly Lab:</b> Co-taught by Teacher 1 + Teacher 2. Students attend 1 session every 2 weeks${course.paired_course_id ? ` (alternating with ${escapeHtml(course.paired_course_id)})` : ''}.`
         : `<b>Co-teaching Model:</b> Both teachers co-teach laboratory sessions across all sections and groups.`);

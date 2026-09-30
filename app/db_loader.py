@@ -197,10 +197,15 @@ def load_problem_from_db(db: Session, options_override: Optional[dict] = None) -
 
         t1 = c.teacher1_id
         t2 = c.teacher2_id
-        if not t1 and c_assigns:
-            tids = [a.teacher_id for a in c_assigns if a.teacher_id]
-            t1 = tids[0] if tids else None
-            t2 = tids[1] if len(tids) > 1 else None
+        if c_assigns:
+            seen_tids = list(dict.fromkeys(a.teacher_id for a in c_assigns if a.teacher_id))
+            if not t1 and seen_tids:
+                t1 = seen_tids[0]
+            if not t2:
+                for tid in seen_tids:
+                    if tid != t1:
+                        t2 = tid
+                        break
 
         teachers_map: dict = {}
         if c.kind == THEORY:

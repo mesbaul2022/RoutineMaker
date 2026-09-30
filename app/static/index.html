@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KUET CSE Routine Maker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <!-- Navigation Header -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-icon">RM</div>
+        <div>
+          <h1>Department Routine Maker</h1>
+          <p>KUET Computer Science & Engineering</p>
+        </div>
+      </div>
+      <nav class="nav-tabs" role="tablist">
+        <button id="nav-teachers" class="nav-tab active" data-tab="teachers" role="tab">
+          <span>👨‍🏫</span> Teachers
+        </button>
+        <button id="nav-courses" class="nav-tab" data-tab="courses" role="tab">
+          <span>📚</span> Courses
+        </button>
+        <button id="nav-assignments" class="nav-tab" data-tab="assignments" role="tab">
+          <span>📋</span> Assignments
+        </button>
+        <button id="nav-generate" class="nav-tab" data-tab="generate" role="tab">
+          <span>⚡</span> Generate
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- ===================================================================== -->
+    <!-- 1. Teachers Tab -->
+    <!-- ===================================================================== -->
+    <section id="tab-teachers" class="tab-content active" role="tabpanel">
+      <div class="toolbar">
+        <div class="toolbar-filters">
+          <input type="text" id="teacher-search-input" placeholder="🔍 Search teacher..." />
+          <select id="teacher-dept-select">
+            <option value="">All departments</option>
+            <option value="CSE">CSE (Departmental)</option>
+            <option value="ECE">ECE</option>
+            <option value="EEE">EEE</option>
+            <option value="ME">ME</option>
+            <option value="MATH">MATH</option>
+            <option value="PHY">PHY</option>
+            <option value="HUM">HUM</option>
+          </select>
+          <select id="teacher-status-select">
+            <option value="">All statuses</option>
+            <option value="active">Active only</option>
+            <option value="on_leave">On-leave only</option>
+          </select>
+        </div>
+        <button id="btn-add-teacher" class="btn btn-primary">
+          <span>+</span> Add Teacher
+        </button>
+      </div>
+
+      <div class="table-card">
+        <div class="table-header">
+          <h2>Faculty & Service Teachers (<span id="teachers-count">0</span>)</h2>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table" id="teachers-table">
+            <thead>
+              <tr>
+                <th>Teacher</th>
+                <th>Short Code</th>
+                <th>Department</th>
+                <th>Max Periods / Day</th>
+                <th>Status</th>
+                <th style="text-align: right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="teachers-tbody">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- 2. Courses Tab -->
+    <!-- ===================================================================== -->
+    <section id="tab-courses" class="tab-content" role="tabpanel">
+      <div class="toolbar">
+        <div class="toolbar-filters">
+          <input type="text" id="course-search-input" placeholder="🔍 Search course..." />
+          <select id="course-batch-select">
+            <option value="">All Batches</option>
+          </select>
+        </div>
+        <button id="btn-add-course" class="btn btn-primary">
+          <span>+</span> Add Course
+        </button>
+      </div>
+
+      <div id="courses-container">
+        <!-- Grouped by batch, populated by JS -->
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- 3. Assignments Tab -->
+    <!-- ===================================================================== -->
+    <section id="tab-assignments" class="tab-content" role="tabpanel">
+      <div class="toolbar">
+        <div class="toolbar-filters">
+          <select id="assign-batch-select">
+            <option value="">All Batches</option>
+          </select>
+          <input type="text" id="assign-search-input" placeholder="🔍 Filter courses..." />
+          <label style="display: flex; align-items: center; gap: 0.4rem; font-weight: 600; cursor: pointer; user-select: none;">
+            <input type="checkbox" id="chk-show-on-leave" />
+            Show on-leave teachers too
+          </label>
+        </div>
+        <div id="assign-save-status" style="font-size: 0.85rem; color: var(--success-text); font-weight: 600; display: none;">
+          ✓ Changes saved automatically
+        </div>
+      </div>
+
+      <div id="assignments-container">
+        <!-- Populated by JS: courses with section & lab group teacher dropdowns -->
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- 4. Generate Routine Tab -->
+    <!-- ===================================================================== -->
+    <section id="tab-generate" class="tab-content" role="tabpanel">
+      <div class="generate-panel">
+        <div class="generate-icon">⚡</div>
+        <h2>Generate Department Routine</h2>
+        <p>Solves class schedules across all batches using Google OR-Tools CP-SAT, respecting all room capacities and teacher availability.</p>
+
+        <div class="generate-options">
+          <label for="solve-seconds" style="font-weight: 600;">Time budget:</label>
+          <select id="solve-seconds" style="width: auto;">
+            <option value="60">Fast solve (60s)</option>
+            <option value="120">Standard solve (120s)</option>
+            <option value="180" selected>Balanced solve (180s)</option>
+            <option value="300">Deep search (300s)</option>
+          </select>
+        </div>
+
+        <button id="btn-generate-routine" class="btn-generate">
+          <span id="gen-btn-spinner" class="spinner" style="display: none;"></span>
+          <span id="gen-btn-text">🚀 Generate Routine</span>
+        </button>
+      </div>
+
+      <!-- Results Display Container -->
+      <div id="generate-results-container" style="display: none;">
+        <div class="results-card">
+          <div class="result-status-bar">
+            <div>
+              <span id="result-status-badge" class="badge" style="font-size: 0.9rem; padding: 0.35rem 0.75rem;">OPTIMAL</span>
+              <span id="result-timestamp" style="font-size: 0.8rem; color: var(--text-muted); margin-left: 0.5rem;"></span>
+            </div>
+            <div class="result-stats-group">
+              <div class="stat-pill">
+                <span class="stat-label">Penalty Score</span>
+                <span class="stat-val" id="result-penalty">0</span>
+              </div>
+              <div class="stat-pill">
+                <span class="stat-label">Solve Time</span>
+                <span class="stat-val" id="result-time">0.0s</span>
+              </div>
+              <div class="stat-pill">
+                <span class="stat-label">Hard Faults</span>
+                <span class="stat-val" id="result-faults-count">0</span>
+              </div>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <a id="btn-download-csv" href="/api/routine/download/csv" class="btn btn-outline" download>
+                📥 Download CSV
+              </a>
+              <a id="btn-open-html" href="/out/routine.html" target="_blank" class="btn btn-gold">
+                ↗ Open Full HTML
+              </a>
+            </div>
+          </div>
+
+          <!-- Faults List if any -->
+          <div id="result-faults-box" class="fault-list" style="display: none;">
+            <h4>⚠️ Hard Constraint Faults Detected:</h4>
+            <ul id="result-faults-ul"></ul>
+          </div>
+
+          <!-- Warnings List if any -->
+          <div id="result-warnings-box" class="warning-list" style="display: none;">
+            <h4>⚠️ Data Warnings:</h4>
+            <ul id="result-warnings-ul"></ul>
+          </div>
+        </div>
+
+        <!-- Embedded Interactive Preview -->
+        <div class="iframe-container">
+          <iframe id="routine-preview-frame" src="about:blank" title="Routine Schedule Preview"></iframe>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ======================================================================= -->
+  <!-- Modals -->
+  <!-- ======================================================================= -->
+
+  <!-- Add/Edit Teacher Modal -->
+  <div id="modal-teacher" class="modal-overlay">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="modal-teacher-title">Add Teacher</h3>
+        <button class="modal-close" onclick="closeTeacherModal()">&times;</button>
+      </div>
+      <form id="form-teacher" onsubmit="handleTeacherSubmit(event)">
+        <div class="modal-body">
+          <input type="hidden" id="teacher-form-id" />
+          <div class="form-group">
+            <label for="teacher-fullname">Full Name *</label>
+            <input type="text" id="teacher-fullname" required placeholder="e.g. Dr. Muhammad Sheikh Sadi" />
+          </div>
+          <div class="form-group">
+            <label for="teacher-shortcode">Short Code *</label>
+            <input type="text" id="teacher-shortcode" required placeholder="e.g. SS" />
+            <div class="form-hint">Used on printed grids and routine timetable cells.</div>
+          </div>
+          <div class="form-group">
+            <label for="teacher-dept">Department *</label>
+            <select id="teacher-dept" required>
+              <option value="CSE">CSE (Departmental)</option>
+              <option value="ECE">ECE</option>
+              <option value="EEE">EEE</option>
+              <option value="ME">ME</option>
+              <option value="MATH">MATH</option>
+              <option value="PHY">PHY</option>
+              <option value="HUM">HUM</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="teacher-form-status">Status *</label>
+            <select id="teacher-form-status">
+              <option value="active">Active</option>
+              <option value="on_leave">On Leave</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="teacher-maxperiods">Max Periods / Day</label>
+            <input type="number" id="teacher-maxperiods" min="1" max="9" value="5" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeTeacherModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-teacher">Save Teacher</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add/Edit Course Modal -->
+  <div id="modal-course" class="modal-overlay">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="modal-course-title">Add Course</h3>
+        <button class="modal-close" onclick="closeCourseModal()">&times;</button>
+      </div>
+      <form id="form-course" onsubmit="handleCourseSubmit(event)">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="course-code">Course Code *</label>
+            <input type="text" id="course-code" required placeholder="e.g. CSE1101" />
+          </div>
+          <div class="form-group">
+            <label for="course-title">Title *</label>
+            <input type="text" id="course-title" required placeholder="e.g. Structured Programming" />
+          </div>
+          <div class="form-group">
+            <label for="course-batch">Batch *</label>
+            <select id="course-batch" required>
+              <!-- Filled from batches -->
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="course-kind">Course Type *</label>
+            <select id="course-kind" required onchange="toggleCourseKindFields()">
+              <option value="theory">Theory</option>
+              <option value="sessional">Sessional (Lab)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="course-room-kind">Required Room Kind *</label>
+            <select id="course-room-kind">
+              <option value="theory">theory (Standard Lecture Hall)</option>
+              <option value="cse_lab">cse_lab (CSE Computer Lab)</option>
+              <option value="ai_lab">ai_lab (AI & Graphics Lab)</option>
+              <option value="network_lab">network_lab (Network Lab)</option>
+              <option value="ece_lab">ece_lab (ECE Lab)</option>
+              <option value="year1_theory">year1_theory (1st Year Homeroom)</option>
+              <option value="year1_cse_lab">year1_cse_lab (1st Year CSE Lab)</option>
+              <option value="phy_lab">phy_lab (Physics Lab)</option>
+              <option value="hum_lab">hum_lab (English Language Lab)</option>
+              <option value="seminar">seminar (Seminar Room)</option>
+            </select>
+          </div>
+          <div class="form-group" id="group-periods">
+            <label for="course-periods">Periods per Week (Theory) *</label>
+            <input type="number" id="course-periods" min="1" max="5" value="3" />
+            <div class="form-hint">Number of 50-minute lecture meetings per week (typically 3).</div>
+          </div>
+          <div class="form-group" id="group-lab-credit" style="display: none;">
+            <label for="course-credit">Lab Type / Credit *</label>
+            <select id="course-credit" onchange="toggleLabCreditFields()">
+              <option value="1.5">1.5 Credit (Weekly — 1 block/week)</option>
+              <option value="0.75">0.75 Credit (Bi-weekly — 1 session every 2 weeks)</option>
+              <option value="3.0">3.0 Credit (Weekly — 2 blocks/week)</option>
+            </select>
+            <div class="form-hint">Select whether this lab runs weekly (1.5 cr) or every alternate week (0.75 cr).</div>
+          </div>
+          <div class="form-group" id="group-paired-course" style="display: none;">
+            <label for="course-paired-id">Paired 0.75 Credit Course (Association)</label>
+            <select id="course-paired-id">
+              <option value="">-- None (Standalone alternating) --</option>
+            </select>
+            <div class="form-hint">Both paired 0.75 cr courses share the same 3-period weekly block; groups alternate between them each week.</div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.5rem; background: #F8FAFC; padding: 0.75rem; border-radius: var(--radius); border: 1px solid #E2E8F0;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="course-teacher1" style="font-size: 0.85rem;">Teacher 1 *</label>
+              <select id="course-teacher1">
+                <option value="">-- Select Teacher 1 --</option>
+              </select>
+              <div class="form-hint" style="font-size: 0.75rem;">1st personal theory class / lab co-teacher</div>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="course-teacher2" style="font-size: 0.85rem;">Teacher 2 (Co-Teacher)</label>
+              <select id="course-teacher2">
+                <option value="">-- Select Teacher 2 --</option>
+              </select>
+              <div class="form-hint" style="font-size: 0.75rem;">2nd personal theory class / lab co-teacher</div>
+            </div>
+            <div style="grid-column: 1 / -1; font-size: 0.75rem; color: var(--navy); font-weight: 500;">
+              ℹ️ Same teachers assigned to both Section A & Section B. Theory: T1 personal + T2 personal + T1/T2 shared.
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeCourseModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-course">Save Course</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast notification -->
+  <div id="toast" class="toast">
+    <span id="toast-message">Notification</span>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

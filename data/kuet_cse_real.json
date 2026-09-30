@@ -1,0 +1,1351 @@
+{
+  "meta": {
+    "name": "Real CSE department data: 1st Year 1st Term, 2nd Year 1st Term, 2nd Year 2nd Term, 3rd Year 2nd Term, 4th Year 1st Term",
+    "note": "Built from uploaded routine PDFs/photo. Read the VERIFY comments in tools/from_real_routines.py before trusting this for anything official."
+  },
+  "config": {
+    "days": [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday"
+    ],
+    "periods": [
+      {
+        "name": "P1",
+        "start": "08:00",
+        "end": "08:50"
+      },
+      {
+        "name": "P2",
+        "start": "08:50",
+        "end": "09:40"
+      },
+      {
+        "name": "P3",
+        "start": "09:40",
+        "end": "10:30"
+      },
+      {
+        "name": "P4",
+        "start": "10:40",
+        "end": "11:30"
+      },
+      {
+        "name": "P5",
+        "start": "11:30",
+        "end": "12:20"
+      },
+      {
+        "name": "P6",
+        "start": "12:20",
+        "end": "13:10"
+      },
+      {
+        "name": "P7",
+        "start": "14:30",
+        "end": "15:20"
+      },
+      {
+        "name": "P8",
+        "start": "15:20",
+        "end": "16:10"
+      },
+      {
+        "name": "P9",
+        "start": "16:10",
+        "end": "17:00"
+      }
+    ],
+    "breaks": [
+      {
+        "name": "Snack break",
+        "after_period": "P3",
+        "start": "10:30",
+        "end": "10:40"
+      },
+      {
+        "name": "Lunch & prayer",
+        "after_period": "P6",
+        "start": "13:10",
+        "end": "14:30"
+      }
+    ],
+    "lab_periods": 3,
+    "options": {
+      "sync_group_labs": true,
+      "max_consecutive_periods": 3,
+      "weights": {
+        "cohort_gap": 8,
+        "teacher_gap": 4,
+        "last_period": 2,
+        "teacher_daily_overload": 6,
+        "consecutive_overrun": 5,
+        "room_churn": 1
+      },
+      "solver": {
+        "max_seconds": 180,
+        "workers": 8,
+        "log": false
+      }
+    }
+  },
+  "rooms": [
+    {
+      "id": "B-306",
+      "name": "Room B-306",
+      "kind": "theory",
+      "capacity": 70
+    },
+    {
+      "id": "B-102",
+      "name": "Room B-102",
+      "kind": "theory",
+      "capacity": 70
+    },
+    {
+      "id": "B-105",
+      "name": "Room B-105",
+      "kind": "theory",
+      "capacity": 70
+    },
+    {
+      "id": "D-401",
+      "name": "Room D-401",
+      "kind": "theory",
+      "capacity": 70
+    },
+    {
+      "id": "D-402",
+      "name": "Room D-402",
+      "kind": "theory",
+      "capacity": 70
+    },
+    {
+      "id": "CSE-103",
+      "name": "CSE Lab 103",
+      "kind": "cse_lab",
+      "capacity": 35
+    },
+    {
+      "id": "CSE-103-2",
+      "name": "CSE Lab 103 (2nd room)",
+      "kind": "cse_lab",
+      "capacity": 35
+    },
+    {
+      "id": "CSE-202",
+      "name": "CSE Lab 202",
+      "kind": "cse_lab",
+      "capacity": 35
+    },
+    {
+      "id": "CSE-107",
+      "name": "CSE Lab 107",
+      "kind": "cse_lab",
+      "capacity": 35
+    },
+    {
+      "id": "CSE-305",
+      "name": "CSE Lab 305 (AI)",
+      "kind": "ai_lab",
+      "capacity": 35
+    },
+    {
+      "id": "CSE-306",
+      "name": "Room CSE-306",
+      "kind": "seminar",
+      "capacity": 70
+    },
+    {
+      "id": "CSE-501-sem",
+      "name": "Room CSE-501 (seminar)",
+      "kind": "seminar",
+      "capacity": 70
+    },
+    {
+      "id": "ECE-104",
+      "name": "ECE Lab 104",
+      "kind": "ece_lab",
+      "capacity": 35
+    },
+    {
+      "id": "CSE-101",
+      "name": "Room CSE-101 (1st yr homeroom)",
+      "kind": "year1_theory",
+      "capacity": 70
+    },
+    {
+      "id": "CSE-102",
+      "name": "Room CSE-102 (1st yr homeroom)",
+      "kind": "year1_theory",
+      "capacity": 70
+    },
+    {
+      "id": "CSE-104-1yr",
+      "name": "CSE Lab 104 (1st yr)",
+      "kind": "year1_cse_lab",
+      "capacity": 35
+    },
+    {
+      "id": "PHY-LAB",
+      "name": "Physics Lab",
+      "kind": "phy_lab",
+      "capacity": 35
+    },
+    {
+      "id": "HUM-LAB",
+      "name": "English Language Lab",
+      "kind": "hum_lab",
+      "capacity": 35
+    },
+    {
+      "id": "CSE-501",
+      "name": "Room CSE-501",
+      "kind": "theory",
+      "capacity": 70
+    },
+    {
+      "id": "CSE-502",
+      "name": "Room CSE-502",
+      "kind": "theory",
+      "capacity": 70
+    },
+    {
+      "id": "CSE-201",
+      "name": "CSE Lab 201",
+      "kind": "network_lab",
+      "capacity": 35
+    }
+  ],
+  "teachers": [
+    {
+      "id": "mma_hashem",
+      "name": "Dr. M. M. A. Hashem",
+      "short": "MMA",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "km_azharul_hasan",
+      "name": "Dr. K. M. Azharul Hasan",
+      "short": "AH",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "md_abdul_awal",
+      "name": "Dr. Md. Abdul Awal",
+      "short": "AAW",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "dola_das",
+      "name": "Ms. Dola Das",
+      "short": "DD",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "kazi_saeed_alam",
+      "name": "Mr. Kazi Saeed Alam",
+      "short": "KSA",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "md_repon_islam",
+      "name": "Mr. Md. Repon Islam",
+      "short": "MRI",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "md_nazirulhasan_shawon",
+      "name": "Mr. Md. Nazirulhasan Shawon",
+      "short": "NHS",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "md_badiuzzaman_shuvo",
+      "name": "Mr. Md. Badiuzzaman Shuvo",
+      "short": "BS",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "safin_ahmmed",
+      "name": "Mr. Safin Ahmmed",
+      "short": "SA",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "kaniz_fatema_isha",
+      "name": "Ms. Most. Kaniz Fatema Isha",
+      "short": "KFI",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "md_tajmilur_rahman",
+      "name": "Mr. Md Tajmilur Rahman",
+      "short": "TR",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "nabil_faiyaz_sadi",
+      "name": "Mr. Nabil Faiyaz Sadi",
+      "short": "NFS",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "waliul_islam_sumon",
+      "name": "Mr. Waliul Islam Sumon",
+      "short": "WIS",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "sadia_islam",
+      "name": "Mst. Sadia Islam",
+      "short": "SI",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "ehsanul_karim",
+      "name": "Mr. Ehsanul Karim",
+      "short": "EK",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "md_milon_islam",
+      "name": "Dr. Md. Milon Islam",
+      "short": "MI",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "md_sakhawat_hossain",
+      "name": "Mr. Md. Sakhawat Hossain",
+      "short": "SH",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "subah_nawar",
+      "name": "Ms. Subah Nawar",
+      "short": "SN",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "md_mubtashim_abrar_nihal",
+      "name": "Mr. Md. Mubtashim Abrar Nihal",
+      "short": "MAN",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "lamisa_bintee_mizan_deya",
+      "name": "Mrs. Lamisa Bintee Mizan Deya",
+      "short": "LBM",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "md_faruque_hossain",
+      "name": "Dr. Md. Faruque Hossain",
+      "short": "FRH",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "md_faisal_hossain",
+      "name": "Dr. Md. Faisal Hossain",
+      "short": "FH",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "mushfiqur_rahman_masuk",
+      "name": "Mr. Mushfiqur Rahman Masuk",
+      "short": "MRM",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "md_minhajul_islam_arnab",
+      "name": "Mr. Md. Minhajul Islam Arnab",
+      "short": "MIA",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "arm_jalal_uddin_jamali",
+      "name": "Dr. A. R. M. Jalal Uddin Jamali",
+      "short": "ARJ",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "md_hasanuzzaman",
+      "name": "Dr. Md. Hasanuzzaman",
+      "short": "HZ",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "sm_rabiul_alam",
+      "name": "Dr. S.M Rabiul Alam",
+      "short": "RA",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "farhana_afroj",
+      "name": "Ms. Farhana Afroj",
+      "short": "FA",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "muhammad_sheikh_sadi",
+      "name": "Dr. Muhammad Sheikh Sadi",
+      "short": "SS",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "md_rejvi_kaysir",
+      "name": "Dr. Md Rejvi Kaysir",
+      "short": "RK",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "akash_biswas",
+      "name": "Mr. Akash Biswas",
+      "short": "AB",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "robin_sarker",
+      "name": "Mr. Robin Sarker",
+      "short": "RS",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "jeesun_patra_papon",
+      "name": "Mr. Jeesun Patra Papon",
+      "short": "JP",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "md_mahbubur_rahman",
+      "name": "Dr. Md. Mahbubur Rahman",
+      "short": "MR",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "miir_anjirin_tazrin",
+      "name": "Mr. Miir Anjirin Tazrin",
+      "short": "AT",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "md_zaidur_rahman",
+      "name": "Dr. Md. Zaidur Rahman",
+      "short": "ZR",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "sm_arif_hossen",
+      "name": "Mr. S.M. Arif Hossen",
+      "short": "AH2",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "sujit_kumer_shil",
+      "name": "Dr. Sujit Kumer Shil",
+      "short": "SKS",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "md_alamgir_hossain",
+      "name": "Dr. Md. Alamgir Hossain",
+      "short": "AH3",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "md_sohag_hossain",
+      "name": "Mr. Md. Sohag Hossain",
+      "short": "MSH",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "md_afsar_ali",
+      "name": "Mr. Md. Afsar Ali",
+      "short": "AA",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "munshi_tauhiduzzaman",
+      "name": "Mr. Munshi Tauhiduzzaman",
+      "short": "MT",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "md_shahinur_alam_sarker",
+      "name": "Mr. Md. Shahinur Alam Sarker",
+      "short": "SA2",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "maria_bhuiyan",
+      "name": "Mrs. Maria Bhuiyan",
+      "short": "MB",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "md_dulal_hossain",
+      "name": "Mr. Md. Dulal Hossain",
+      "short": "DH",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "sunny_khatun",
+      "name": "Mst. Sunny Khatun",
+      "short": "MK",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "kazi_md_rokibul_alam",
+      "name": "Dr. Kazi Md. Rokibul Alam",
+      "short": "RA2",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "muhammad_aminul_haque",
+      "name": "Dr. Muhammad Aminul Haque",
+      "short": "MAH",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "sk_md_masudul_ahsan",
+      "name": "Dr. Sk. Md. Masudul Ahsan",
+      "short": "SMA",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "al_mahmud",
+      "name": "Prof. Dr. Al-Mahmud",
+      "short": "AM",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "sk_imran_hossain",
+      "name": "Dr. Sk. Imran Hossain",
+      "short": "IH",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    }
+  ],
+  "batches": [
+    {
+      "id": "1-1",
+      "name": "1st Year 1st Term",
+      "sections": [
+        "A",
+        "B"
+      ],
+      "groups": [
+        "G1",
+        "G2"
+      ],
+      "section_size": 60,
+      "group_size": 30
+    },
+    {
+      "id": "3-2",
+      "name": "3rd Year 2nd Term",
+      "sections": [
+        "A",
+        "B"
+      ],
+      "groups": [
+        "G1",
+        "G2"
+      ],
+      "section_size": 60,
+      "group_size": 30
+    },
+    {
+      "id": "2-2",
+      "name": "2nd Year 2nd Term",
+      "sections": [
+        "A",
+        "B"
+      ],
+      "groups": [
+        "G1",
+        "G2"
+      ],
+      "section_size": 60,
+      "group_size": 30
+    },
+    {
+      "id": "2-1",
+      "name": "2nd Year 1st Term",
+      "sections": [
+        "A",
+        "B"
+      ],
+      "groups": [
+        "G1",
+        "G2"
+      ],
+      "section_size": 60,
+      "group_size": 30
+    },
+    {
+      "id": "4-1",
+      "name": "4th Year 1st Term",
+      "sections": [
+        "A",
+        "B"
+      ],
+      "groups": [
+        "G1",
+        "G2"
+      ],
+      "section_size": 60,
+      "group_size": 30
+    }
+  ],
+  "courses": [
+    {
+      "code": "CSE1101",
+      "title": "Structured Programming",
+      "batch": "1-1",
+      "kind": "theory",
+      "room_kind": "year1_theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "md_tajmilur_rahman",
+        "B": "md_tajmilur_rahman"
+      }
+    },
+    {
+      "code": "CSE1102",
+      "title": "Structured Programming Laboratory",
+      "batch": "1-1",
+      "kind": "sessional",
+      "room_kind": "year1_cse_lab",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "md_tajmilur_rahman",
+          "G2": "ehsanul_karim"
+        },
+        "B": {
+          "G1": "md_tajmilur_rahman",
+          "G2": "ehsanul_karim"
+        }
+      }
+    },
+    {
+      "code": "CSE1107",
+      "title": "Discrete Mathematics",
+      "batch": "1-1",
+      "kind": "theory",
+      "room_kind": "year1_theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "md_milon_islam",
+        "B": "md_milon_islam"
+      }
+    },
+    {
+      "code": "PHY1107",
+      "title": "Physics",
+      "batch": "1-1",
+      "kind": "theory",
+      "room_kind": "year1_theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "sujit_kumer_shil",
+        "B": "sujit_kumer_shil"
+      }
+    },
+    {
+      "code": "PHY1108",
+      "title": "Physics Laboratory",
+      "batch": "1-1",
+      "kind": "sessional",
+      "room_kind": "phy_lab",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "md_sohag_hossain",
+          "G2": "md_afsar_ali"
+        },
+        "B": {
+          "G1": "md_sohag_hossain",
+          "G2": "md_afsar_ali"
+        }
+      }
+    },
+    {
+      "code": "MATH1107",
+      "title": "Differential and Integral Calculus",
+      "batch": "1-1",
+      "kind": "theory",
+      "room_kind": "year1_theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "md_dulal_hossain",
+        "B": "md_dulal_hossain"
+      }
+    },
+    {
+      "code": "HUM1107",
+      "title": "English and Human Communication",
+      "batch": "1-1",
+      "kind": "theory",
+      "room_kind": "year1_theory",
+      "periods_per_week": 2,
+      "teachers": {
+        "A": "munshi_tauhiduzzaman",
+        "B": "munshi_tauhiduzzaman"
+      }
+    },
+    {
+      "code": "HUM1108",
+      "title": "English and Human Communication Lab",
+      "batch": "1-1",
+      "kind": "sessional",
+      "room_kind": "hum_lab",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "md_shahinur_alam_sarker",
+          "G2": "maria_bhuiyan"
+        },
+        "B": {
+          "G1": "md_shahinur_alam_sarker",
+          "G2": "maria_bhuiyan"
+        }
+      }
+    },
+    {
+      "code": "CSE4101",
+      "title": "Computer Graphics and Image Processing",
+      "batch": "4-1",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "md_mubtashim_abrar_nihal",
+        "B": "md_mubtashim_abrar_nihal"
+      }
+    },
+    {
+      "code": "CSE4102",
+      "title": "Computer Graphics and Image Processing Laboratory",
+      "batch": "4-1",
+      "kind": "sessional",
+      "room_kind": "ai_lab",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "md_tajmilur_rahman",
+          "G2": "md_mubtashim_abrar_nihal"
+        },
+        "B": {
+          "G1": "md_tajmilur_rahman",
+          "G2": "md_mubtashim_abrar_nihal"
+        }
+      }
+    },
+    {
+      "code": "CSE4105",
+      "title": "Computer Networks",
+      "batch": "4-1",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "md_sakhawat_hossain",
+        "B": "md_sakhawat_hossain"
+      }
+    },
+    {
+      "code": "CSE4106",
+      "title": "Computer Networks Laboratory",
+      "batch": "4-1",
+      "kind": "sessional",
+      "room_kind": "network_lab",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "sk_imran_hossain",
+          "G2": "md_sakhawat_hossain"
+        },
+        "B": {
+          "G1": "sk_imran_hossain",
+          "G2": "md_sakhawat_hossain"
+        }
+      }
+    },
+    {
+      "code": "CSE4111",
+      "title": "Machine Learning",
+      "batch": "4-1",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "muhammad_aminul_haque",
+        "B": "muhammad_aminul_haque"
+      }
+    },
+    {
+      "code": "CSE4112",
+      "title": "Machine Learning Laboratory",
+      "batch": "4-1",
+      "kind": "sessional",
+      "room_kind": "cse_lab",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "muhammad_aminul_haque",
+          "G2": "nabil_faiyaz_sadi"
+        },
+        "B": {
+          "G1": "muhammad_aminul_haque",
+          "G2": "nabil_faiyaz_sadi"
+        }
+      }
+    },
+    {
+      "code": "CSE4115",
+      "title": "Computer Security",
+      "batch": "4-1",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "dola_das",
+        "B": "dola_das"
+      }
+    },
+    {
+      "code": "CSE4116",
+      "title": "Computer Security Laboratory",
+      "batch": "4-1",
+      "kind": "sessional",
+      "room_kind": "cse_lab",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "kazi_md_rokibul_alam",
+          "G2": "dola_das"
+        },
+        "B": {
+          "G1": "kazi_md_rokibul_alam",
+          "G2": "dola_das"
+        }
+      }
+    },
+    {
+      "code": "CSE4121",
+      "title": "Natural Language Processing",
+      "batch": "4-1",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "km_azharul_hasan",
+        "B": "km_azharul_hasan"
+      }
+    },
+    {
+      "code": "CSE4122",
+      "title": "Natural Language Processing Laboratory",
+      "batch": "4-1",
+      "kind": "sessional",
+      "room_kind": "ai_lab",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "km_azharul_hasan",
+          "G2": "md_nazirulhasan_shawon"
+        },
+        "B": {
+          "G1": "km_azharul_hasan",
+          "G2": "md_nazirulhasan_shawon"
+        }
+      }
+    },
+    {
+      "code": "CSE3209",
+      "title": "Artificial Intelligence",
+      "batch": "3-2",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "waliul_islam_sumon",
+        "B": "waliul_islam_sumon"
+      }
+    },
+    {
+      "code": "CSE3210",
+      "title": "Artificial Intelligence Laboratory",
+      "batch": "3-2",
+      "kind": "sessional",
+      "room_kind": "ai_lab",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "waliul_islam_sumon",
+          "G2": "sadia_islam"
+        },
+        "B": {
+          "G1": "waliul_islam_sumon",
+          "G2": "sadia_islam"
+        }
+      }
+    },
+    {
+      "code": "CSE3211",
+      "title": "Compiler Design",
+      "batch": "3-2",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "md_abdul_awal",
+        "B": "md_abdul_awal"
+      }
+    },
+    {
+      "code": "CSE3212",
+      "title": "Compiler Design Laboratory",
+      "batch": "3-2",
+      "kind": "sessional",
+      "room_kind": "cse_lab",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "md_abdul_awal",
+          "G2": "dola_das"
+        },
+        "B": {
+          "G1": "md_abdul_awal",
+          "G2": "dola_das"
+        }
+      }
+    },
+    {
+      "code": "CSE3217",
+      "title": "Mobile Computing",
+      "batch": "3-2",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "kaniz_fatema_isha",
+        "B": "kaniz_fatema_isha"
+      }
+    },
+    {
+      "code": "CSE3218",
+      "title": "Mobile Computing Laboratory",
+      "batch": "3-2",
+      "kind": "sessional",
+      "room_kind": "cse_lab",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "md_repon_islam",
+          "G2": "kaniz_fatema_isha"
+        },
+        "B": {
+          "G1": "md_repon_islam",
+          "G2": "kaniz_fatema_isha"
+        }
+      }
+    },
+    {
+      "code": "CSE3219",
+      "title": "Software Engineering and Project Management",
+      "batch": "3-2",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "nabil_faiyaz_sadi",
+        "B": "nabil_faiyaz_sadi"
+      }
+    },
+    {
+      "code": "CSE3220",
+      "title": "Software Engineering and Project Management Laboratory",
+      "batch": "3-2",
+      "kind": "sessional",
+      "room_kind": "cse_lab",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "md_nazirulhasan_shawon",
+          "G2": "nabil_faiyaz_sadi"
+        },
+        "B": {
+          "G1": "md_nazirulhasan_shawon",
+          "G2": "nabil_faiyaz_sadi"
+        }
+      }
+    },
+    {
+      "code": "CSE3230",
+      "title": "Technical Writing and Seminar",
+      "batch": "3-2",
+      "kind": "sessional",
+      "room_kind": "seminar",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "km_azharul_hasan",
+          "G2": "kazi_saeed_alam"
+        },
+        "B": {
+          "G1": "km_azharul_hasan",
+          "G2": "kazi_saeed_alam"
+        }
+      }
+    },
+    {
+      "code": "HUM3247",
+      "title": "Engineers and Society",
+      "batch": "3-2",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 2,
+      "teachers": {
+        "A": "mma_hashem",
+        "B": "mma_hashem"
+      }
+    },
+    {
+      "code": "CSE2200",
+      "title": "Advanced Programming Laboratory",
+      "batch": "2-2",
+      "kind": "sessional",
+      "room_kind": "cse_lab",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "safin_ahmmed",
+          "G2": "ehsanul_karim"
+        },
+        "B": {
+          "G1": "safin_ahmmed",
+          "G2": "ehsanul_karim"
+        }
+      }
+    },
+    {
+      "code": "CSE2201",
+      "title": "Algorithm Analysis and Design",
+      "batch": "2-2",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "md_sakhawat_hossain",
+        "B": "md_sakhawat_hossain"
+      }
+    },
+    {
+      "code": "CSE2202",
+      "title": "Algorithm Analysis and Design Laboratory",
+      "batch": "2-2",
+      "kind": "sessional",
+      "room_kind": "cse_lab",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "subah_nawar",
+          "G2": "md_mubtashim_abrar_nihal"
+        },
+        "B": {
+          "G1": "subah_nawar",
+          "G2": "md_mubtashim_abrar_nihal"
+        }
+      }
+    },
+    {
+      "code": "CSE2208",
+      "title": "Numerical Methods Laboratory",
+      "batch": "2-2",
+      "kind": "sessional",
+      "room_kind": "cse_lab",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "md_milon_islam",
+          "G2": "lamisa_bintee_mizan_deya"
+        },
+        "B": {
+          "G1": "md_milon_islam",
+          "G2": "lamisa_bintee_mizan_deya"
+        }
+      }
+    },
+    {
+      "code": "CSE2209",
+      "title": "Theory of Computation",
+      "batch": "2-2",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "md_nazirulhasan_shawon",
+        "B": "md_nazirulhasan_shawon"
+      }
+    },
+    {
+      "code": "ECE2213",
+      "title": "Digital Electronics",
+      "batch": "2-2",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "md_faisal_hossain",
+        "B": "md_faisal_hossain"
+      }
+    },
+    {
+      "code": "ECE2214",
+      "title": "Digital Electronics Laboratory",
+      "batch": "2-2",
+      "kind": "sessional",
+      "room_kind": "ece_lab",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "mushfiqur_rahman_masuk",
+          "G2": "md_minhajul_islam_arnab"
+        },
+        "B": {
+          "G1": "mushfiqur_rahman_masuk",
+          "G2": "md_minhajul_islam_arnab"
+        }
+      }
+    },
+    {
+      "code": "MATH2207",
+      "title": "Complex Variable, Vector Analysis and Statistics",
+      "batch": "2-2",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "arm_jalal_uddin_jamali",
+        "B": "arm_jalal_uddin_jamali"
+      }
+    },
+    {
+      "code": "HUM2207",
+      "title": "Economics and Accounting",
+      "batch": "2-2",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 2,
+      "teachers": {
+        "A": "sm_rabiul_alam",
+        "B": "sm_rabiul_alam"
+      }
+    },
+    {
+      "code": "CSE2103",
+      "title": "Microprocessors and Microcontrollers",
+      "batch": "2-1",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "safin_ahmmed",
+        "B": "safin_ahmmed"
+      }
+    },
+    {
+      "code": "CSE2104",
+      "title": "Microprocessors and Microcontrollers Laboratory",
+      "batch": "2-1",
+      "kind": "sessional",
+      "room_kind": "cse_lab",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "muhammad_sheikh_sadi",
+          "G2": "md_repon_islam"
+        },
+        "B": {
+          "G1": "muhammad_sheikh_sadi",
+          "G2": "md_repon_islam"
+        }
+      }
+    },
+    {
+      "code": "CSE2105",
+      "title": "Data Structures and Algorithms",
+      "batch": "2-1",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "lamisa_bintee_mizan_deya",
+        "B": "lamisa_bintee_mizan_deya"
+      }
+    },
+    {
+      "code": "CSE2106",
+      "title": "Data Structures and Algorithms Laboratory",
+      "batch": "2-1",
+      "kind": "sessional",
+      "room_kind": "cse_lab",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "subah_nawar",
+          "G2": "lamisa_bintee_mizan_deya"
+        },
+        "B": {
+          "G1": "subah_nawar",
+          "G2": "lamisa_bintee_mizan_deya"
+        }
+      }
+    },
+    {
+      "code": "CSE2113",
+      "title": "Computer Architecture",
+      "batch": "2-1",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "sadia_islam",
+        "B": "sadia_islam"
+      }
+    },
+    {
+      "code": "CSE2114",
+      "title": "Computer Architecture Laboratory",
+      "batch": "2-1",
+      "kind": "sessional",
+      "room_kind": "cse_lab",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "md_rejvi_kaysir",
+          "G2": "akash_biswas"
+        },
+        "B": {
+          "G1": "md_rejvi_kaysir",
+          "G2": "akash_biswas"
+        }
+      }
+    },
+    {
+      "code": "EEE2117",
+      "title": "Analog Electronics",
+      "batch": "2-1",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "jeesun_patra_papon",
+        "B": "jeesun_patra_papon"
+      }
+    },
+    {
+      "code": "EEE2118",
+      "title": "Analog Electronics Laboratory",
+      "batch": "2-1",
+      "kind": "sessional",
+      "room_kind": "ece_lab",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "md_rejvi_kaysir",
+          "G2": "akash_biswas"
+        },
+        "B": {
+          "G1": "md_rejvi_kaysir",
+          "G2": "akash_biswas"
+        }
+      }
+    },
+    {
+      "code": "ME2170",
+      "title": "Computer Aided Design Laboratory",
+      "batch": "2-1",
+      "kind": "sessional",
+      "room_kind": "cse_lab",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "md_mahbubur_rahman",
+          "G2": "miir_anjirin_tazrin"
+        },
+        "B": {
+          "G1": "md_mahbubur_rahman",
+          "G2": "miir_anjirin_tazrin"
+        }
+      }
+    },
+    {
+      "code": "MATH2107",
+      "title": "Fourier Analysis and Linear Algebra",
+      "batch": "2-1",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "sm_arif_hossen",
+        "B": "sm_arif_hossen"
+      }
+    }
+  ]
+}

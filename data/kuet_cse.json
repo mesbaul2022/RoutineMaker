@@ -1,0 +1,1150 @@
+{
+  "meta": {
+    "name": "Sample CSE department instance",
+    "note": "Synthetic data. Replace with your real department records.",
+    "seed": 2207075
+  },
+  "config": {
+    "days": [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday"
+    ],
+    "periods": [
+      {
+        "name": "P1",
+        "start": "08:00",
+        "end": "08:50"
+      },
+      {
+        "name": "P2",
+        "start": "08:50",
+        "end": "09:40"
+      },
+      {
+        "name": "P3",
+        "start": "09:40",
+        "end": "10:30"
+      },
+      {
+        "name": "P4",
+        "start": "10:40",
+        "end": "11:30"
+      },
+      {
+        "name": "P5",
+        "start": "11:30",
+        "end": "12:20"
+      },
+      {
+        "name": "P6",
+        "start": "12:20",
+        "end": "13:10"
+      },
+      {
+        "name": "P7",
+        "start": "14:30",
+        "end": "15:20"
+      },
+      {
+        "name": "P8",
+        "start": "15:20",
+        "end": "16:10"
+      },
+      {
+        "name": "P9",
+        "start": "16:10",
+        "end": "17:00"
+      }
+    ],
+    "breaks": [
+      {
+        "name": "Snack break",
+        "after_period": "P3",
+        "start": "10:30",
+        "end": "10:40"
+      },
+      {
+        "name": "Lunch & prayer",
+        "after_period": "P6",
+        "start": "13:10",
+        "end": "14:30"
+      }
+    ],
+    "lab_periods": 3,
+    "options": {
+      "sync_group_labs": true,
+      "max_consecutive_periods": 3,
+      "weights": {
+        "cohort_gap": 8,
+        "teacher_gap": 4,
+        "last_period": 2,
+        "teacher_daily_overload": 6,
+        "consecutive_overrun": 5,
+        "room_churn": 1
+      },
+      "solver": {
+        "max_seconds": 120,
+        "workers": 8,
+        "log": false
+      }
+    }
+  },
+  "rooms": [
+    {
+      "id": "R301",
+      "name": "Room 301",
+      "kind": "theory",
+      "capacity": 70
+    },
+    {
+      "id": "R302",
+      "name": "Room 302",
+      "kind": "theory",
+      "capacity": 70
+    },
+    {
+      "id": "R303",
+      "name": "Room 303",
+      "kind": "theory",
+      "capacity": 70
+    },
+    {
+      "id": "R304",
+      "name": "Room 304",
+      "kind": "theory",
+      "capacity": 70
+    },
+    {
+      "id": "R305",
+      "name": "Room 305",
+      "kind": "theory",
+      "capacity": 70
+    },
+    {
+      "id": "R306",
+      "name": "Room 306",
+      "kind": "theory",
+      "capacity": 70
+    },
+    {
+      "id": "R307",
+      "name": "Room 307",
+      "kind": "theory",
+      "capacity": 70
+    },
+    {
+      "id": "R308",
+      "name": "Room 308",
+      "kind": "theory",
+      "capacity": 70
+    },
+    {
+      "id": "SL1",
+      "name": "Software Lab 1",
+      "kind": "software",
+      "capacity": 35
+    },
+    {
+      "id": "SL2",
+      "name": "Software Lab 2",
+      "kind": "software",
+      "capacity": 35
+    },
+    {
+      "id": "SL3",
+      "name": "Software Lab 3",
+      "kind": "software",
+      "capacity": 35
+    },
+    {
+      "id": "SL4",
+      "name": "Software Lab 4",
+      "kind": "software",
+      "capacity": 35
+    },
+    {
+      "id": "HL1",
+      "name": "Hardware Lab 1",
+      "kind": "hardware",
+      "capacity": 35
+    },
+    {
+      "id": "HL2",
+      "name": "Hardware Lab 2",
+      "kind": "hardware",
+      "capacity": 35
+    },
+    {
+      "id": "HL3",
+      "name": "Hardware Lab 3",
+      "kind": "hardware",
+      "capacity": 35
+    },
+    {
+      "id": "NL1",
+      "name": "Network Lab 1",
+      "kind": "network",
+      "capacity": 35
+    },
+    {
+      "id": "NL2",
+      "name": "Network Lab 2",
+      "kind": "network",
+      "capacity": 35
+    }
+  ],
+  "teachers": [
+    {
+      "id": "T01",
+      "name": "Dr. Rahman",
+      "short": "T01",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "T02",
+      "name": "Dr. Hossain",
+      "short": "T02",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "T03",
+      "name": "Dr. Ahmed",
+      "short": "T03",
+      "unavailable": [
+        {
+          "day": "Monday",
+          "periods": [
+            "P7",
+            "P8",
+            "P9"
+          ]
+        }
+      ],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "T04",
+      "name": "Dr. Chowdhury",
+      "short": "T04",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "T05",
+      "name": "Dr. Islam",
+      "short": "T05",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "T06",
+      "name": "Dr. Karim",
+      "short": "T06",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "T07",
+      "name": "Dr. Sarker",
+      "short": "T07",
+      "unavailable": [
+        {
+          "day": "Sunday",
+          "periods": [
+            "P1",
+            "P2",
+            "P3"
+          ]
+        }
+      ],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "T08",
+      "name": "Dr. Mondal",
+      "short": "T08",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "T09",
+      "name": "Dr. Biswas",
+      "short": "T09",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "T10",
+      "name": "Dr. Roy",
+      "short": "T10",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "T11",
+      "name": "Dr. Das",
+      "short": "T11",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "T12",
+      "name": "Dr. Saha",
+      "short": "T12",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "T13",
+      "name": "Dr. Talukder",
+      "short": "T13",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "T14",
+      "name": "Dr. Mridha",
+      "short": "T14",
+      "unavailable": [
+        {
+          "day": "Monday",
+          "periods": [
+            "P4",
+            "P5",
+            "P6"
+          ]
+        }
+      ],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "T15",
+      "name": "Mr. Bhuiyan",
+      "short": "T15",
+      "unavailable": [
+        {
+          "day": "Sunday",
+          "periods": [
+            "P1",
+            "P2",
+            "P3"
+          ]
+        }
+      ],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "T16",
+      "name": "Ms. Alam",
+      "short": "T16",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "T17",
+      "name": "Mr. Siddique",
+      "short": "T17",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "T18",
+      "name": "Ms. Haque",
+      "short": "T18",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "T19",
+      "name": "Mr. Mahmud",
+      "short": "T19",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "T20",
+      "name": "Ms. Kabir",
+      "short": "T20",
+      "unavailable": [
+        {
+          "day": "Tuesday",
+          "periods": [
+            "P1",
+            "P2",
+            "P3"
+          ]
+        }
+      ],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "T21",
+      "name": "Mr. Nasrin",
+      "short": "T21",
+      "unavailable": [
+        {
+          "day": "Monday",
+          "periods": [
+            "P1",
+            "P2",
+            "P3"
+          ]
+        }
+      ],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "T22",
+      "name": "Ms. Sultana",
+      "short": "T22",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "T23",
+      "name": "Mr. Parvin",
+      "short": "T23",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "T24",
+      "name": "Ms. Akter",
+      "short": "T24",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "T25",
+      "name": "Mr. Jahan",
+      "short": "T25",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "T26",
+      "name": "Ms. Ferdous",
+      "short": "T26",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "T27",
+      "name": "Mr. Rashid",
+      "short": "T27",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "T28",
+      "name": "Ms. Uddin",
+      "short": "T28",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "T29",
+      "name": "Mr. Mollah",
+      "short": "T29",
+      "unavailable": [
+        {
+          "day": "Sunday",
+          "periods": [
+            "P1",
+            "P2",
+            "P3"
+          ]
+        }
+      ],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "T30",
+      "name": "Ms. Sheikh",
+      "short": "T30",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "T31",
+      "name": "Mr. Barua",
+      "short": "T31",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    },
+    {
+      "id": "T32",
+      "name": "Ms. Dutta",
+      "short": "T32",
+      "unavailable": [],
+      "max_periods_per_day": 5
+    }
+  ],
+  "batches": [
+    {
+      "id": "1-1",
+      "name": "1st Year 1st Semester",
+      "sections": [
+        "A",
+        "B"
+      ],
+      "groups": [
+        "G1",
+        "G2"
+      ],
+      "section_size": 60,
+      "group_size": 30
+    },
+    {
+      "id": "2-1",
+      "name": "2nd Year 1st Semester",
+      "sections": [
+        "A",
+        "B"
+      ],
+      "groups": [
+        "G1",
+        "G2"
+      ],
+      "section_size": 60,
+      "group_size": 30
+    },
+    {
+      "id": "3-1",
+      "name": "3rd Year 1st Semester",
+      "sections": [
+        "A",
+        "B"
+      ],
+      "groups": [
+        "G1",
+        "G2"
+      ],
+      "section_size": 60,
+      "group_size": 30
+    },
+    {
+      "id": "4-1",
+      "name": "4th Year 1st Semester",
+      "sections": [
+        "A",
+        "B"
+      ],
+      "groups": [
+        "G1",
+        "G2"
+      ],
+      "section_size": 60,
+      "group_size": 30
+    },
+    {
+      "id": "4-2",
+      "name": "4th Year 2nd Semester",
+      "sections": [
+        "A",
+        "B"
+      ],
+      "groups": [
+        "G1",
+        "G2"
+      ],
+      "section_size": 60,
+      "group_size": 30
+    }
+  ],
+  "courses": [
+    {
+      "code": "CSE 1101",
+      "title": "Structured Programming",
+      "batch": "1-1",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "T23",
+        "B": "T23"
+      }
+    },
+    {
+      "code": "CSE 1102",
+      "title": "Structured Programming Sessional",
+      "batch": "1-1",
+      "kind": "sessional",
+      "room_kind": "software",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "T23",
+          "G2": "T31"
+        },
+        "B": {
+          "G1": "T17",
+          "G2": "T12"
+        }
+      }
+    },
+    {
+      "code": "MATH 1101",
+      "title": "Differential Calculus",
+      "batch": "1-1",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "T15",
+        "B": "T15"
+      }
+    },
+    {
+      "code": "PHY 1101",
+      "title": "Physics",
+      "batch": "1-1",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "T09",
+        "B": "T09"
+      }
+    },
+    {
+      "code": "PHY 1102",
+      "title": "Physics Sessional",
+      "batch": "1-1",
+      "kind": "sessional",
+      "room_kind": "hardware",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "T09",
+          "G2": "T02"
+        },
+        "B": {
+          "G1": "T07",
+          "G2": "T25"
+        }
+      }
+    },
+    {
+      "code": "EEE 1101",
+      "title": "Basic Electrical Engineering",
+      "batch": "1-1",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "T22",
+        "B": "T22"
+      }
+    },
+    {
+      "code": "EEE 1102",
+      "title": "Basic Electrical Engineering Sessional",
+      "batch": "1-1",
+      "kind": "sessional",
+      "room_kind": "hardware",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "T22",
+          "G2": "T24"
+        },
+        "B": {
+          "G1": "T26",
+          "G2": "T16"
+        }
+      }
+    },
+    {
+      "code": "HUM 1101",
+      "title": "English",
+      "batch": "1-1",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 2,
+      "teachers": {
+        "A": "T27",
+        "B": "T27"
+      }
+    },
+    {
+      "code": "CSE 2101",
+      "title": "Data Structures",
+      "batch": "2-1",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "T01",
+        "B": "T01"
+      }
+    },
+    {
+      "code": "CSE 2102",
+      "title": "Data Structures Sessional",
+      "batch": "2-1",
+      "kind": "sessional",
+      "room_kind": "software",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "T01",
+          "G2": "T03"
+        },
+        "B": {
+          "G1": "T13",
+          "G2": "T28"
+        }
+      }
+    },
+    {
+      "code": "CSE 2103",
+      "title": "Digital Logic Design",
+      "batch": "2-1",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "T20",
+        "B": "T20"
+      }
+    },
+    {
+      "code": "CSE 2104",
+      "title": "Digital Logic Design Sessional",
+      "batch": "2-1",
+      "kind": "sessional",
+      "room_kind": "hardware",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "T20",
+          "G2": "T06"
+        },
+        "B": {
+          "G1": "T14",
+          "G2": "T11"
+        }
+      }
+    },
+    {
+      "code": "CSE 2105",
+      "title": "Object Oriented Programming",
+      "batch": "2-1",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "T31",
+        "B": "T31"
+      }
+    },
+    {
+      "code": "CSE 2106",
+      "title": "Object Oriented Programming Sessional",
+      "batch": "2-1",
+      "kind": "sessional",
+      "room_kind": "software",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "T31",
+          "G2": "T17"
+        },
+        "B": {
+          "G1": "T12",
+          "G2": "T29"
+        }
+      }
+    },
+    {
+      "code": "MATH 2101",
+      "title": "Linear Algebra",
+      "batch": "2-1",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "T18",
+        "B": "T18"
+      }
+    },
+    {
+      "code": "EEE 2101",
+      "title": "Electronic Devices",
+      "batch": "2-1",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 2,
+      "teachers": {
+        "A": "T02",
+        "B": "T02"
+      }
+    },
+    {
+      "code": "CSE 3101",
+      "title": "Database Systems",
+      "batch": "3-1",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "T24",
+        "B": "T24"
+      }
+    },
+    {
+      "code": "CSE 3102",
+      "title": "Database Systems Sessional",
+      "batch": "3-1",
+      "kind": "sessional",
+      "room_kind": "software",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "T24",
+          "G2": "T26"
+        },
+        "B": {
+          "G1": "T16",
+          "G2": "T19"
+        }
+      }
+    },
+    {
+      "code": "CSE 3103",
+      "title": "Computer Networks",
+      "batch": "3-1",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "T05",
+        "B": "T05"
+      }
+    },
+    {
+      "code": "CSE 3104",
+      "title": "Computer Networks Sessional",
+      "batch": "3-1",
+      "kind": "sessional",
+      "room_kind": "network",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "T05",
+          "G2": "T10"
+        },
+        "B": {
+          "G1": "T04",
+          "G2": "T23"
+        }
+      }
+    },
+    {
+      "code": "CSE 3105",
+      "title": "Operating Systems",
+      "batch": "3-1",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "T03",
+        "B": "T03"
+      }
+    },
+    {
+      "code": "CSE 3106",
+      "title": "Operating Systems Sessional",
+      "batch": "3-1",
+      "kind": "sessional",
+      "room_kind": "software",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "T03",
+          "G2": "T13"
+        },
+        "B": {
+          "G1": "T28",
+          "G2": "T15"
+        }
+      }
+    },
+    {
+      "code": "CSE 3107",
+      "title": "Microprocessors",
+      "batch": "3-1",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "T06",
+        "B": "T06"
+      }
+    },
+    {
+      "code": "CSE 3108",
+      "title": "Microprocessors Sessional",
+      "batch": "3-1",
+      "kind": "sessional",
+      "room_kind": "hardware",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "T06",
+          "G2": "T14"
+        },
+        "B": {
+          "G1": "T11",
+          "G2": "T09"
+        }
+      }
+    },
+    {
+      "code": "MATH 3101",
+      "title": "Numerical Methods",
+      "batch": "3-1",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 2,
+      "teachers": {
+        "A": "T17",
+        "B": "T17"
+      }
+    },
+    {
+      "code": "CSE 4101",
+      "title": "Machine Learning",
+      "batch": "4-1",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "T32",
+        "B": "T32"
+      }
+    },
+    {
+      "code": "CSE 4102",
+      "title": "Machine Learning Sessional",
+      "batch": "4-1",
+      "kind": "sessional",
+      "room_kind": "software",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "T32",
+          "G2": "T08"
+        },
+        "B": {
+          "G1": "T30",
+          "G2": "T27"
+        }
+      }
+    },
+    {
+      "code": "CSE 4103",
+      "title": "Compiler Design",
+      "batch": "4-1",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "T07",
+        "B": "T07"
+      }
+    },
+    {
+      "code": "CSE 4104",
+      "title": "Compiler Design Sessional",
+      "batch": "4-1",
+      "kind": "sessional",
+      "room_kind": "software",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "T07",
+          "G2": "T25"
+        },
+        "B": {
+          "G1": "T21",
+          "G2": "T01"
+        }
+      }
+    },
+    {
+      "code": "CSE 4105",
+      "title": "Computer Graphics",
+      "batch": "4-1",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "T26",
+        "B": "T26"
+      }
+    },
+    {
+      "code": "CSE 4106",
+      "title": "Computer Graphics Sessional",
+      "batch": "4-1",
+      "kind": "sessional",
+      "room_kind": "software",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "T26",
+          "G2": "T16"
+        },
+        "B": {
+          "G1": "T19",
+          "G2": "T20"
+        }
+      }
+    },
+    {
+      "code": "CSE 4107",
+      "title": "Software Engineering",
+      "batch": "4-1",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "T10",
+        "B": "T10"
+      }
+    },
+    {
+      "code": "HUM 4101",
+      "title": "Industrial Management",
+      "batch": "4-1",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 2,
+      "teachers": {
+        "A": "T13",
+        "B": "T13"
+      }
+    },
+    {
+      "code": "CSE 4201",
+      "title": "Artificial Intelligence",
+      "batch": "4-2",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "T14",
+        "B": "T14"
+      }
+    },
+    {
+      "code": "CSE 4202",
+      "title": "Artificial Intelligence Sessional",
+      "batch": "4-2",
+      "kind": "sessional",
+      "room_kind": "software",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "T14",
+          "G2": "T11"
+        },
+        "B": {
+          "G1": "T09",
+          "G2": "T02"
+        }
+      }
+    },
+    {
+      "code": "CSE 4203",
+      "title": "Distributed Systems",
+      "batch": "4-2",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "T12",
+        "B": "T12"
+      }
+    },
+    {
+      "code": "CSE 4204",
+      "title": "Distributed Systems Sessional",
+      "batch": "4-2",
+      "kind": "sessional",
+      "room_kind": "network",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "T12",
+          "G2": "T29"
+        },
+        "B": {
+          "G1": "T22",
+          "G2": "T24"
+        }
+      }
+    },
+    {
+      "code": "CSE 4205",
+      "title": "Information Security",
+      "batch": "4-2",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "T08",
+        "B": "T08"
+      }
+    },
+    {
+      "code": "CSE 4207",
+      "title": "Digital Image Processing",
+      "batch": "4-2",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 3,
+      "teachers": {
+        "A": "T25",
+        "B": "T25"
+      }
+    },
+    {
+      "code": "CSE 4208",
+      "title": "Digital Image Processing Sessional",
+      "batch": "4-2",
+      "kind": "sessional",
+      "room_kind": "software",
+      "blocks_per_week": 1,
+      "teachers": {
+        "A": {
+          "G1": "T25",
+          "G2": "T21"
+        },
+        "B": {
+          "G1": "T01",
+          "G2": "T03"
+        }
+      }
+    },
+    {
+      "code": "HUM 4201",
+      "title": "Professional Ethics",
+      "batch": "4-2",
+      "kind": "theory",
+      "room_kind": "theory",
+      "periods_per_week": 2,
+      "teachers": {
+        "A": "T16",
+        "B": "T16"
+      }
+    }
+  ]
+}

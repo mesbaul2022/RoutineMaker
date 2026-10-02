@@ -4,6 +4,8 @@
 **Khulna University of Engineering & Technology (KUET)**  
 *Automated Class Timetabling System powered by Google OR-Tools CP-SAT*
 
+> 🚀 **Live Interactive Web Simulation**: Open [http://localhost:8000](http://localhost:8000/) in your browser to instantly visualize, simulate, and interact with the live scheduling system.
+
 ---
 
 ## Table of Contents
@@ -341,77 +343,77 @@ Below are live captures of the production web application demonstrating that all
 ### Screenshot 1: Academic Curriculum in Strict Canonical Order
 *Displays all 8 terms strictly ordered ($1\text{-}1 \to 1\text{-}2 \to 2\text{-}1 \to 2\text{-}2 \to 3\text{-}1 \to 3\text{-}2 \to 4\text{-}1 \to 4\text{-}2$), dynamic term status badges (`🟢 ON` vs `⚪ OFF`), and structured course listings.*
 
-![Academic Curriculum in Strict Order](C:/Users/Mesbaul Islam/.gemini/antigravity-ide/brain/6125be5c-0258-4587-bd5b-c46f834fe528/courses_tab_1790927443382.png)
+![Academic Curriculum in Strict Order](docs/images/courses_tab_1790927443382.png)
 
 ---
 
 ### Screenshot 2: Inactive Term Status Control
 *Demonstrating term status toggled to `OFF`. Inactive terms display only syllabus details with no teachers assigned and are hidden from assignments.*
 
-![Inactive Term Status](C:/Users/Mesbaul Islam/.gemini/antigravity-ide/brain/6125be5c-0258-4587-bd5b-c46f834fe528/courses_1_2_toggled_off_1790925886161.png)
+![Inactive Term Status](docs/images/courses_1_2_toggled_off_1790925886161.png)
 
 ---
 
 ### Screenshot 3: 4th Year 2nd Term Course Tracks (Core & Electives)
 *Categorized view of 4-2 showing Core Compulsory Courses, Optional-II Elective Theory, and Optional-III Elective Theory + Labs.*
 
-![4-2 Electives and Core Grouping](C:/Users/Mesbaul Islam/.gemini/antigravity-ide/brain/6125be5c-0258-4587-bd5b-c46f834fe528/courses_4_2_groupings_1790925237164.png)
+![4-2 Electives and Core Grouping](docs/images/courses_4_2_groupings_1790925237164.png)
 
 ---
 
 ### Screenshot 4: Course Configuration & Lab Pairing Modal
 *Modal allowing administrators to edit course parameters, set bi-weekly 0.75-credit pairings, allocate credit loads, and designate room types.*
 
-![Course Configuration Modal](C:/Users/Mesbaul Islam/.gemini/antigravity-ide/brain/6125be5c-0258-4587-bd5b-c46f834fe528/edit_course_modal_opened_1790891591155.png)
+![Course Configuration Modal](docs/images/edit_course_modal_opened_1790891591155.png)
 
 ---
 
 ### Screenshot 5: Assignments Section for Active Running Terms
 *Displays running terms in canonical sequence with term-wise course selection dropdowns for rapid teacher assignment.*
 
-![Assignments Tab for Running Terms](C:/Users/Mesbaul Islam/.gemini/antigravity-ide/brain/6125be5c-0258-4587-bd5b-c46f834fe528/assignments_tab_1790927506588.png)
+![Assignments Tab for Running Terms](docs/images/assignments_tab_1790927506588.png)
 
 ---
 
 ### Screenshot 6: Batches & Sections Master Routine
 *Complete master routine plotting student sections in order ($1\text{-}1\text{A}, 1\text{-}1\text{B}, 2\text{-}1\text{A}, \dots$) with soft amber tints for labs and clear period divisions.*
 
-![Batches and Sections Master Routine](C:/Users/Mesbaul Islam/.gemini/antigravity-ide/brain/6125be5c-0258-4587-bd5b-c46f834fe528/master_routine_tab_1790927657903.png)
+![Batches and Sections Master Routine](docs/images/master_routine_tab_1790927657903.png)
 
 ---
 
 ### Screenshot 7: Labs & Specialized Rooms Master Routine
 *Dedicated laboratory allocation matrix showing simultaneous utilization of CSE Lab 103, CSE Lab 202, AI Lab, Network Lab, and Chemistry Lab.*
 
-![Labs and Rooms Master Routine](C:/Users/Mesbaul Islam/.gemini/antigravity-ide/brain/6125be5c-0258-4587-bd5b-c46f834fe528/labs_rooms_master_routine_1790890918333.png)
+![Labs and Rooms Master Routine](docs/images/labs_rooms_master_routine_1790890918333.png)
 
 ---
 
 ### Screenshot 8: Real-Time Master Routine Search
 *Instant interactive filtering in the Master Routine tab isolating classes by professor, course code, or room across all days of the week.*
 
-![Master Routine Filtered View](C:/Users/Mesbaul Islam/.gemini/antigravity-ide/brain/6125be5c-0258-4587-bd5b-c46f834fe528/master_routine_filtered_hashem_1790890958027.png)
+![Master Routine Filtered View](docs/images/master_routine_filtered_hashem_1790890958027.png)
 
 ---
 
 ### Screenshot 9: Individual Teacher Routine Navigation
 *Teacher-centric schedule view with dropdown search, quick navigation buttons, and one-click individual routine printing.*
 
-![Teacher Individual Routine View](C:/Users/Mesbaul Islam/.gemini/antigravity-ide/brain/6125be5c-0258-4587-bd5b-c46f834fe528/teachers_filtered_by_sadi_1790891291265.png)
+![Teacher Individual Routine View](docs/images/teachers_filtered_by_sadi_1790891291265.png)
 
 ---
 
 ### Screenshot 10: Incremental / Freeze Generation Interface
 *The generation control center featuring the Generation Strategy selector (Incremental vs Full) and the active terms freeze checklist.*
 
-![Generation Strategy and Freeze Selector](C:/Users/Mesbaul Islam/.gemini/antigravity-ide/brain/6125be5c-0258-4587-bd5b-c46f834fe528/generate_strategy_options_1790928151942.png)
+![Generation Strategy and Freeze Selector](docs/images/generate_strategy_options_1790928151942.png)
 
 ---
 
 ### Screenshot 11: Generation Completed with OPTIMAL Status and 0 Faults
 *Execution result showing OPTIMAL solver status, 0 verification faults, and the mode indicator badge confirming terms remained frozen.*
 
-![Routine Generation Results](C:/Users/Mesbaul Islam/.gemini/antigravity-ide/brain/6125be5c-0258-4587-bd5b-c46f834fe528/generate_tab_result_1790928127412.png)
+![Routine Generation Results](docs/images/generate_tab_result_1790928127412.png)
 
 ---
 

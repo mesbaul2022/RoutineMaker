@@ -96,6 +96,7 @@ def _make_teacher(t: dict, grid: TimeGrid) -> Teacher:
         short=t.get("short", t["id"]),
         unavailable=blocked,
         max_periods_per_day=t.get("max_periods_per_day", 4),
+        department=t.get("department", "CSE"),
     )
 
 

@@ -23,12 +23,18 @@ from .db import (
     Batch as BatchModel,
     Course as CourseModel,
     Room as RoomModel,
+    ScheduledAssignment as ScheduledAssignmentModel,
     Teacher as TeacherModel,
     TeacherUnavailable as TeacherUnavailableModel,
     get_db,
+    get_saved_placements_map,
+    get_scheduled_batches_summary,
     init_db,
+    save_solution_assignments,
 )
 from .db_loader import load_problem_from_db, validate_db_problem
+
+BATCH_ORDER = ["1-1", "1-2", "2-1", "2-2", "3-1", "3-2", "4-1", "4-2"]
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT_DIR = ROOT / "out"
@@ -97,6 +103,12 @@ class BatchOut(BaseModel):
     groups: list[str]
     section_size: int
     group_size: int
+    status: str = "on"
+    has_routine: bool = False
+
+
+class BatchStatusUpdate(BaseModel):
+    status: str  # "on" or "off"
 
 
 class CourseBase(BaseModel):
@@ -107,6 +119,7 @@ class CourseBase(BaseModel):
     periods_per_week: Optional[int] = None
     blocks_per_week: Optional[int] = None
     credit: Optional[float] = 3.0
+    category: Optional[str] = None  # "core", "optional_ii", "optional_iii"
     paired_course_id: Optional[str] = None
     teacher1_id: Optional[str] = None
     teacher2_id: Optional[str] = None
@@ -124,6 +137,7 @@ class CourseUpdate(BaseModel):
     periods_per_week: Optional[int] = None
     blocks_per_week: Optional[int] = None
     credit: Optional[float] = None
+    category: Optional[str] = None
     paired_course_id: Optional[str] = None
     teacher1_id: Optional[str] = None
     teacher2_id: Optional[str] = None
@@ -172,6 +186,8 @@ class AssignmentOut(BaseModel):
 
 class GenerateRequest(BaseModel):
     seconds: Optional[float] = None
+    mode: Optional[str] = "incremental"  # "incremental" or "full"
+    frozen_batches: Optional[List[str]] = None
 
 
 # -----------------------------------------------------------------------------
@@ -317,6 +333,7 @@ def _course_to_out(c: CourseModel, db: Session) -> CourseOut:
         periods_per_week=c.periods_per_week,
         blocks_per_week=c.blocks_per_week,
         credit=c.credit,
+        category=c.category,
         paired_course_id=c.paired_course_id,
         teacher1_id=c.teacher1_id,
         teacher2_id=c.teacher2_id,
@@ -349,7 +366,8 @@ def list_courses(batch_id: Optional[str] = None, db: Session = Depends(get_db)):
     query = db.query(CourseModel)
     if batch_id:
         query = query.filter(CourseModel.batch_id == batch_id)
-    courses = query.order_by(CourseModel.batch_id, CourseModel.id).all()
+    courses = query.all()
+    courses.sort(key=lambda c: (BATCH_ORDER.index(c.batch_id) if c.batch_id in BATCH_ORDER else 99, c.id))
     return [_course_to_out(c, db) for c in courses]
 
 
@@ -381,6 +399,7 @@ def create_course(payload: CourseCreate, db: Session = Depends(get_db)):
         periods_per_week=payload.periods_per_week if kind == "theory" else None,
         blocks_per_week=payload.blocks_per_week if kind == "sessional" else None,
         credit=payload.credit or (3.0 if kind == "theory" else 1.5),
+        category=payload.category,
         paired_course_id=payload.paired_course_id,
         teacher1_id=payload.teacher1_id,
         teacher2_id=payload.teacher2_id,
@@ -432,6 +451,8 @@ def update_course(course_id: str, payload: CourseUpdate, db: Session = Depends(g
         course.blocks_per_week = payload.blocks_per_week
     if payload.credit is not None:
         course.credit = payload.credit
+    if payload.category is not None:
+        course.category = payload.category or None
     if payload.paired_course_id is not None:
         course.paired_course_id = payload.paired_course_id or None
         if payload.paired_course_id:
@@ -483,10 +504,14 @@ def delete_course(course_id: str, db: Session = Depends(get_db)):
 # Batches API
 # -----------------------------------------------------------------------------
 
-
 @app.get("/api/batches", response_model=List[BatchOut])
-def list_batches(db: Session = Depends(get_db)):
-    batches = db.query(BatchModel).all()
+def list_batches(status: Optional[str] = None, db: Session = Depends(get_db)):
+    query = db.query(BatchModel)
+    if status:
+        query = query.filter(BatchModel.status == status)
+    batches = query.all()
+    batches.sort(key=lambda b: BATCH_ORDER.index(b.id) if b.id in BATCH_ORDER else 99)
+    summary = get_scheduled_batches_summary(db)
     out = []
     for b in batches:
         out.append(
@@ -497,9 +522,33 @@ def list_batches(db: Session = Depends(get_db)):
                 groups=[g.strip() for g in b.groups.split(",") if g.strip()],
                 section_size=b.section_size,
                 group_size=b.group_size,
+                status=b.status or "on",
+                has_routine=(b.id in summary and summary[b.id] > 0),
             )
         )
     return out
+
+
+@app.patch("/api/batches/{batch_id}/status", response_model=BatchOut)
+def update_batch_status(batch_id: str, payload: BatchStatusUpdate, db: Session = Depends(get_db)):
+    batch = db.query(BatchModel).filter_by(id=batch_id).first()
+    if not batch:
+        raise HTTPException(status_code=404, detail="Batch not found")
+    new_status = payload.status.strip().lower()
+    if new_status not in ("on", "off"):
+        raise HTTPException(status_code=400, detail="Status must be 'on' or 'off'")
+    batch.status = new_status
+    db.commit()
+    db.refresh(batch)
+    return BatchOut(
+        id=batch.id,
+        name=batch.name,
+        sections=[s.strip() for s in batch.sections.split(",") if s.strip()],
+        groups=[g.strip() for g in batch.groups.split(",") if g.strip()],
+        section_size=batch.section_size,
+        group_size=batch.group_size,
+        status=batch.status,
+    )
 
 
 # -----------------------------------------------------------------------------
@@ -662,9 +711,17 @@ def delete_assignment(assignment_id: int, db: Session = Depends(get_db)):
     return {"ok": True, "message": f"Assignment {assignment_id} deleted."}
 
 
-# -----------------------------------------------------------------------------
-# Generate Routine & Routine Info
-# -----------------------------------------------------------------------------
+@app.get("/api/routine/scheduled-batches")
+def get_scheduled_batches(db: Session = Depends(get_db)):
+    summary = get_scheduled_batches_summary(db)
+    active_batches = [
+        b.id for b in db.query(BatchModel).filter(BatchModel.status == "on").all()
+    ]
+    active_batches.sort(key=lambda b: BATCH_ORDER.index(b) if b in BATCH_ORDER else 99)
+    return {
+        "scheduled_batches": summary,
+        "active_batches": active_batches,
+    }
 
 
 @app.post("/api/generate-routine")
@@ -692,13 +749,44 @@ def generate_routine(payload: Optional[GenerateRequest] = None, db: Session = De
             "html_url": None,
         }
 
-    # 3. Solve routine using existing CP-SAT routine scheduler
-    solution = solve_routine(problem)
+    # 3. Determine incremental freeze constraints
+    mode = payload.mode if payload and payload.mode in ("incremental", "full") else "incremental"
+    requested_frozen = list(payload.frozen_batches) if payload and payload.frozen_batches else []
+    active_batch_ids = list(problem.batches.keys())
+
+    freeze_map: dict[int, tuple[str, int]] = {}
+    actual_frozen_batches: list[str] = []
+
+    if mode == "incremental" and requested_frozen:
+        valid_frozen = [bid for bid in requested_frozen if bid in problem.batches]
+        if valid_frozen:
+            saved_map = get_saved_placements_map(db, valid_frozen)
+            missing_frozen = []
+            for ev in problem.events:
+                if ev.batch_id in valid_frozen:
+                    key = (ev.batch_id, ev.course.code, ev.section, ev.group, ev.meeting_index)
+                    if key in saved_map:
+                        freeze_map[ev.eid] = saved_map[key]
+                    else:
+                        missing_frozen.append(f"{ev.label} (m{ev.meeting_index})")
+
+            if freeze_map:
+                actual_frozen_batches = valid_frozen
+            if missing_frozen:
+                warnings.append(
+                    f"{len(missing_frozen)} classes for frozen batches were not found in saved routine; they will be scheduled fresh."
+                )
+
+    # 4. Solve routine using CP-SAT routine scheduler
+    solution = solve_routine(problem, freeze=freeze_map if freeze_map else None)
 
     if not solution.ok:
         result = {
             "ok": False,
             "status": solution.status,
+            "mode": mode,
+            "frozen_batches": actual_frozen_batches,
+            "scheduled_batches": [b for b in active_batch_ids if b not in actual_frozen_batches],
             "objective": None,
             "faults": ["No feasible solution could be found with the current constraints."],
             "warnings": warnings,
@@ -709,10 +797,13 @@ def generate_routine(payload: Optional[GenerateRequest] = None, db: Session = De
         latest_generation_result = result
         return result
 
-    # 4. Independent hard constraint verification using tools/verify.py
+    # 5. Save solution assignments into scheduled_assignments table
+    save_solution_assignments(db, solution.assignments, batch_ids_to_replace=active_batch_ids)
+
+    # 6. Independent hard constraint verification using tools/verify.py
     faults = verify(problem, solution)
 
-    # 5. Write outputs using existing routine/report.py functions
+    # 7. Write outputs using routine/report.py
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     csv_file = OUT_DIR / "routine.csv"
     html_file = OUT_DIR / "routine.html"
@@ -726,9 +817,14 @@ def generate_routine(payload: Optional[GenerateRequest] = None, db: Session = De
         subtitle="Weekly class routine · generated with CP-SAT",
     )
 
+    scheduled_new = [b for b in active_batch_ids if b not in actual_frozen_batches]
+
     result = {
         "ok": True,
         "status": solution.status,
+        "mode": mode,
+        "frozen_batches": actual_frozen_batches,
+        "scheduled_batches": scheduled_new,
         "objective": solution.objective,
         "solve_time_seconds": round(solution.wall_seconds, 1),
         "faults": faults,

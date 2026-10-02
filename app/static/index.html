@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/style.css?v=3.0">
 </head>
 <body>
   <!-- Navigation Header -->
@@ -29,6 +29,9 @@
         </button>
         <button id="nav-assignments" class="nav-tab" data-tab="assignments" role="tab">
           <span>📋</span> Assignments
+        </button>
+        <button id="nav-master" class="nav-tab" data-tab="master" role="tab">
+          <span>📊</span> Master Routine
         </button>
         <button id="nav-generate" class="nav-tab" data-tab="generate" role="tab">
           <span>⚡</span> Generate
@@ -96,9 +99,20 @@
     <section id="tab-courses" class="tab-content" role="tabpanel">
       <div class="toolbar">
         <div class="toolbar-filters">
-          <input type="text" id="course-search-input" placeholder="🔍 Search course..." />
+          <input type="text" id="course-search-input" placeholder="🔍 Search course code, title..." />
           <select id="course-batch-select">
-            <option value="">All Batches</option>
+            <option value="">All Batches / Terms</option>
+          </select>
+          <select id="course-category-select">
+            <option value="">All Categories</option>
+            <option value="core">Core Courses</option>
+            <option value="optional_ii">Optional-II Elective</option>
+            <option value="optional_iii">Optional-III Elective</option>
+          </select>
+          <select id="course-status-select">
+            <option value="">All Terms (ON & OFF)</option>
+            <option value="on">Running Terms (ON only)</option>
+            <option value="off">Inactive Terms (OFF only)</option>
           </select>
         </div>
         <button id="btn-add-course" class="btn btn-primary">
@@ -116,14 +130,17 @@
     <!-- ===================================================================== -->
     <section id="tab-assignments" class="tab-content" role="tabpanel">
       <div class="toolbar">
-        <div class="toolbar-filters">
-          <select id="assign-batch-select">
-            <option value="">All Batches</option>
+        <div class="toolbar-filters" style="display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center;">
+          <select id="assign-batch-select" style="min-width: 190px;">
+            <option value="">All Running Terms</option>
           </select>
-          <input type="text" id="assign-search-input" placeholder="🔍 Filter courses..." />
+          <select id="assign-course-select" style="min-width: 260px;">
+            <option value="">All Courses in Selected Term</option>
+          </select>
+          <input type="text" id="assign-search-input" placeholder="🔍 Quick filter course..." style="min-width: 170px;" />
           <label style="display: flex; align-items: center; gap: 0.4rem; font-weight: 600; cursor: pointer; user-select: none;">
             <input type="checkbox" id="chk-show-on-leave" />
-            Show on-leave teachers too
+            Show on-leave teachers
           </label>
         </div>
         <div id="assign-save-status" style="font-size: 0.85rem; color: var(--success-text); font-weight: 600; display: none;">
@@ -137,15 +154,91 @@
     </section>
 
     <!-- ===================================================================== -->
-    <!-- 4. Generate Routine Tab -->
+    <!-- 4. Master Routine Tab -->
+    <!-- ===================================================================== -->
+    <section id="tab-master" class="tab-content" role="tabpanel">
+      <div class="toolbar">
+        <div class="toolbar-filters">
+          <span style="font-weight: 800; color: var(--text-main); font-size: 1.05rem; display: flex; align-items: center; gap: 0.5rem;">
+            <span>📋</span> Master Routine Timetable
+          </span>
+          <span style="font-size: 0.85rem; color: var(--text-dim); margin-left: 0.5rem;">Combined master schedule of all teachers, labs, and student batches</span>
+        </div>
+        <div style="display: flex; gap: 0.6rem; align-items: center;">
+          <a id="btn-master-download-csv" href="/api/routine/download/csv" class="btn btn-outline btn-sm" download>
+            📥 Download CSV
+          </a>
+          <a id="btn-master-open-html" href="/out/routine.html" target="_blank" class="btn btn-primary btn-sm">
+            ↗ Open Full Routine
+          </a>
+        </div>
+      </div>
+
+      <div class="iframe-container" style="height: 880px;">
+        <iframe id="master-routine-frame" src="/out/routine.html" title="Master Routine Schedule"></iframe>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- 5. Generate Routine Tab -->
     <!-- ===================================================================== -->
     <section id="tab-generate" class="tab-content" role="tabpanel">
       <div class="generate-panel">
         <div class="generate-icon">⚡</div>
         <h2>Generate Department Routine</h2>
-        <p>Solves class schedules across all batches using Google OR-Tools CP-SAT, respecting all room capacities and teacher availability.</p>
+        <p>Solves class schedules across batches using Google OR-Tools CP-SAT, respecting room capacities, teacher workloads, and availability.</p>
 
-        <div class="generate-options">
+        <!-- Generation Mode Selector -->
+        <div class="mode-selector-card">
+          <label class="mode-selector-title">Generation Strategy:</label>
+          <div class="mode-options-grid">
+            <label class="mode-option-label selected" id="mode-incremental-label">
+              <input type="radio" name="gen-mode" value="incremental" checked onchange="onGenModeChange('incremental')">
+              <div class="mode-option-content">
+                <div class="mode-option-head">
+                  <span class="mode-option-icon">🔒</span>
+                  <span class="mode-option-name">Incremental / Freeze Mode (Recommended)</span>
+                </div>
+                <div class="mode-option-desc">
+                  Keep running routines of selected terms completely unchanged, and schedule only new/unlocked terms into remaining slots and rooms.
+                </div>
+              </div>
+            </label>
+
+            <label class="mode-option-label" id="mode-full-label">
+              <input type="radio" name="gen-mode" value="full" onchange="onGenModeChange('full')">
+              <div class="mode-option-content">
+                <div class="mode-option-head">
+                  <span class="mode-option-icon">🔄</span>
+                  <span class="mode-option-name">Full Generation Mode</span>
+                </div>
+                <div class="mode-option-desc">
+                  Re-shuffle and rebuild timetable from scratch across all currently running terms simultaneously.
+                </div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Incremental Batch Selection Box -->
+        <div id="freeze-batches-card" class="freeze-batches-card">
+          <div class="freeze-header">
+            <div class="freeze-title-group">
+              <h3>Terms to Keep Unchanged (Freeze Placement)</h3>
+              <p>Checked terms will stay 100% frozen in their current slots & rooms. Unchecked terms will be scheduled fresh without modifying frozen terms.</p>
+            </div>
+            <div class="freeze-quick-actions">
+              <button type="button" class="btn btn-sm btn-outline" onclick="freezeAllScheduledBatches()">🔒 Freeze All Scheduled</button>
+              <button type="button" class="btn btn-sm btn-outline" onclick="unfreezeAllBatches()">🔓 Unfreeze All</button>
+            </div>
+          </div>
+          <div id="freeze-batches-list" class="freeze-batches-grid">
+            <!-- Populated dynamically by app.js -->
+            <div style="color: var(--text-muted); font-size: 0.85rem; padding: 1rem;">Loading active running terms...</div>
+          </div>
+        </div>
+
+        <div class="generate-options" style="margin-top: 1.5rem;">
           <label for="solve-seconds" style="font-weight: 600;">Time budget:</label>
           <select id="solve-seconds" style="width: auto;">
             <option value="60">Fast solve (60s)</option>
@@ -157,7 +250,7 @@
 
         <button id="btn-generate-routine" class="btn-generate">
           <span id="gen-btn-spinner" class="spinner" style="display: none;"></span>
-          <span id="gen-btn-text">🚀 Generate Routine</span>
+          <span id="gen-btn-text">🚀 Schedule Routine</span>
         </button>
       </div>
 
@@ -165,8 +258,9 @@
       <div id="generate-results-container" style="display: none;">
         <div class="results-card">
           <div class="result-status-bar">
-            <div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
               <span id="result-status-badge" class="badge" style="font-size: 0.9rem; padding: 0.35rem 0.75rem;">OPTIMAL</span>
+              <span id="result-mode-badge" class="badge" style="font-size: 0.85rem; background: #F1F5F9; color: #334155; border: 1px solid #CBD5E1;"></span>
               <span id="result-timestamp" style="font-size: 0.8rem; color: var(--text-muted); margin-left: 0.5rem;"></span>
             </div>
             <div class="result-stats-group">
@@ -288,8 +382,16 @@
           </div>
           <div class="form-group">
             <label for="course-batch">Batch *</label>
-            <select id="course-batch" required>
+            <select id="course-batch" required onchange="handleModalBatchChange()">
               <!-- Filled from batches -->
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="course-category">Course Category</label>
+            <select id="course-category">
+              <option value="core">Core Course</option>
+              <option value="optional_ii">Optional-II Elective</option>
+              <option value="optional_iii">Optional-III Elective</option>
             </select>
           </div>
           <div class="form-group">
@@ -335,7 +437,10 @@
             </select>
             <div class="form-hint">Both paired 0.75 cr courses share the same 3-period weekly block; groups alternate between them each week.</div>
           </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.5rem; background: #F8FAFC; padding: 0.75rem; border-radius: var(--radius); border: 1px solid #E2E8F0;">
+          <div id="course-modal-off-notice" style="display: none; padding: 0.65rem 0.85rem; background: #FEF3C7; border: 1px solid #FDE68A; border-radius: var(--radius); color: #92400E; font-size: 0.82rem; margin-top: 0.5rem; font-weight: 500;">
+            ⚪ This course belongs to an inactive term (Status: <b>OFF</b>). Teacher assignment is disabled until this term's status is toggled to <b>ON</b>.
+          </div>
+          <div id="course-teachers-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.5rem; background: #F8FAFC; padding: 0.75rem; border-radius: var(--radius); border: 1px solid #E2E8F0;">
             <div class="form-group" style="margin-bottom: 0;">
               <label for="course-teacher1" style="font-size: 0.85rem;">Teacher 1 *</label>
               <select id="course-teacher1">
@@ -368,6 +473,6 @@
     <span id="toast-message">Notification</span>
   </div>
 
-  <script src="/static/app.js?v=2.2"></script>
+  <script src="/static/app.js?v=3.0"></script>
 </body>
 </html>

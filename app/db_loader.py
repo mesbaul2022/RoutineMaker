@@ -56,14 +56,20 @@ DEFAULT_BREAKS = [
 DEFAULT_HOME_ROOMS = {
     "1-1|A": "CSE-101",
     "1-1|B": "CSE-102",
+    "1-2|A": "CSE-101",
+    "1-2|B": "CSE-102",
     "2-1|A": "B-102",
     "2-1|B": "B-105",
     "2-2|A": "D-402",
     "2-2|B": "B-102",
+    "3-1|A": "B-306",
+    "3-1|B": "D-401",
     "3-2|A": "B-306",
     "3-2|B": "D-401",
     "4-1|A": "CSE-501",
     "4-1|B": "CSE-502",
+    "4-2|A": "CSE-501",
+    "4-2|B": "CSE-502",
 }
 
 DEFAULT_OPTIONS = {
@@ -113,6 +119,9 @@ def _load_config() -> tuple[TimeGrid, dict]:
     return grid, dict(DEFAULT_OPTIONS)
 
 
+CURRICULUM_ORDER = ["1-1", "1-2", "2-1", "2-2", "3-1", "3-2", "4-1", "4-2"]
+
+
 def load_problem_from_db(db: Session, options_override: Optional[dict] = None) -> Problem:
     """Build a Problem instance entirely from current database contents."""
     grid, options = _load_config()
@@ -135,9 +144,15 @@ def load_problem_from_db(db: Session, options_override: Optional[dict] = None) -
             capacity=r.capacity,
         )
 
-    # 2. Batches
+    # 2. Batches (Only active running batches with status='on', strictly in CURRICULUM_ORDER)
     batches: dict[str, RoutineBatch] = {}
-    for b in db.query(BatchModel).all():
+    active_batch_ids: set[str] = set()
+    active_batch_models = db.query(BatchModel).filter(BatchModel.status == "on").all()
+    active_batch_models.sort(
+        key=lambda b: CURRICULUM_ORDER.index(b.id) if b.id in CURRICULUM_ORDER else 99
+    )
+    for b in active_batch_models:
+        active_batch_ids.add(b.id)
         sections = [s.strip() for s in b.sections.split(",") if s.strip()]
         groups = [g.strip() for g in b.groups.split(",") if g.strip()]
         batches[b.id] = RoutineBatch(
@@ -179,10 +194,17 @@ def load_problem_from_db(db: Session, options_override: Optional[dict] = None) -
             short=t.short_code,
             unavailable=blocked,
             max_periods_per_day=t.max_periods_per_day,
+            department=t.department or "CSE",
         )
 
-    # 4. Courses & Assignments
-    db_courses = db.query(CourseModel).all()
+    # 4. Courses & Assignments (Only active batches, strictly in CURRICULUM_ORDER)
+    db_courses = [c for c in db.query(CourseModel).all() if c.batch_id in active_batch_ids]
+    db_courses.sort(
+        key=lambda c: (
+            CURRICULUM_ORDER.index(c.batch_id) if c.batch_id in CURRICULUM_ORDER else 99,
+            c.id,
+        )
+    )
     db_assignments = db.query(AssignmentModel).all()
 
     # Index assignments by course_id
@@ -206,6 +228,10 @@ def load_problem_from_db(db: Session, options_override: Optional[dict] = None) -
                     if tid != t1:
                         t2 = tid
                         break
+
+        # For optional / elective courses: only schedule if teachers have been assigned (offered this term)
+        if c.category in ("optional_ii", "optional_iii") and not t1 and not t2 and not c_assigns:
+            continue
 
         teachers_map: dict = {}
         if c.kind == THEORY:

@@ -112,14 +112,20 @@ class RoutineScheduler:
         default_homerooms = {
             "1-1|A": "CSE-101",
             "1-1|B": "CSE-102",
+            "1-2|A": "CSE-101",
+            "1-2|B": "CSE-102",
             "2-1|A": "B-102",
             "2-1|B": "B-105",
             "2-2|A": "D-402",
             "2-2|B": "B-102",
+            "3-1|A": "B-306",
+            "3-1|B": "D-401",
             "3-2|A": "B-306",
             "3-2|B": "D-401",
             "4-1|A": "CSE-501",
             "4-1|B": "CSE-502",
+            "4-2|A": "CSE-501",
+            "4-2|B": "CSE-502",
         }
         home_rooms = {**default_homerooms, **self.opt.get("home_rooms", {})}
         for ev in self.p.events:

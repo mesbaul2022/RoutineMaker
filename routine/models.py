@@ -17,6 +17,7 @@ class Teacher:
     short: str
     unavailable: set[int] = field(default_factory=set)  # flat slot indices
     max_periods_per_day: int = 4
+    department: str = "CSE"
 
     def is_free(self, slots: list[int]) -> bool:
         return all(s not in self.unavailable for s in slots)

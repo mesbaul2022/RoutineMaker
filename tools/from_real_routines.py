@@ -156,6 +156,12 @@ TEACHERS = [
     {"id": "sk_md_masudul_ahsan", "name": "Dr. Sk. Md. Masudul Ahsan", "short": "SMA"},
     {"id": "al_mahmud", "name": "Prof. Dr. Al-Mahmud", "short": "AM"},
     {"id": "sk_imran_hossain", "name": "Dr. Sk. Imran Hossain", "short": "IH"},
+
+    # -- Chemistry department teachers --
+    {"id": "mohammad_hasan_morshed", "name": "Dr. Mohammad Hasan Morshed", "short": "MHM", "department": "CHEM"},
+    {"id": "abm_mamun_jamal", "name": "Dr. A. B. M. Mamun Jamal", "short": "MJ", "department": "CHEM"},
+    {"id": "md_abdul_motin", "name": "Dr. Md. Abdul Motin", "short": "AM", "department": "CHEM"},
+    {"id": "md_rubel_al_mamun", "name": "Md. Rubel Al-Mamun", "short": "RA", "department": "CHEM"},
 ]
 
 # --------------------------------------------------------------------- rooms
@@ -188,6 +194,7 @@ ROOMS = [
     {"id": "CSE-501", "name": "Room CSE-501", "kind": "theory", "capacity": 70},
     {"id": "CSE-502", "name": "Room CSE-502", "kind": "theory", "capacity": 70},
     {"id": "CSE-201", "name": "CSE Lab 201", "kind": "network_lab", "capacity": 35},
+    {"id": "CHEM-LAB", "name": "Chemistry Lab", "kind": "chem_lab", "capacity": 35},
     # CSE4102/CSE4122 (4th year) share the SAME physical CSE-305 as CSE3210
     # (3rd year AI lab) per both footnotes -- reusing the "ai_lab" room above
     # rather than adding a duplicate. CSE4112/CSE4116 (4th year) draw from the
@@ -225,13 +232,17 @@ def theory(code, title, batch, periods, teacher, room_kind="theory"):
     }
 
 
-def sessional(code, title, batch, room_kind, g1_teacher, g2_teacher, blocks=1):
+def sessional(code, title, batch, room_kind, g1_teacher, g2_teacher, blocks=1, credit=1.5, paired_course_id=None):
     pair = {"G1": g1_teacher, "G2": g2_teacher}
-    return {
+    data = {
         "code": code, "title": title, "batch": batch, "kind": "sessional",
         "room_kind": room_kind, "blocks_per_week": blocks,
+        "credit": credit,
         "teachers": {"A": pair, "B": pair},
     }
+    if paired_course_id:
+        data["paired_course_id"] = paired_course_id
+    return data
 
 
 COURSES = [
@@ -253,7 +264,7 @@ COURSES = [
     # SKS picked as owner.
     theory("PHY1107", "Physics", "1-1", 3, "sujit_kumer_shil", room_kind="year1_theory"),
     sessional("PHY1108", "Physics Laboratory", "1-1", "phy_lab",
-              "md_sohag_hossain", "md_afsar_ali"),
+              "md_sohag_hossain", "md_afsar_ali", credit=0.75, paired_course_id="HUM1108"),
 
     theory("MATH1107", "Differential and Integral Calculus", "1-1", 3,
            "md_dulal_hossain", room_kind="year1_theory"),
@@ -264,7 +275,7 @@ COURSES = [
     theory("HUM1107", "English and Human Communication", "1-1", 2,
            "munshi_tauhiduzzaman", room_kind="year1_theory"),
     sessional("HUM1108", "English and Human Communication Lab", "1-1", "hum_lab",
-              "md_shahinur_alam_sarker", "maria_bhuiyan"),
+              "md_shahinur_alam_sarker", "maria_bhuiyan", credit=0.75, paired_course_id="PHY1108"),
 
     # ---------------- 4th Year 1st Term ----------------
     # VERIFY: CSE4101 shows MAN, MAH, AM and SMA across different instances --
@@ -314,26 +325,26 @@ COURSES = [
 
     theory("CSE3211", "Compiler Design", "3-2", 3, "md_abdul_awal"),
     sessional("CSE3212", "Compiler Design Laboratory", "3-2", "cse_lab",
-              "md_abdul_awal", "dola_das"),
+              "md_abdul_awal", "dola_das", credit=0.75),
 
     # VERIFY: KFI and MRI both appear on CSE3217 instances
     # ("CSE 3217 (KFI)" and "CSE3217c* (MRI/KFI)") -- KFI picked as owner.
     theory("CSE3217", "Mobile Computing", "3-2", 3, "kaniz_fatema_isha"),
     sessional("CSE3218", "Mobile Computing Laboratory", "3-2", "cse_lab",
-              "md_repon_islam", "kaniz_fatema_isha"),
+              "md_repon_islam", "kaniz_fatema_isha", credit=0.75),
 
     # VERIFY: NFS and EK both appear on CSE3219 instances
     # ("CSE 3219 (NFS)" and "CSE3219c (NFS/EK)") -- NFS picked as owner.
     theory("CSE3219", "Software Engineering and Project Management", "3-2", 3,
            "nabil_faiyaz_sadi"),
     sessional("CSE3220", "Software Engineering and Project Management Laboratory",
-              "3-2", "cse_lab", "md_nazirulhasan_shawon", "nabil_faiyaz_sadi"),
+              "3-2", "cse_lab", "md_nazirulhasan_shawon", "nabil_faiyaz_sadi", credit=0.75),
 
     # VERIFY: shown as one combined A/B session (AH+KSA) in your routine,
     # not per-section -- modelled here as the same two teachers scheduled
     # separately for A and B rather than one truly joint session.
     sessional("CSE3230", "Technical Writing and Seminar", "3-2", "seminar",
-              "km_azharul_hasan", "kazi_saeed_alam"),
+              "km_azharul_hasan", "kazi_saeed_alam", credit=0.75),
 
     # VERIFY: MMA and SI both appear ("HUM 3247 (MMA)" and
     # "HUM3247c* (MMA/SI)") -- MMA picked as owner. 2 periods/week assumed.

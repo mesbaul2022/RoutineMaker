@@ -1334,6 +1334,18 @@ function loadMasterRoutine() {
   }
 }
 
+function downloadMasterFromMain() {
+  const masterFrame = document.getElementById("master-routine-frame") || document.getElementById("routine-preview-frame");
+  if (masterFrame && masterFrame.contentWindow && typeof masterFrame.contentWindow.downloadCurrentMasterPDF === "function") {
+    masterFrame.contentWindow.downloadCurrentMasterPDF();
+  } else {
+    const win = window.open("/out/routine.html", "_blank");
+    if (win) {
+      win.focus();
+    }
+  }
+}
+
 function switchMasterIframeTab(subview) {
   const masterFrame = document.getElementById("master-routine-frame");
   if (masterFrame && masterFrame.contentWindow) {

@@ -142,8 +142,22 @@ def verify(problem: Problem, solution: Solution) -> list[str]:
                 key = (ev.course.code, ev.batch_id, ev.section)
                 starts[key].add(a.start)
                 kinds[key] = ev.room_kind
+        course_events: dict[tuple, list] = defaultdict(list)
+        for ev in problem.events:
+            if ev.is_lab:
+                course_events[(ev.course.code, ev.batch_id, ev.section)].append(ev)
+
         for key, s in starts.items():
-            expected_syncable = room_supply.get(kinds[key], 0) >= 2
+            evs = course_events[key]
+            all_teachers: set[str] = set()
+            has_shared_teacher = False
+            for ev in evs:
+                if any(tid in all_teachers for tid in ev.teacher_ids):
+                    has_shared_teacher = True
+                    break
+                all_teachers.update(ev.teacher_ids)
+
+            expected_syncable = (room_supply.get(kinds[key], 0) >= 2) and (not has_shared_teacher)
             if expected_syncable and len(s) > 1:
                 faults.append(f"H9 {key} groups are not synchronised: starts {sorted(s)}")
 

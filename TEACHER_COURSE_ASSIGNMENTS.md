@@ -211,7 +211,8 @@ them into one person by mistake:
 |---|---|---|---|
 | AH | Dr. K. M. Azharul Hasan (3rd/4th yr) | Mr. S.M. Arif Hossen (2nd yr, MATH) | Dr. Md. Alamgir Hossain (1st yr, PHY) |
 | SA | Mr. Safin Ahmmed (2nd/3rd yr) | Mr. Md. Shahinur Alam Sarker (1st yr, HUM) | -- |
-| RA | Dr. S.M Rabiul Alam (2nd yr, HUM) | Dr. Kazi Md. Rokibul Alam (4th yr) | -- |
+| RA | Dr. S.M Rabiul Alam (2nd yr, HUM) | Dr. Kazi Md. Rokibul Alam (4th yr) | Md. Rubel Al-Mamun (CHEM) |
+| AM | Prof. Dr. Al-Mahmud (CSE) | Dr. Md. Abdul Motin (CHEM) | -- |
 
 People correctly recognised as the SAME person across different
 sheets despite different abbreviations (so the system can catch a

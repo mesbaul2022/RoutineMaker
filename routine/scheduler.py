@@ -295,6 +295,17 @@ class RoutineScheduler:
                 skipped.add(f"{evs[0].course.code} ({kind}: only "
                             f"{room_supply.get(kind, 0)} room(s) for {len(evs)} groups)")
                 continue
+            # Groups sharing any teacher cannot physically run simultaneously in two rooms.
+            all_teachers: set[str] = set()
+            has_shared_teacher = False
+            for ev in evs:
+                if any(tid in all_teachers for tid in ev.teacher_ids):
+                    has_shared_teacher = True
+                    break
+                all_teachers.update(ev.teacher_ids)
+            if has_shared_teacher:
+                skipped.add(f"{evs[0].course.code} (groups share teacher, staggered)")
+                continue
             for a, b in zip(evs, evs[1:]):
                 self.model.Add(self.slot_var[a.eid] == self.slot_var[b.eid])
         self.unsynced_courses = sorted(skipped)

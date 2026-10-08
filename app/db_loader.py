@@ -300,7 +300,7 @@ def _build_events(
                 # Class 3: shared by Teacher 1 and Teacher 2 (SR/TJ)
                 # If only 1 teacher is set: all classes by Teacher 1
                 for k in range(course.periods_per_week):
-                    if t1 and t2:
+                    if t1 and t2 and t1 != t2:
                         if k == 0:
                             tids = [t1]
                             is_shared = False
@@ -320,6 +320,8 @@ def _build_events(
                         fallback = course.theory_teacher(section)
                         tids = [fallback] if fallback else []
                         is_shared = False
+
+                    tids = list(dict.fromkeys([t for t in tids if t]))
 
                     events.append(
                         Event(
@@ -341,10 +343,12 @@ def _build_events(
                 # Sessional (Lab)
                 lab_tids = [t for t in [t1, t2] if t]
                 if not lab_tids:
+                    all_g_tids = []
                     for g in batch.groups:
-                        lab_tids = course.lab_teachers(section, g)
-                        if lab_tids:
-                            break
+                        for tid in course.lab_teachers(section, g):
+                            if tid and tid not in all_g_tids:
+                                all_g_tids.append(tid)
+                    lab_tids = all_g_tids
 
                 is_075 = (course.credit == 0.75)
                 if is_075 and course.paired_course_id:
@@ -388,14 +392,14 @@ def _build_events(
                         lab_section_events[(course.code, batch.id, section)] = ev
                         eid += 1
                 elif is_075:
-                    # Standalone 0.75 credit lab (alternating)
+                    # Standalone 0.75 credit lab: one session per section alternating G1/G2 bi-weekly
                     events.append(
                         Event(
                             eid=eid,
                             course=course,
                             batch_id=batch.id,
                             section=section,
-                            group="G1",
+                            group="G1/G2",
                             length=grid.lab_periods,
                             teacher_ids=lab_tids,
                             room_kind=course.room_kind,
@@ -406,14 +410,13 @@ def _build_events(
                     eid += 1
                 else:
                     # Standard 1.5 or 3.0 cr weekly lab (meets every week for each group)
+                    # All labs must be conducted by both assigned teachers
                     for gi, group in enumerate(batch.groups):
-                        if t1 and t2:
-                            g_tids = [t1] if gi % 2 == 0 else [t2]
-                        elif lab_tids:
-                            g_tids = lab_tids
-                        else:
-                            fallback_tids = course.lab_teachers(section, group)
-                            g_tids = fallback_tids if fallback_tids else ([t1] if t1 else ([t2] if t2 else []))
+                        grp_tids = course.lab_teachers(section, group)
+                        grp_tids = [tid for tid in grp_tids if tid]
+                        combined_tids = list(dict.fromkeys(grp_tids or lab_tids))
+                        if not combined_tids:
+                            combined_tids = [t for t in [t1, t2] if t]
                         for k in range(course.blocks_per_week or 1):
                             events.append(
                                 Event(
@@ -423,7 +426,7 @@ def _build_events(
                                     section=section,
                                     group=group,
                                     length=grid.lab_periods,
-                                    teacher_ids=g_tids,
+                                    teacher_ids=combined_tids,
                                     room_kind=course.room_kind,
                                     size=batch.group_size,
                                     meeting_index=k,

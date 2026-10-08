@@ -270,7 +270,8 @@ def _render_table(problem: Problem, cells) -> str:
                     for e in cell["entries"]:
                         tag = f"<b>{html.escape(e['code'])}</b>"
                         if e["group"]:
-                            tag += f" <span class='grp'>{html.escape(e['group'])}</span>"
+                            grp_str = f"({e['group']})" if not e["group"].startswith("(") else e["group"]
+                            tag += f" <span class='grp'>{html.escape(grp_str)}</span>"
                         meta = " · ".join(x for x in (e["room"], e["teachers"]) if x)
                         inner.append(
                             f"<div class='ent'>{tag}<span class='meta'>"
@@ -604,7 +605,7 @@ def _render_master_batches_table(problem: Problem, solution: Solution) -> str:
                     klass = "m-cell-lab" if cell["lab"] else "m-cell-theory"
                     entries_html = []
                     for e in cell["entries"]:
-                        grp_txt = f" ({e['group']})" if e["group"] else ""
+                        grp_txt = f" ({e['group']})" if e["group"] and not e["group"].startswith("(") else (f" {e['group']}" if e["group"] else "")
                         meta_txt = " · ".join(x for x in (e["room"], e["teachers"]) if x)
                         entries_html.append(
                             f"<div class='m-code'>{html.escape(e['code'])}{html.escape(grp_txt)}</div>"
@@ -1329,51 +1330,182 @@ footer {{
   text-align: center;
 }}
 
+/* ------------------------------------------------------------- Routine Download Bar */
+.routine-download-bar {{
+  margin-top: 1.25rem;
+  margin-bottom: 2rem;
+  padding: 0.9rem 1.25rem;
+  background: #F8FAFC;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}}
+
+.download-bar-info {{
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}}
+
+.download-bar-title {{
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}}
+
+.download-bar-subtitle {{
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}}
+
+.download-bar-actions {{
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}}
+
+.btn-download-pdf {{
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: var(--primary);
+  color: #FFFFFF;
+  border: none;
+  padding: 0.55rem 1.15rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.12);
+  transition: all 0.15s ease;
+}}
+
+.btn-download-pdf:hover {{
+  background: #1E293B;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(15, 23, 42, 0.18);
+}}
+
+.btn-download-pdf:disabled {{
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}}
+
+.btn-print-routine {{
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: #FFFFFF;
+  color: var(--text-main);
+  border: 1px solid var(--border);
+  padding: 0.55rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}}
+
+.btn-print-routine:hover {{
+  background: #F1F5F9;
+  border-color: #94A3B8;
+}}
+
 /* ------------------------------------------------------------- Print Optimizations */
+@page {{
+  size: landscape;
+  margin: 8mm 6mm;
+}}
+
 @media print {{
-  body {{
-    background: #FFFFFF;
-    color: #000000;
-    padding: 0;
-    font-size: 11px;
+  html, body {{
+    background: #FFFFFF !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-size: 10px;
   }}
   .wrap {{
-    box-shadow: none;
-    border: none;
-    padding: 0;
-    max-width: 100%;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
   }}
-  nav, footer, .master-subnav-toolbar, .teacher-filter-toolbar {{
+  nav, footer, .master-subnav-toolbar, .teacher-filter-toolbar,
+  .routine-download-bar, .master-controls, .dept-pill-group,
+  .teacher-filter-status button {{
     display: none !important;
   }}
   section[hidden] {{
+    display: none !important;
+  }}
+  section:not([hidden]) {{
     display: block !important;
+  }}
+  .master-view-panel[style*="display: none"] {{
+    display: none !important;
   }}
   header.app-masthead {{
     border-color: #000000;
-    padding-bottom: 0.5rem;
-    margin-bottom: 1rem;
+    padding-bottom: 0.35rem;
+    margin-bottom: 0.75rem;
   }}
   .scroll, .master-table-scroll {{
-    border-color: #000000;
-    box-shadow: none;
+    border: none !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+    width: 100% !important;
+    max-height: none !important;
+  }}
+  table.routine, table.master-table {{
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 9.5px !important;
+  }}
+  table.master-table {{
+    font-size: 8px !important;
   }}
   table.routine th, table.routine td, table.master-table th, table.master-table td {{
-    border-color: #475569 !important;
+    border-color: #334155 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }}
   table.routine thead th, th.corner, th.day, table.master-table thead th {{
     background: #E2E8F0 !important;
     color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }}
   td.lab, td.m-cell-lab {{
     background: #FEF9C3 !important;
     border-color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }}
   td.theory, td.m-cell-theory {{
     background: #FFFFFF !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }}
-  h2 {{ page-break-after: avoid; }}
-  .scroll, .master-table-scroll {{ page-break-inside: avoid; }}
+  h2 {{
+    page-break-after: avoid;
+    font-size: 13px;
+    margin: 6px 0 3px;
+  }}
+  tr {{
+    page-break-inside: avoid;
+  }}
 }}
 
 @media (prefers-reduced-motion: reduce) {{ * {{ transition: none !important; }} }}
@@ -1520,6 +1652,214 @@ function printTeacherView() {
   window.print();
 }
 
+// ----------------------------------------------------------------- PDF Export Engine
+function downloadElementAsPDF(element, filename, format, btn) {
+  format = format || 'a4';
+  if (!element) return;
+  if (!window.html2pdf) {
+    alert("PDF generator library is still loading. Please try again or use the Print button.");
+    return;
+  }
+
+  let originalBtnHtml = '';
+  if (btn) {
+    originalBtnHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span>⏳</span> Generating PDF...';
+  }
+
+  // Show floating loading indicator
+  const loadingIndicator = document.createElement('div');
+  loadingIndicator.style.position = 'fixed';
+  loadingIndicator.style.bottom = '24px';
+  loadingIndicator.style.right = '24px';
+  loadingIndicator.style.background = '#0F172A';
+  loadingIndicator.style.color = '#FFFFFF';
+  loadingIndicator.style.padding = '12px 20px';
+  loadingIndicator.style.borderRadius = '8px';
+  loadingIndicator.style.boxShadow = '0 10px 25px rgba(0,0,0,0.3)';
+  loadingIndicator.style.zIndex = '1000000';
+  loadingIndicator.style.fontFamily = '"Source Sans 3", system-ui, sans-serif';
+  loadingIndicator.style.fontSize = '14px';
+  loadingIndicator.style.fontWeight = '600';
+  loadingIndicator.innerHTML = '📄 Generating PDF routine... Please wait.';
+  document.body.appendChild(loadingIndicator);
+
+  const prevScrollX = window.scrollX || window.pageXOffset || 0;
+  const prevScrollY = window.scrollY || window.pageYOffset || 0;
+  window.scrollTo(0, 0);
+
+  const isWide = format === 'a3' || (element.scrollWidth && element.scrollWidth > 1400);
+
+  const clone = element.cloneNode(true);
+
+  // CRITICAL FIX: Ensure clone and all sub-elements are visible (not hidden by tab system)
+  clone.removeAttribute('hidden');
+  clone.style.display = 'block';
+  clone.style.visibility = 'visible';
+  clone.style.opacity = '1';
+  clone.querySelectorAll('[hidden]').forEach(el => el.removeAttribute('hidden'));
+  clone.querySelectorAll('.master-view-panel').forEach(el => { el.style.display = 'block'; });
+  clone.querySelectorAll('*').forEach(el => {
+    if (el.style.display === 'none' && !el.classList.contains('hidden-by-filter')) {
+      el.style.display = '';
+    }
+  });
+
+  // Strip UI toolbars, download bars, search inputs, and buttons from PDF export
+  clone.querySelectorAll('.routine-download-bar, .master-subnav-toolbar, .teacher-filter-toolbar, button, input, .master-controls, .dept-pill-group, .teacher-filter-status').forEach(el => el.remove());
+
+  clone.querySelectorAll('.scroll, .master-table-scroll').forEach(el => {
+    el.style.overflow = 'visible';
+    el.style.maxHeight = 'none';
+    el.style.border = 'none';
+    el.style.boxShadow = 'none';
+    el.style.width = '100%';
+  });
+
+  if (isWide) {
+    clone.querySelectorAll('table.master-table').forEach(t => {
+      t.style.width = '100%';
+      t.style.fontSize = '8px';
+    });
+    clone.querySelectorAll('table.master-table th, table.master-table td').forEach(td => {
+      td.style.padding = '3px 4px';
+    });
+  } else {
+    clone.querySelectorAll('table.routine').forEach(t => {
+      t.style.width = '100%';
+      t.style.fontSize = '8.5px';
+      t.style.pageBreakInside = 'avoid';
+      t.style.breakInside = 'avoid';
+    });
+    clone.querySelectorAll('table.routine th, table.routine td').forEach(td => {
+      td.style.padding = '3px 5px';
+    });
+
+    // Clean page break before each subsequent section (e.g. Section B on page 2)
+    let sectionCount = 0;
+    clone.querySelectorAll('h2').forEach(h2 => {
+      h2.style.margin = '8px 0 4px';
+      h2.style.fontSize = '13px';
+      h2.style.pageBreakAfter = 'avoid';
+      h2.style.breakAfter = 'avoid';
+      if (h2.textContent.toLowerCase().includes('section')) {
+        sectionCount++;
+        if (sectionCount > 1) {
+          h2.style.pageBreakBefore = 'always';
+          h2.style.breakBefore = 'page';
+          h2.style.marginTop = '14px';
+        }
+      }
+    });
+  }
+
+  const container = document.createElement('div');
+  container.id = 'pdf-export-container';
+  container.style.position = 'static';
+  container.style.display = 'block';
+  container.style.background = '#FFFFFF';
+  container.style.padding = '0';
+  container.style.margin = '0 auto';
+  container.style.color = '#000000';
+  container.style.fontFamily = '"Source Sans 3", system-ui, -apple-system, sans-serif';
+  container.style.width = isWide ? '1700px' : '1020px';
+
+  const headerHtml = `
+    <div style="text-align: center; margin-bottom: 10px; padding: 6px 0 6px; border-bottom: 2px solid #0F172A;">
+      <div style="font-size: 13px; font-weight: 600; color: #475569;">Khulna University of Engineering & Technology (KUET)</div>
+      <div style="font-size: 17px; font-weight: 800; color: #0F172A; letter-spacing: -0.01em;">Department of Computer Science and Engineering</div>
+      <div style="font-size: 12px; font-weight: 700; color: #D97706; text-transform: uppercase; margin-top: 2px;">Official Class Routine Timetable</div>
+    </div>
+  `;
+  container.innerHTML = headerHtml;
+  container.appendChild(clone);
+  document.body.appendChild(container);
+
+  const pdfFormat = isWide ? 'a3' : 'a4';
+
+  const opt = {
+    margin: [6, 6, 6, 6],
+    filename: filename,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: {
+      scale: 1.5,
+      useCORS: true,
+      logging: false,
+      scrollY: 0,
+      scrollX: 0
+    },
+    jsPDF: {
+      unit: 'mm',
+      format: pdfFormat,
+      orientation: 'landscape'
+    },
+    pagebreak: { mode: ['css', 'legacy'] }
+  };
+
+  function cleanup() {
+    if (document.body.contains(loadingIndicator)) document.body.removeChild(loadingIndicator);
+    if (document.body.contains(container)) document.body.removeChild(container);
+    window.scrollTo(prevScrollX, prevScrollY);
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalBtnHtml;
+    }
+  }
+
+  html2pdf()
+    .set(opt)
+    .from(container)
+    .save()
+    .then(() => {
+      cleanup();
+    })
+    .catch(err => {
+      console.error('PDF generation error:', err);
+      cleanup();
+      alert('Direct PDF generation encountered an issue. Opening printer dialog...');
+      window.print();
+    });
+}
+
+function downloadCurrentMasterPDF(btn) {
+  const activeSubtab = document.querySelector('.master-subtab.active');
+  const view = activeSubtab ? activeSubtab.dataset.view : 'teachers';
+  const panel = document.getElementById('view-master-' + view);
+  const nameMap = {
+    teachers: 'Teachers',
+    labs: 'Labs_and_Rooms',
+    batches: 'Batches_and_Sections'
+  };
+  const label = nameMap[view] || 'Master';
+  downloadElementAsPDF(panel, `KUET_CSE_Master_Routine_${label}.pdf`, 'a3', btn);
+}
+
+function printCurrentMasterRoutine() {
+  window.print();
+}
+
+function downloadTermRoutinePDF(sectionId, batchId, btn) {
+  const section = document.getElementById(sectionId);
+  downloadElementAsPDF(section, `KUET_CSE_Routine_Term_${batchId}.pdf`, 'a4', btn);
+}
+
+function printTermRoutine(sectionId) {
+  window.print();
+}
+
+function downloadTeacherRoutinePDF(btn) {
+  const dropdown = document.getElementById('teacher-dropdown-select');
+  const tid = dropdown ? dropdown.value : 'all';
+  if (tid && tid !== 'all') {
+    const card = document.getElementById('tc-' + tid);
+    downloadElementAsPDF(card, `KUET_CSE_Teacher_Routine_${tid}.pdf`, 'a4', btn);
+  } else {
+    const container = document.getElementById('teacher-cards-container');
+    downloadElementAsPDF(container, 'KUET_CSE_Teachers_All_Routines.pdf', 'a4', btn);
+  }
+}
+
 // Show first tab by default (Master Routine)
 if (tabs.length > 0) {
   show(tabs[0].dataset.target);
@@ -1578,22 +1918,67 @@ def write_html(
           <div class="search-box">
             <input type="text" id="master-search-input" placeholder="🔍 Quick filter rows (teacher, code, room)..." oninput="onMasterSearchInput(this.value)" autocomplete="off" />
           </div>
-          <button type="button" class="btn-action-icon" onclick="window.print()">
-            🖨️ Print Master Routine
+          <button type="button" class="btn-download-pdf" onclick="downloadCurrentMasterPDF(this)">
+            <span>📥</span> Download PDF
+          </button>
+          <button type="button" class="btn-action-icon" onclick="printCurrentMasterRoutine()">
+            🖨️ Print
           </button>
         </div>
       </div>
 
       <div id="view-master-teachers" class="master-view-panel">
         {master_teachers_html}
+        <div class="routine-download-bar">
+          <div class="download-bar-info">
+            <span class="download-bar-title">👨‍🏫 Teachers Master Routine</span>
+            <span class="download-bar-subtitle">Full faculty schedule across all 5 weekdays</span>
+          </div>
+          <div class="download-bar-actions">
+            <button type="button" class="btn-download-pdf" onclick="downloadCurrentMasterPDF(this)">
+              <span>📥</span> Download Master Routine (PDF)
+            </button>
+            <button type="button" class="btn-print-routine" onclick="printCurrentMasterRoutine()">
+              <span>🖨️</span> Print Master Routine
+            </button>
+          </div>
+        </div>
       </div>
 
       <div id="view-master-labs" class="master-view-panel" style="display: none;">
         {master_labs_html}
+        <div class="routine-download-bar">
+          <div class="download-bar-info">
+            <span class="download-bar-title">🔬 Labs & Rooms Master Routine</span>
+            <span class="download-bar-subtitle">Computer laboratories & specialized room occupancy schedule</span>
+          </div>
+          <div class="download-bar-actions">
+            <button type="button" class="btn-download-pdf" onclick="downloadCurrentMasterPDF(this)">
+              <span>📥</span> Download Master Routine (PDF)
+            </button>
+            <button type="button" class="btn-print-routine" onclick="printCurrentMasterRoutine()">
+              <span>🖨️</span> Print Master Routine
+            </button>
+          </div>
+        </div>
       </div>
 
       <div id="view-master-batches" class="master-view-panel" style="display: none;">
         {master_batches_html}
+        <div class="routine-download-bar">
+          <div class="download-bar-info">
+            <span class="download-bar-title">🎓 Batches & Sections Master Routine</span>
+            <span class="download-bar-subtitle">All student cohort and section timetables unified</span>
+          </div>
+          <div class="download-bar-actions">
+            <button type="button" class="btn-download-pdf" onclick="downloadCurrentMasterPDF(this)">
+              <span>📥</span> Download Master Routine (PDF)
+            </button>
+            <button type="button" class="btn-print-routine" onclick="printCurrentMasterRoutine()">
+              <span>🖨️</span> Print Master Routine
+            </button>
+          </div>
+        </div>
       </div>
     </section>
     """
@@ -1668,9 +2053,12 @@ def write_html(
 
         <div class="teacher-filter-status">
           <span id="teacher-filter-count" style="font-weight: 700; color: #475569; font-size: 0.85rem;">Showing all {len(sorted_busy_teachers)} teachers</span>
-          <div style="display: flex; gap: 0.5rem;">
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
             <button type="button" class="btn-action-icon" onclick="navigateTeacherStep(-1)">◀ Prev Teacher</button>
             <button type="button" class="btn-action-icon" onclick="navigateTeacherStep(1)">Next Teacher ▶</button>
+            <button type="button" class="btn-download-pdf" style="padding: 0.45rem 0.9rem; font-size: 0.8rem;" onclick="downloadTeacherRoutinePDF(this)">
+              <span>📥</span> Download PDF
+            </button>
             <button type="button" class="btn-action-icon" onclick="printTeacherView()">🖨️ Print Teacher Routine</button>
           </div>
         </div>
@@ -1696,6 +2084,25 @@ def write_html(
             cells = _section_grid(problem, solution, batch.id, section)
             blocks.append(f"<h2>Section {html.escape(section)}</h2>")
             blocks.append(f"<div class='scroll'>{_render_table(problem, cells)}</div>")
+        
+        # Download bar below the term routine
+        download_bar = f"""
+        <div class="routine-download-bar">
+          <div class="download-bar-info">
+            <span class="download-bar-title">🎓 Term {html.escape(batch.id)} Routine</span>
+            <span class="download-bar-subtitle">{html.escape(batch.name)} — All Sections Schedule</span>
+          </div>
+          <div class="download-bar-actions">
+            <button type="button" class="btn-download-pdf" onclick="downloadTermRoutinePDF('{pid}', '{html.escape(batch.id)}', this)">
+              <span>📥</span> Download Term {html.escape(batch.id)} PDF
+            </button>
+            <button type="button" class="btn-print-routine" onclick="printTermRoutine('{pid}')">
+              <span>🖨️</span> Print Term Routine
+            </button>
+          </div>
+        </div>
+        """
+        blocks.append(download_bar)
         panels.append(f"<section id='{pid}' hidden>{''.join(blocks)}</section>")
 
     used_slots = sum(a.event.length for a in solution.assignments)
@@ -1721,6 +2128,12 @@ def write_html(
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,600;700&display=swap" rel="stylesheet">
+<script src="/static/html2pdf.bundle.min.js"></script>
+<script>
+if (!window.html2pdf) {{
+  document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\\/script>');
+}}
+</script>
 <style>{CSS}</style>
 </head><body><div class="wrap">
 <header class="app-masthead">

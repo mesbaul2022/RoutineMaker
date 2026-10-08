@@ -31,7 +31,8 @@ def reconstruct(problem, csv_path):
     assignments = []
     with open(csv_path, newline="", encoding="utf-8") as fh:
         for row in csv.DictReader(fh):
-            key = (row["course_code"], row["batch"], row["section"], row["group"] or None)
+            grp = (row["group"] or "").replace("(0.75cr alt)", "").strip() or None
+            key = (row["course_code"], row["batch"], row["section"], grp)
             idx = used[key]
             used[key] += 1
             ev = by_key[key][idx]
@@ -46,8 +47,23 @@ def reconstruct(problem, csv_path):
 
 
 def main():
-    problem = load_problem("data/kuet_cse.json")
-    sol = reconstruct(problem, "out/routine.csv")
+    csv_path = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1].endswith(".csv") else "out/routine.csv"
+    if len(sys.argv) > 2 and sys.argv[2].endswith(".json"):
+        problem = load_problem(sys.argv[2])
+    else:
+        db_file = Path(__file__).resolve().parents[1] / "routine.db"
+        if db_file.exists():
+            from app.db import SessionLocal
+            from app.db_loader import load_problem_from_db
+            with SessionLocal() as db:
+                problem = load_problem_from_db(db)
+        else:
+            json_file = Path(__file__).resolve().parents[1] / "data" / "kuet_cse_real.json"
+            if not json_file.exists():
+                json_file = Path(__file__).resolve().parents[1] / "data" / "kuet_cse.json"
+            problem = load_problem(str(json_file))
+
+    sol = reconstruct(problem, csv_path)
     print(f"reconstructed {len(sol.assignments)} / {len(problem.events)} meetings")
 
     from tools.verify import verify

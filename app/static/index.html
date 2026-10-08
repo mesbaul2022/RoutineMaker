@@ -164,10 +164,13 @@
           </span>
           <span style="font-size: 0.85rem; color: var(--text-dim); margin-left: 0.5rem;">Combined master schedule of all teachers, labs, and student batches</span>
         </div>
-        <div style="display: flex; gap: 0.6rem; align-items: center;">
+        <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
           <a id="btn-master-download-csv" href="/api/routine/download/csv" class="btn btn-outline btn-sm" download>
             📥 Download CSV
           </a>
+          <button id="btn-master-download-pdf" type="button" class="btn btn-outline btn-sm" onclick="downloadMasterFromMain()">
+            📥 Download PDF
+          </button>
           <a id="btn-master-open-html" href="/out/routine.html" target="_blank" class="btn btn-primary btn-sm">
             ↗ Open Full Routine
           </a>
@@ -277,10 +280,13 @@
                 <span class="stat-val" id="result-faults-count">0</span>
               </div>
             </div>
-            <div style="display: flex; gap: 0.5rem;">
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
               <a id="btn-download-csv" href="/api/routine/download/csv" class="btn btn-outline" download>
                 📥 Download CSV
               </a>
+              <button id="btn-download-pdf" type="button" class="btn btn-outline" onclick="downloadMasterFromMain()">
+                📥 Download PDF
+              </button>
               <a id="btn-open-html" href="/out/routine.html" target="_blank" class="btn btn-gold">
                 ↗ Open Full HTML
               </a>
@@ -357,7 +363,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline" onclick="closeTeacherModal()">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="btn-save-teacher">Save Teacher</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-teacher">✓ Save Teacher (OK)</button>
         </div>
       </form>
     </div>
@@ -462,7 +468,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline" onclick="closeCourseModal()">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="btn-save-course">Save Course</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-course">✓ Save Course (OK)</button>
         </div>
       </form>
     </div>

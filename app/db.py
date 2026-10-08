@@ -270,7 +270,47 @@ def _migrate_schema():
                     (category, credit, cid),
                 )
 
-        # 5. Scheduled assignments table for freeze & incremental routines
+        # 5. Chemistry teachers migration & assignment
+        chem_teachers = [
+            ("mohammad_hasan_morshed", "Dr. Mohammad Hasan Morshed", "MHM", "CHEM", "active", 5),
+            ("abm_mamun_jamal", "Dr. A. B. M. Mamun Jamal", "MJ", "CHEM", "active", 5),
+            ("md_abdul_motin", "Dr. Md. Abdul Motin", "AM", "CHEM", "active", 5),
+            ("md_rubel_al_mamun", "Md. Rubel Al-Mamun", "RA", "CHEM", "active", 5),
+        ]
+        for tid, tname, tcode, tdept, tstatus, tmax in chem_teachers:
+            cur.execute("SELECT id FROM teachers WHERE id = ?", (tid,))
+            if not cur.fetchone():
+                cur.execute(
+                    "INSERT INTO teachers (id, full_name, short_code, department, status, max_periods_per_day) VALUES (?, ?, ?, ?, ?, ?)",
+                    (tid, tname, tcode, tdept, tstatus, tmax),
+                )
+            else:
+                cur.execute(
+                    "UPDATE teachers SET full_name = ?, short_code = ?, department = ? WHERE id = ?",
+                    (tname, tcode, tdept, tid),
+                )
+
+        # Update Chemistry courses: theory with MHM + MJ, laboratory with AM + RA in chem_lab
+        cur.execute(
+            "UPDATE courses SET teacher1_id = 'mohammad_hasan_morshed', teacher2_id = 'abm_mamun_jamal' WHERE id = 'CHEM1207'"
+        )
+        cur.execute(
+            "UPDATE courses SET teacher1_id = 'md_abdul_motin', teacher2_id = 'md_rubel_al_mamun', room_kind = 'chem_lab', credit = 0.75 WHERE id = 'CHEM1208'"
+        )
+
+        cur.execute("DELETE FROM assignments WHERE course_id IN ('CHEM1207', 'CHEM1208')")
+        for sec in ('A', 'B'):
+            cur.execute("INSERT INTO assignments (course_id, section, teacher_id) VALUES ('CHEM1207', ?, 'mohammad_hasan_morshed')", (sec,))
+            cur.execute("INSERT INTO assignments (course_id, section, teacher_id) VALUES ('CHEM1207', ?, 'abm_mamun_jamal')", (sec,))
+            for grp in ('G1', 'G2'):
+                cur.execute("INSERT INTO assignments (course_id, section, \"group\", teacher_id) VALUES ('CHEM1208', ?, ?, 'md_abdul_motin')", (sec, grp))
+                cur.execute("INSERT INTO assignments (course_id, section, \"group\", teacher_id) VALUES ('CHEM1208', ?, ?, 'md_rubel_al_mamun')", (sec, grp))
+
+        # Ensure CSE1204/CSE1205 in batch 1-2 have complete teachers for solver feasibility
+        cur.execute("UPDATE courses SET teacher2_id = 'md_badiuzzaman_shuvo' WHERE id = 'CSE1204' AND teacher2_id IS NULL")
+        cur.execute("UPDATE courses SET teacher1_id = 'dola_das', teacher2_id = 'kazi_saeed_alam' WHERE id = 'CSE1205'")
+
+        # 6. Scheduled assignments table for freeze & incremental routines
         cur.execute("PRAGMA table_info(scheduled_assignments)")
         if not cur.fetchall():
             cur.execute(

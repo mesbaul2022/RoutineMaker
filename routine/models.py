@@ -137,6 +137,9 @@ class Problem:
         batch = self.batches[event.batch_id]
         if event.group is None:
             return [(event.batch_id, event.section, g) for g in batch.groups]
+        if "/" in event.group or "," in event.group:
+            grps = [g.strip() for g in event.group.replace("/", ",").split(",") if g.strip()]
+            return [(event.batch_id, event.section, g) for g in grps]
         return [(event.batch_id, event.section, event.group)]
 
     def feasible_rooms(self, event: Event) -> list[Room]:

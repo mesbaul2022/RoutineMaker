@@ -66,6 +66,11 @@ NON_CSE_DEPARTMENTS: dict[str, str] = {
     "munshi_tauhiduzzaman": "HUM",
     "md_shahinur_alam_sarker": "HUM",
     "maria_bhuiyan": "HUM",
+    # CHEM
+    "mohammad_hasan_morshed": "CHEM",
+    "abm_mamun_jamal": "CHEM",
+    "md_abdul_motin": "CHEM",
+    "md_rubel_al_mamun": "CHEM",
 }
 
 

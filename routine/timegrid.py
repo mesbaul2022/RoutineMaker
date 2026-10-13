@@ -31,8 +31,9 @@ class Period:
 class Break:
     name: str
     after_period: str  # break happens immediately after this period
-    start: str
-    end: str
+    start: str = ""
+    end: str = ""
+    length_minutes: int = 0
 
 
 class TimeGrid:
@@ -174,7 +175,8 @@ class TimeGrid:
             lines.append(f"  {p.name:<4} {p.start}-{p.end}")
             if i in cut_after:
                 b = cut_after[i]
-                lines.append(f"       -- {b.name} {b.start}-{b.end} --")
+                t_info = f" {b.start}-{b.end}" if b.start and b.end else (f" ({b.length_minutes}m)" if b.length_minutes else "")
+                lines.append(f"       -- {b.name}{t_info} --")
         blocks = ", ".join(
             "[" + "-".join(self.periods[i].name for i in blk) + "]" for blk in self.blocks
         )

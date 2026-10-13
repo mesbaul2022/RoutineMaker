@@ -66,8 +66,13 @@ class Course:
         return self.teachers.get(section, "")
 
     def lab_teachers(self, section: str, group: str) -> list[str]:
-        val = self.teachers.get(section, {}).get(group, [])
-        return [val] if isinstance(val, str) else list(val)
+        sec_val = self.teachers.get(section, {})
+        if isinstance(sec_val, list):
+            return list(sec_val)
+        if isinstance(sec_val, dict):
+            val = sec_val.get(group, [])
+            return [val] if isinstance(val, str) else list(val)
+        return [sec_val] if isinstance(sec_val, str) else []
 
 
 @dataclass
@@ -94,7 +99,7 @@ class Event:
 
     @property
     def is_lab(self) -> bool:
-        return self.group is not None
+        return self.group is not None or self.length > 1 or not self.course.is_theory
 
     @property
     def cohort_keys(self) -> list[tuple]:
@@ -143,6 +148,19 @@ class Problem:
         return [(event.batch_id, event.section, event.group)]
 
     def feasible_rooms(self, event: Event) -> list[Room]:
+        clean_code = event.course.code.replace(" ", "").upper()
+        if clean_code in ("CSE3200", "CSE4000") or clean_code.startswith("CSE4000"):
+            home_rooms = self.options.get("home_rooms", {})
+            home_id = home_rooms.get(f"{event.batch_id}|{event.section}")
+            cand = []
+            if home_id and home_id in self.rooms:
+                cand.append(self.rooms[home_id])
+            for r in self.rooms.values():
+                if r.capacity >= event.size:
+                    if r not in cand:
+                        cand.append(r)
+            return cand or list(self.rooms.values())
+
         if not event.is_lab:
             home_rooms = self.options.get("home_rooms", {})
             home_id = home_rooms.get(f"{event.batch_id}|{event.section}")

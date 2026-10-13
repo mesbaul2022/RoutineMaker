@@ -310,7 +310,32 @@ def _migrate_schema():
         cur.execute("UPDATE courses SET teacher2_id = 'md_badiuzzaman_shuvo' WHERE id = 'CSE1204' AND teacher2_id IS NULL")
         cur.execute("UPDATE courses SET teacher1_id = 'dola_das', teacher2_id = 'kazi_saeed_alam' WHERE id = 'CSE1205'")
 
-        # 6. Scheduled assignments table for freeze & incremental routines
+        # 6. Project & Thesis courses (CSE 3200 in 3-2, CSE 4000 in 4-1 & 4-2)
+        project_courses = [
+            ("CSE3200", "System Development Project", "3-2", "sessional", "theory", None, 1, 1.5, "core", None),
+            ("CSE4000_41", "Capstone Project/Thesis", "4-1", "sessional", "theory", None, 1, 1.5, "core", None),
+            ("CSE4000", "Capstone Project/Thesis", "4-2", "sessional", "theory", None, 2, 3.0, "core", None),
+        ]
+        for cid, title, bid, kind, rkind, periods, blocks, credit, category, paired in project_courses:
+            cur.execute("SELECT id FROM courses WHERE id = ?", (cid,))
+            if not cur.fetchone():
+                cur.execute(
+                    """INSERT INTO courses
+                       (id, title, batch_id, kind, room_kind, periods_per_week, blocks_per_week, credit, category, paired_course_id, teacher1_id, teacher2_id)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)""",
+                    (cid, title, bid, kind, rkind, periods, blocks, credit, category, paired),
+                )
+            else:
+                cur.execute(
+                    """UPDATE courses
+                       SET title = ?, batch_id = ?, kind = ?, room_kind = ?, periods_per_week = ?,
+                           blocks_per_week = ?, credit = ?, category = ?, teacher1_id = NULL, teacher2_id = NULL
+                       WHERE id = ?""",
+                    (title, bid, kind, rkind, periods, blocks, credit, category, cid),
+                )
+        cur.execute("DELETE FROM assignments WHERE course_id IN ('CSE3200', 'CSE4000', 'CSE4000_41')")
+
+        # 7. Scheduled assignments table for freeze & incremental routines
         cur.execute("PRAGMA table_info(scheduled_assignments)")
         if not cur.fetchall():
             cur.execute(

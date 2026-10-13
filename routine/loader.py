@@ -57,8 +57,14 @@ def _merge(base: dict, override: dict) -> dict:
 def load_problem(path: str | Path) -> Problem:
     raw = json.loads(Path(path).read_text(encoding="utf-8"))
 
-    grid = TimeGrid.from_dict(raw["config"])
-    options = _merge(DEFAULT_OPTIONS, raw["config"].get("options", {}))
+    if "config" in raw:
+        grid = TimeGrid.from_dict(raw["config"])
+        options = _merge(DEFAULT_OPTIONS, raw["config"].get("options", {}))
+    elif "grid" in raw:
+        grid = TimeGrid.from_dict(raw["grid"])
+        options = _merge(DEFAULT_OPTIONS, raw.get("options", {}))
+    else:
+        raise KeyError("Neither 'config' nor 'grid' found in problem JSON")
 
     rooms = {r["id"]: Room(**r) for r in raw["rooms"]}
     batches = {b["id"]: Batch(**b) for b in raw["batches"]}
@@ -106,7 +112,12 @@ def _make_course(c: dict) -> Course:
     teachers_dict = c.get("teachers", {})
     if (not t1 or not t2) and isinstance(teachers_dict, dict):
         if c.get("kind") == "theory":
-            vals = [v for v in teachers_dict.values() if isinstance(v, str)]
+            vals = []
+            for v in teachers_dict.values():
+                if isinstance(v, str):
+                    vals.append(v)
+                elif isinstance(v, list):
+                    vals.extend([x for x in v if isinstance(x, str)])
             uniq = list(dict.fromkeys(vals))
             if not t1 and len(uniq) > 0:
                 t1 = uniq[0]
@@ -122,6 +133,10 @@ def _make_course(c: dict) -> Course:
                             lab_vals.extend(grp_val)
                         elif isinstance(grp_val, str):
                             lab_vals.append(grp_val)
+                elif isinstance(sec_val, list):
+                    lab_vals.extend(sec_val)
+                elif isinstance(sec_val, str):
+                    lab_vals.append(sec_val)
             uniq = list(dict.fromkeys(lab_vals))
             if not t1 and len(uniq) > 0:
                 t1 = uniq[0]
@@ -156,6 +171,28 @@ def _build_events(
         if not batch:
             continue
 
+        clean_code = course.code.replace(" ", "").upper()
+        if clean_code in ("CSE3200", "CSE4000") or clean_code.startswith("CSE4000"):
+            n_blocks = course.blocks_per_week or (2 if course.credit == 3.0 else 1)
+            for section in batch.sections:
+                for k in range(n_blocks):
+                    events.append(
+                        Event(
+                            eid=eid,
+                            course=course,
+                            batch_id=batch.id,
+                            section=section,
+                            group=None,
+                            length=grid.lab_periods,
+                            teacher_ids=[],
+                            room_kind=course.room_kind,
+                            size=batch.section_size,
+                            meeting_index=k,
+                        )
+                    )
+                    eid += 1
+            continue
+
         t1 = course.teacher1_id
         t2 = course.teacher2_id
 
@@ -180,8 +217,29 @@ def _build_events(
                         is_shared = False
                     else:
                         fallback = course.theory_teacher(section)
-                        tids = [fallback] if fallback else []
-                        is_shared = False
+                        if isinstance(fallback, list):
+                            if len(fallback) == 2 and fallback[0] != fallback[1]:
+                                if k == 0:
+                                    tids = [fallback[0]]
+                                    is_shared = False
+                                elif k == 1:
+                                    tids = [fallback[1]]
+                                    is_shared = False
+                                else:
+                                    tids = [fallback[0], fallback[1]]
+                                    is_shared = True
+                            elif fallback:
+                                tids = [fallback[0]]
+                                is_shared = False
+                            else:
+                                tids = []
+                                is_shared = False
+                        elif fallback:
+                            tids = [fallback]
+                            is_shared = False
+                        else:
+                            tids = []
+                            is_shared = False
 
                     tids = list(dict.fromkeys([t for t in tids if t]))
 
@@ -322,8 +380,12 @@ def validate(problem: Problem) -> tuple[list[str], list[str]]:
         if not c.is_theory:
             continue
         for section in problem.batches[c.batch].sections:
-            key = (c.theory_teacher(section), c.batch)
-            theory_load.setdefault(key, set()).add(c.code)
+            t = c.theory_teacher(section)
+            tids = t if isinstance(t, list) else ([t] if t else [])
+            for tid in tids:
+                if tid:
+                    key = (tid, c.batch)
+                    theory_load.setdefault(key, set()).add(c.code)
     for (tid, batch), codes in theory_load.items():
         if len(codes) > 1:
             name = problem.teachers[tid].name if tid in problem.teachers else tid

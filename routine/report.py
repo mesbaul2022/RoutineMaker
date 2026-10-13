@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import csv
 import html
+import re
 from collections import defaultdict
 from pathlib import Path
 
@@ -42,6 +43,23 @@ def _curriculum_key(batch_id: str) -> int:
         return CURRICULUM_ORDER.index(batch_id)
     except ValueError:
         return 99
+
+
+def format_display_group(group: str | None, section: str = "") -> str:
+    """Format group label for display in KUET routines.
+
+    In KUET routines, groups are designated by section letter followed by group number:
+    - Section A: A1, A2, A1/A2
+    - Section B: B1, B2, B1/B2
+    instead of generic G1, G2, G1/G2.
+    """
+    if not group:
+        return ""
+    g = str(group).strip()
+    if not section:
+        return g
+    sec = section.strip().upper()
+    return re.sub(r"\bG(\d+)\b", rf"{sec}\1", g)
 
 
 # ----------------------------------------------------------------- console
@@ -110,16 +128,28 @@ def write_csv(problem: Problem, solution: Solution, path: str | Path) -> Path:
             ev = a.event
             d, p = grid.day_of(a.start), grid.period_of(a.start)
             end_p = p + ev.length - 1
-            if ev.is_shared:
+            clean_code = ev.course.code.replace(" ", "").upper()
+            is_project = clean_code in ("CSE3200", "CSE4000") or clean_code.startswith("CSE4000")
+            if is_project:
+                t_str = ""
+                room_str = ""
+                disp_code = "CSE 3200" if "3200" in clean_code else "CSE 4000"
+            elif ev.is_shared:
                 t_str = "/".join(problem.teachers[t].name for t in ev.teacher_ids if t in problem.teachers)
+                room_str = problem.rooms[a.room_id].name
+                disp_code = ev.course.code
             elif ev.is_lab:
                 t_str = " + ".join(problem.teachers[t].name for t in ev.teacher_ids if t in problem.teachers)
+                room_str = problem.rooms[a.room_id].name
+                disp_code = ev.course.code
             else:
                 t_str = ", ".join(problem.teachers[t].name for t in ev.teacher_ids if t in problem.teachers)
+                room_str = problem.rooms[a.room_id].name
+                disp_code = ev.course.code
 
-            grp = ev.group or ""
+            grp = format_display_group(ev.group, ev.section)
             if ev.paired_event_id is not None:
-                grp = f"{ev.group} (0.75cr alt)" if ev.group else "(0.75cr alt)"
+                grp = f"{grp} (0.75cr alt)" if grp else "(0.75cr alt)"
 
             w.writerow(
                 [
@@ -131,10 +161,10 @@ def write_csv(problem: Problem, solution: Solution, path: str | Path) -> Path:
                     ev.batch_id,
                     ev.section,
                     grp,
-                    ev.course.code,
+                    disp_code,
                     ev.course.title,
                     ev.course.kind,
-                    problem.rooms[a.room_id].name,
+                    room_str,
                     t_str,
                 ]
             )
@@ -158,8 +188,13 @@ def _section_grid(problem: Problem, solution: Solution, batch_id: str, section: 
     for a in relevant:
         ev = a.event
         d, p = grid.day_of(a.start), grid.period_of(a.start)
+        clean_code = ev.course.code.replace(" ", "").upper()
+        is_project = clean_code in ("CSE3200", "CSE4000") or clean_code.startswith("CSE4000")
+
         if ev.paired_event_id is not None:
             key = (d, p, "paired_075_lab")
+        elif is_project:
+            key = (d, p, "project", ev.eid)
         elif ev.is_lab:
             key = (d, p, ev.course.code)
         else:
@@ -169,6 +204,19 @@ def _section_grid(problem: Problem, solution: Solution, batch_id: str, section: 
             key,
             {"day": d, "period": p, "span": ev.length, "lab": ev.is_lab, "entries": []},
         )
+        if is_project:
+            disp_code = "CSE 3200" if "3200" in clean_code else "CSE 4000"
+            bucket["entries"].append(
+                {
+                    "code": disp_code,
+                    "group": "",
+                    "room": "",
+                    "teachers": "",
+                    "is_project": True,
+                }
+            )
+            continue
+
         if ev.is_shared:
             t_str = "/".join(problem.teachers[t].short for t in ev.teacher_ids if t in problem.teachers)
         elif ev.is_lab:
@@ -176,9 +224,9 @@ def _section_grid(problem: Problem, solution: Solution, batch_id: str, section: 
         else:
             t_str = ", ".join(problem.teachers[t].short for t in ev.teacher_ids if t in problem.teachers)
 
-        grp_label = ev.group
+        grp_label = format_display_group(ev.group, ev.section)
         if ev.paired_event_id is not None:
-            grp_label = f"{ev.group} (0.75cr alt)" if ev.group else "(0.75cr alt)"
+            grp_label = f"{grp_label} (0.75cr alt)" if grp_label else "(0.75cr alt)"
 
         bucket["entries"].append(
             {
@@ -218,6 +266,11 @@ def _teacher_grid(problem: Problem, solution: Solution, teacher_id: str):
             continue
         ev = a.event
         d, p = grid.day_of(a.start), grid.period_of(a.start)
+        disp_grp = format_display_group(ev.group, ev.section)
+        if disp_grp:
+            grp_tag = f"{ev.batch_id} {disp_grp}" if disp_grp.startswith(ev.section) else f"{ev.batch_id} {ev.section}{disp_grp}"
+        else:
+            grp_tag = f"{ev.batch_id} {ev.section}"
         cells[d][p] = {
             "day": d,
             "period": p,
@@ -226,7 +279,7 @@ def _teacher_grid(problem: Problem, solution: Solution, teacher_id: str):
             "entries": [
                 {
                     "code": ev.course.code,
-                    "group": f"{ev.batch_id} {ev.section}{ev.group or ''}",
+                    "group": grp_tag,
                     "room": problem.rooms[a.room_id].name,
                     "teachers": "",
                 }
@@ -269,6 +322,9 @@ def _render_table(problem: Problem, cells) -> str:
                     inner = []
                     for e in cell["entries"]:
                         tag = f"<b>{html.escape(e['code'])}</b>"
+                        if e.get("is_project"):
+                            inner.append(f"<div class='ent'>{tag}</div>")
+                            continue
                         if e["group"]:
                             grp_str = f"({e['group']})" if not e["group"].startswith("(") else e["group"]
                             tag += f" <span class='grp'>{html.escape(grp_str)}</span>"
@@ -356,6 +412,7 @@ def _render_master_teachers_table(problem: Problem, solution: Solution, teachers
     for a in solution.assignments:
         ev = a.event
         d, p = grid.day_of(a.start), grid.period_of(a.start)
+        disp_grp = format_display_group(ev.group, ev.section)
         for tid in ev.teacher_ids:
             if tid in t_grids:
                 t_grids[tid][d][p] = {
@@ -363,7 +420,7 @@ def _render_master_teachers_table(problem: Problem, solution: Solution, teachers
                     "code": ev.course.code,
                     "batch": ev.batch_id,
                     "section": ev.section,
-                    "group": ev.group or "",
+                    "group": disp_grp,
                     "room": problem.rooms[a.room_id].name,
                     "lab": ev.is_lab,
                 }
@@ -424,8 +481,11 @@ def _render_master_teachers_table(problem: Problem, solution: Solution, teachers
                     end_p = p + span - 1
                     border_cls = " brk-sep" if end_p in (2, 5) else ""
                     klass = "m-cell-lab" if cell["lab"] else "m-cell-theory"
-                    grp_txt = f" ({cell['group']})" if cell["group"] else ""
-                    tag_meta = f"{cell['batch']} {cell['section']}{grp_txt}"
+                    grp = cell["group"]
+                    if grp:
+                        tag_meta = f"{cell['batch']} {grp}" if grp.startswith(cell["section"]) else f"{cell['batch']} {cell['section']} ({grp})"
+                    else:
+                        tag_meta = f"{cell['batch']} {cell['section']}"
 
                     row.append(
                         f"<td class='{klass}{border_cls}' colspan='{span}'>"
@@ -468,12 +528,13 @@ def _render_master_labs_table(problem: Problem, solution: Solution) -> str:
             ev = a.event
             d, p = grid.day_of(a.start), grid.period_of(a.start)
             t_str = "+".join(problem.teachers[t].short for t in ev.teacher_ids if t in problem.teachers)
+            disp_grp = format_display_group(ev.group, ev.section)
             r_grids[a.room_id][d][p] = {
                 "span": ev.length,
                 "code": ev.course.code,
                 "batch": ev.batch_id,
                 "section": ev.section,
-                "group": ev.group or "",
+                "group": disp_grp,
                 "teachers": t_str,
             }
             for k in range(1, ev.length):
@@ -605,6 +666,9 @@ def _render_master_batches_table(problem: Problem, solution: Solution) -> str:
                     klass = "m-cell-lab" if cell["lab"] else "m-cell-theory"
                     entries_html = []
                     for e in cell["entries"]:
+                        if e.get("is_project"):
+                            entries_html.append(f"<div class='m-code'>{html.escape(e['code'])}</div>")
+                            continue
                         grp_txt = f" ({e['group']})" if e["group"] and not e["group"].startswith("(") else (f" {e['group']}" if e["group"] else "")
                         meta_txt = " · ".join(x for x in (e["room"], e["teachers"]) if x)
                         entries_html.append(
@@ -1421,6 +1485,165 @@ footer {{
   border-color: #94A3B8;
 }}
 
+/* ------------------------------------------------------------- Term Legend / Reference Card */
+.term-legend-card {{
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  page-break-inside: avoid;
+}}
+
+.term-legend-card-header {{
+  background: #F1F5F9;
+  border-bottom: 1px solid var(--border);
+  padding: 0.65rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}}
+
+.term-legend-card-title {{
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}}
+
+.term-legend-card-subtitle {{
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  font-weight: 500;
+}}
+
+.term-legend-grid {{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  padding: 1.25rem;
+}}
+
+@media (max-width: 850px) {{
+  .term-legend-grid {{
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }}
+}}
+
+.term-legend-col {{
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 1rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+}}
+
+.term-legend-col-header {{
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 2px solid var(--primary-border);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
+}}
+
+.term-legend-col-header h4 {{
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-main);
+}}
+
+.term-legend-icon {{
+  font-size: 1.1rem;
+}}
+
+.term-legend-subheading {{
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #475569;
+  margin-bottom: 0.45rem;
+  padding-left: 0.2rem;
+  border-left: 3px solid var(--primary);
+}}
+
+.term-legend-list {{
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}}
+
+.term-legend-row {{
+  display: flex;
+  align-items: baseline;
+  padding: 0.25rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  transition: background 0.1s ease;
+  line-height: 1.45;
+}}
+
+.term-legend-row:hover {{
+  background: #EDF2F7;
+}}
+
+.term-legend-code {{
+  font-weight: 700;
+  color: #1E3A8A;
+  min-width: 88px;
+  flex-shrink: 0;
+}}
+
+.term-legend-code.sessional-code {{
+  color: #B45309;
+}}
+
+.term-legend-code.teacher-code {{
+  font-weight: 800;
+  color: #0369A1;
+  min-width: 58px;
+  flex-shrink: 0;
+  font-family: monospace;
+  font-size: 0.9rem;
+}}
+
+.term-legend-sep {{
+  color: #94A3B8;
+  margin: 0 0.5rem 0 0.25rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}}
+
+.term-legend-name {{
+  color: var(--text-main);
+  font-weight: 500;
+  flex-grow: 1;
+}}
+
+.term-legend-dept {{
+  color: #64748B;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-left: 0.35rem;
+}}
+
+.term-legend-courses {{
+  color: #0369A1;
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin-left: 0.5rem;
+}}
+
 /* ------------------------------------------------------------- Print Optimizations */
 @page {{
   size: landscape;
@@ -1505,6 +1728,37 @@ footer {{
   }}
   tr {{
     page-break-inside: avoid;
+  }}
+  .term-legend-card {{
+    page-break-inside: avoid !important;
+    border: 1px solid #94A3B8 !important;
+    box-shadow: none !important;
+    margin-top: 8px !important;
+    margin-bottom: 8px !important;
+  }}
+  .term-legend-card-header {{
+    background: #E2E8F0 !important;
+    padding: 3px 6px !important;
+  }}
+  .term-legend-grid {{
+    gap: 8px !important;
+    padding: 6px !important;
+  }}
+  .term-legend-col {{
+    background: #FFFFFF !important;
+    border: 1px solid #CBD5E1 !important;
+    padding: 4px 6px !important;
+  }}
+  .term-legend-row {{
+    padding: 1px 0 !important;
+    font-size: 9px !important;
+    line-height: 1.25 !important;
+  }}
+  .term-legend-code {{
+    min-width: 75px !important;
+  }}
+  .term-legend-code.teacher-code {{
+    min-width: 45px !important;
   }}
 }}
 
@@ -1867,6 +2121,156 @@ if (tabs.length > 0) {
 """
 
 
+# ----------------------------------------------------------------- Term Reference Section
+
+
+def _render_term_reference_section(problem: Problem, solution: Solution, batch_id: str) -> str:
+    """Render a clean two-column reference card below the timetable of a specific term.
+
+    Column 1: All Theory and Sessional courses with their code and title.
+    Column 2: All teachers assigned to the term courses with their shortcut code and full name.
+    """
+    # 1. Collect all courses for this batch
+    batch_courses: list = []
+    seen_codes = set()
+    for c in problem.courses:
+        if c.batch == batch_id and c.code not in seen_codes:
+            seen_codes.add(c.code)
+            batch_courses.append(c)
+
+    for a in solution.assignments:
+        if a.event.batch_id == batch_id and a.event.course.code not in seen_codes:
+            seen_codes.add(a.event.course.code)
+            batch_courses.append(a.event.course)
+
+    theory_courses = [c for c in batch_courses if c.is_theory]
+    sessional_courses = [c for c in batch_courses if not c.is_theory]
+
+    theory_courses.sort(key=lambda c: c.code)
+    sessional_courses.sort(key=lambda c: c.code)
+
+    # 2. Collect all teachers assigned to courses of this term
+    teacher_courses_map: dict[str, set[str]] = defaultdict(set)
+    for a in solution.assignments:
+        if a.event.batch_id == batch_id:
+            for tid in a.event.teacher_ids:
+                teacher_courses_map[tid].add(a.event.course.code)
+
+    for c in batch_courses:
+        if c.teacher1_id:
+            teacher_courses_map[c.teacher1_id].add(c.code)
+        if c.teacher2_id:
+            teacher_courses_map[c.teacher2_id].add(c.code)
+        if isinstance(c.teachers, dict):
+            for s, val in c.teachers.items():
+                if isinstance(val, str) and val:
+                    teacher_courses_map[val].add(c.code)
+                elif isinstance(val, dict):
+                    for g, gval in val.items():
+                        if isinstance(gval, list):
+                            for tid in gval:
+                                if tid:
+                                    teacher_courses_map[tid].add(c.code)
+                        elif isinstance(gval, str) and gval:
+                            teacher_courses_map[gval].add(c.code)
+
+    teachers = [problem.teachers[tid] for tid in teacher_courses_map.keys() if tid in problem.teachers]
+    dept_order = ["CSE", "ECE", "EEE", "ME", "MATH", "PHY", "CHEM", "HUM"]
+    teachers.sort(
+        key=lambda t: (
+            dept_order.index(t.department) if t.department in dept_order else 99,
+            t.short.upper(),
+            t.name,
+        )
+    )
+
+    # Format Column 1: Courses (Theory & Sessional)
+    col1_parts = []
+    if theory_courses:
+        col1_parts.append("<div class='term-legend-subheading'>Theory Courses</div>")
+        col1_parts.append("<div class='term-legend-list'>")
+        for c in theory_courses:
+            credit_info = f" ({c.credit:.2f} Cr.)" if getattr(c, "credit", None) else ""
+            col1_parts.append(
+                f"<div class='term-legend-row'>"
+                f"<span class='term-legend-code'>{html.escape(c.code)}</span>"
+                f"<span class='term-legend-sep'>:</span>"
+                f"<span class='term-legend-name'>{html.escape(c.title)}{html.escape(credit_info)}</span>"
+                f"</div>"
+            )
+        col1_parts.append("</div>")
+
+    if sessional_courses:
+        margin_top = " style='margin-top: 0.85rem;'" if theory_courses else ""
+        col1_parts.append(f"<div class='term-legend-subheading'{margin_top}>Sessional / Laboratory Courses</div>")
+        col1_parts.append("<div class='term-legend-list'>")
+        for c in sessional_courses:
+            credit_info = f" ({c.credit:.2f} Cr.)" if getattr(c, "credit", None) else ""
+            clean_code = c.code.replace(" ", "").upper()
+            display_code = "CSE 3200" if "3200" in clean_code else ("CSE 4000" if "4000" in clean_code else c.code)
+            col1_parts.append(
+                f"<div class='term-legend-row'>"
+                f"<span class='term-legend-code sessional-code'>{html.escape(display_code)}</span>"
+                f"<span class='term-legend-sep'>:</span>"
+                f"<span class='term-legend-name'>{html.escape(c.title)}{html.escape(credit_info)}</span>"
+                f"</div>"
+            )
+        col1_parts.append("</div>")
+
+    if not col1_parts:
+        col1_parts.append("<div style='color: var(--text-dim); font-size: 0.85rem;'>No courses listed for this term.</div>")
+
+    # Format Column 2: Teachers (Shortcut code & full name)
+    col2_parts = []
+    if teachers:
+        col2_parts.append("<div class='term-legend-subheading'>Assigned Faculty Members</div>")
+        col2_parts.append("<div class='term-legend-list'>")
+        for t in teachers:
+            dept_info = f" ({t.department})" if t.department else ""
+            assigned_c_list = sorted(teacher_courses_map.get(t.id, []))
+            courses_tag = (
+                f"<span class='term-legend-courses' title='Courses taught in Term {html.escape(batch_id)}'>"
+                f"[{', '.join(assigned_c_list)}]</span>"
+                if assigned_c_list
+                else ""
+            )
+            col2_parts.append(
+                f"<div class='term-legend-row'>"
+                f"<span class='term-legend-code teacher-code'>{html.escape(t.short)}</span>"
+                f"<span class='term-legend-sep'>:</span>"
+                f"<span class='term-legend-name'>{html.escape(t.name)}<span class='term-legend-dept'>{html.escape(dept_info)}</span>{courses_tag}</span>"
+                f"</div>"
+            )
+        col2_parts.append("</div>")
+    else:
+        col2_parts.append("<div style='color: var(--text-dim); font-size: 0.85rem;'>No teachers assigned for this term.</div>")
+
+    return f"""
+    <div class="term-legend-card">
+      <div class="term-legend-card-header">
+        <span class="term-legend-card-title">📋 Term {html.escape(batch_id)} Academic Curriculum & Faculty Reference</span>
+        <span class="term-legend-card-subtitle">{len(theory_courses)} Theory · {len(sessional_courses)} Sessional · {len(teachers)} Teachers Assigned</span>
+      </div>
+      <div class="term-legend-grid">
+        <div class="term-legend-col">
+          <div class="term-legend-col-header">
+            <span class="term-legend-icon">📖</span>
+            <h4>Courses (Theory & Sessional)</h4>
+          </div>
+          {''.join(col1_parts)}
+        </div>
+        <div class="term-legend-col">
+          <div class="term-legend-col-header">
+            <span class="term-legend-icon">👨‍🏫</span>
+            <h4>Teachers (Shortcut Code & Name)</h4>
+          </div>
+          {''.join(col2_parts)}
+        </div>
+      </div>
+    </div>
+    """
+
+
 # ----------------------------------------------------------------- Main HTML Generation
 
 
@@ -2085,6 +2489,9 @@ def write_html(
             blocks.append(f"<h2>Section {html.escape(section)}</h2>")
             blocks.append(f"<div class='scroll'>{_render_table(problem, cells)}</div>")
         
+        # Add two-column course & teacher reference below the term routine table(s)
+        blocks.append(_render_term_reference_section(problem, solution, batch.id))
+
         # Download bar below the term routine
         download_bar = f"""
         <div class="routine-download-bar">

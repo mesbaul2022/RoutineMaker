@@ -546,8 +546,12 @@ function renderCourseRow(batch, course) {
     ? `<div style="font-size: 0.75rem; color: #5B21B6; font-weight: 600; margin-top: 0.2rem;">🔗 Paired: ${escapeHtml(course.paired_course_id)}</div>`
     : "";
 
+  const isProject = course.id.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().startsWith("CSE3200") || course.id.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().startsWith("CSE4000");
+
   let teachersStr = "";
-  if (isOff) {
+  if (isProject) {
+    teachersStr = `<span class="badge" style="background: #EFF6FF; color: #1D4ED8; font-weight: 600;">Individual Supervision</span>`;
+  } else if (isOff) {
     teachersStr = `<span class="badge" style="background: #F1F5F9; color: #64748B; border: 1px dashed #CBD5E1; font-weight: 500;">No Teacher Assigned (Term OFF)</span>`;
   } else {
     const t1 = state.teachers.find((t) => t.id === course.teacher1_id);
@@ -561,13 +565,17 @@ function renderCourseRow(batch, course) {
     }
   }
 
-  const loadStr = isTheory
-    ? `${course.periods_per_week || 3} periods / wk`
-    : (is075 ? `1 block / 2 wks` : `${course.blocks_per_week || 1} block / wk`);
+  const loadStr = isProject
+    ? `${course.blocks_per_week || 1} weekly slot(s) [Section-wide]`
+    : (isTheory
+        ? `${course.periods_per_week || 3} periods / wk`
+        : (is075 ? `1 block / 2 wks` : `${course.blocks_per_week || 1} block / wk`));
+
+  const displayCode = course.display_code || course.id;
 
   return `
     <tr>
-      <td><strong style="color: var(--navy-deep);">${escapeHtml(course.id)}</strong></td>
+      <td><strong style="color: var(--navy-deep);">${escapeHtml(displayCode)}</strong></td>
       <td>
         <div style="font-weight: 600; display: flex; align-items: center; flex-wrap: wrap;">
           ${escapeHtml(course.title)}
@@ -938,13 +946,35 @@ function renderCourseAssignmentCard(batch, course, assignMap) {
     ? `<div class="warning-box"><span>⚠️</span> <span>Warning: <b>${escapeHtml(teacher2.full_name)}</b> is marked <b>ON LEAVE</b>!</span></div>`
     : "";
 
+  const safeCid = course.id.replace(/[^a-zA-Z0-9]/g, "_");
+  const isProject = course.id.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().startsWith("CSE3200") || course.id.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().startsWith("CSE4000");
+
+  if (isProject) {
+    const dispCode = course.display_code || (course.id.includes("3200") ? "CSE 3200" : "CSE 4000");
+    const weeklySlotCount = course.blocks_per_week || (course.credit === 3.0 ? 2 : 1);
+    return `
+      <div class="course-card" id="assign-card-${safeCid}">
+        <div class="course-card-header">
+          <div class="course-title-group" style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
+            <span class="course-code">${escapeHtml(dispCode)}</span>
+            <span class="course-name">${escapeHtml(course.title)}</span>
+            ${catBadge}
+            <span class="badge" style="background: #EFF6FF; color: #1D4ED8; font-weight: 700;">${course.credit || 1.5} cr · ${weeklySlotCount} weekly slot(s)</span>
+            <span class="badge" style="background: #ECFDF5; color: #047857; font-weight: 700;">Section-Wide (Not Group-Wise)</span>
+          </div>
+        </div>
+        <div style="margin-top: 0.75rem; padding: 0.85rem 1rem; background: #F0FDF4; border-radius: var(--radius); border-left: 4px solid #10B981; font-size: 0.85rem; color: #065F46; line-height: 1.5;">
+          🎓 <b>Individual Faculty Supervision:</b> This course is conducted by individually assigned faculty supervisors (1–2 students per supervisor). No classroom teachers are assigned. The scheduler automatically assigns ${weeklySlotCount} weekly 3-period slot(s) for each section (Section A and Section B, section-wide). In the timetable, only the course code <b>${escapeHtml(dispCode)}</b> is displayed without teacher names.
+        </div>
+      </div>
+    `;
+  }
+
   const ruleHint = isTheory
     ? `<b>Co-teaching Model (Both Section A & B):</b> Teachers are assigned to the whole course, not per-section. Both sections receive 3 periods/week: 1 personal class by Teacher 1, 1 personal class by Teacher 2, and 1 shared class (T1/T2) for each section.`
     : (is075
         ? `<b>0.75 Credit Bi-weekly Lab:</b> Co-taught by Teacher 1 + Teacher 2. Students attend 1 session every 2 weeks${course.paired_course_id ? ` (alternating with ${escapeHtml(course.paired_course_id)})` : ''}.`
         : `<b>Co-teaching Model:</b> Both teachers co-teach laboratory sessions across all sections and groups.`);
-
-  const safeCid = course.id.replace(/[^a-zA-Z0-9]/g, "_");
 
   return `
     <div class="course-card" id="assign-card-${safeCid}">

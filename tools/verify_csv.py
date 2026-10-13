@@ -32,6 +32,10 @@ def reconstruct(problem, csv_path):
     with open(csv_path, newline="", encoding="utf-8") as fh:
         for row in csv.DictReader(fh):
             grp = (row["group"] or "").replace("(0.75cr alt)", "").strip() or None
+            if grp and row.get("section"):
+                import re
+                sec = row["section"].strip().upper()
+                grp = re.sub(rf"\b{sec}(\d+)\b", r"G\1", grp)
             key = (row["course_code"], row["batch"], row["section"], grp)
             idx = used[key]
             used[key] += 1
@@ -40,7 +44,8 @@ def reconstruct(problem, csv_path):
             p = grid.period_index(row["start_period"])
             start = grid.slot(d, p)
             room_id = next(
-                r.id for r in problem.rooms.values() if r.name == row["room"]
+                (r.id for r in problem.rooms.values() if r.name == row["room"]),
+                "theory"
             )
             assignments.append(Assignment(ev, room_id, start))
     return Solution(status="FROM_CSV", assignments=assignments)

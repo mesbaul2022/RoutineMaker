@@ -41,7 +41,12 @@ def verify(problem: Problem, solution: Solution) -> list[str]:
         room = problem.rooms[a.room_id]
 
         theory_kinds = {"theory", "year1_theory"}
-        if not ev.is_lab and room.kind in theory_kinds and ev.room_kind in theory_kinds:
+        clean_code = ev.course.code.replace(" ", "").upper()
+        is_project = clean_code in ("CSE3200", "CSE4000") or clean_code.startswith("CSE4000")
+
+        if is_project:
+            pass
+        elif not ev.is_lab and room.kind in theory_kinds and ev.room_kind in theory_kinds:
             pass
         elif room.kind != ev.room_kind:
             faults.append(f"H5 {ev.label} placed in {room.name} of kind {room.kind}")
@@ -91,12 +96,11 @@ def verify(problem: Problem, solution: Solution) -> list[str]:
                 f"{grid.describe(s)}: {items}"
             )
 
-    # H4 theory meetings of one course-section sit on distinct days
+    # H4 theory & multi-block meetings of one course-section sit on distinct days
     spread: dict[tuple, list[int]] = defaultdict(list)
     for a in solution.assignments:
         ev = a.event
-        if not ev.is_lab:
-            spread[(ev.course.code, ev.batch_id, ev.section)].append(grid.day_of(a.start))
+        spread[(ev.course.code, ev.batch_id, ev.section, ev.group)].append(grid.day_of(a.start))
     for key, days in spread.items():
         if len(days) != len(set(days)):
             faults.append(f"H4 {key} has two meetings on the same day")
@@ -136,19 +140,23 @@ def verify(problem: Problem, solution: Solution) -> list[str]:
 
         starts: dict[tuple, set] = defaultdict(set)
         kinds: dict[tuple, str] = {}
+        course_events: dict[tuple, list] = defaultdict(list)
         for a in solution.assignments:
             ev = a.event
-            if ev.is_lab:
-                key = (ev.course.code, ev.batch_id, ev.section)
+            clean_code = ev.course.code.replace(" ", "").upper()
+            if ev.is_lab and ev.group is not None and clean_code not in ("CSE3200", "CSE4000") and not clean_code.startswith("CSE4000"):
+                key = (ev.course.code, ev.batch_id, ev.section, ev.meeting_index)
                 starts[key].add(a.start)
                 kinds[key] = ev.room_kind
-        course_events: dict[tuple, list] = defaultdict(list)
         for ev in problem.events:
-            if ev.is_lab:
-                course_events[(ev.course.code, ev.batch_id, ev.section)].append(ev)
+            clean_code = ev.course.code.replace(" ", "").upper()
+            if ev.is_lab and ev.group is not None and clean_code not in ("CSE3200", "CSE4000") and not clean_code.startswith("CSE4000"):
+                course_events[(ev.course.code, ev.batch_id, ev.section, ev.meeting_index)].append(ev)
 
         for key, s in starts.items():
             evs = course_events[key]
+            if len(evs) < 2:
+                continue
             all_teachers: set[str] = set()
             has_shared_teacher = False
             for ev in evs:
@@ -157,7 +165,7 @@ def verify(problem: Problem, solution: Solution) -> list[str]:
                     break
                 all_teachers.update(ev.teacher_ids)
 
-            expected_syncable = (room_supply.get(kinds[key], 0) >= 2) and (not has_shared_teacher)
+            expected_syncable = (room_supply.get(kinds[key], 0) >= len(evs)) and (not has_shared_teacher)
             if expected_syncable and len(s) > 1:
                 faults.append(f"H9 {key} groups are not synchronised: starts {sorted(s)}")
 

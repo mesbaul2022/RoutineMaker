@@ -245,9 +245,17 @@ def load_problem_from_db(db: Session, options_override: Optional[dict] = None) -
 
         course_credit = c.credit or (3.0 if c.kind == THEORY else (1.5 if (c.blocks_per_week or 1) == 1 else 3.0))
 
+        clean_id = c.id.replace(" ", "").upper()
+        if clean_id.startswith("CSE3200"):
+            course_code = "CSE 3200"
+        elif clean_id.startswith("CSE4000"):
+            course_code = "CSE 4000"
+        else:
+            course_code = c.id
+
         courses.append(
             RoutineCourse(
-                code=c.id,
+                code=course_code,
                 title=c.title,
                 batch=c.batch_id,
                 kind=c.kind,
@@ -287,6 +295,30 @@ def _build_events(
     for course in courses:
         batch = batches.get(course.batch)
         if not batch:
+            continue
+
+        clean_code = course.code.replace(" ", "").upper()
+        if clean_code in ("CSE3200", "CSE4000") or clean_code.startswith("CSE4000"):
+            # Project / Thesis courses: section-wide weekly slot (not group-wise)
+            # Supervised individually, no classroom teachers assigned
+            n_blocks = course.blocks_per_week or (2 if course.credit == 3.0 else 1)
+            for section in batch.sections:
+                for k in range(n_blocks):
+                    events.append(
+                        Event(
+                            eid=eid,
+                            course=course,
+                            batch_id=batch.id,
+                            section=section,
+                            group=None,
+                            length=grid.lab_periods,
+                            teacher_ids=[],
+                            room_kind=course.room_kind,
+                            size=batch.section_size,
+                            meeting_index=k,
+                        )
+                    )
+                    eid += 1
             continue
 
         t1 = course.teacher1_id
@@ -448,6 +480,9 @@ def validate_db_problem(problem: Problem, db: Session | None = None) -> tuple[li
 
     # 1. Teacher existence and completeness
     for ev in problem.events:
+        clean_code = ev.course.code.replace(" ", "").upper()
+        if clean_code in ("CSE3200", "CSE4000") or clean_code.startswith("CSE4000"):
+            continue
         if not ev.teacher_ids:
             errors.append(f"{ev.label}: no teacher assigned to this meeting.")
             continue
@@ -513,7 +548,13 @@ def validate_db_problem(problem: Problem, db: Session | None = None) -> tuple[li
     # 5. Room supply
     for kind in {r.kind for r in problem.rooms.values()}:
         supply = sum(1 for r in problem.rooms.values() if r.kind == kind)
-        demand = sum(ev.length for ev in problem.events if ev.room_kind == kind)
+        demand = sum(
+            ev.length
+            for ev in problem.events
+            if ev.room_kind == kind
+            and ev.course.code.replace(" ", "").upper() not in ("CSE3200", "CSE4000")
+            and not ev.course.code.replace(" ", "").upper().startswith("CSE4000")
+        )
         capacity = supply * grid.n_slots
         if demand > capacity:
             errors.append(

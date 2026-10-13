@@ -146,6 +146,7 @@ class CourseUpdate(BaseModel):
 class CourseOut(CourseBase):
     model_config = ConfigDict(from_attributes=True)
     id: str
+    display_code: Optional[str] = None
     teacher1_name: Optional[str] = None
     teacher1_short: Optional[str] = None
     teacher2_name: Optional[str] = None
@@ -324,8 +325,17 @@ def delete_teacher(teacher_id: str, db: Session = Depends(get_db)):
 def _course_to_out(c: CourseModel, db: Session) -> CourseOut:
     t1 = db.query(TeacherModel).filter_by(id=c.teacher1_id).first() if c.teacher1_id else None
     t2 = db.query(TeacherModel).filter_by(id=c.teacher2_id).first() if c.teacher2_id else None
+    clean_id = c.id.replace(" ", "").upper()
+    if clean_id.startswith("CSE3200"):
+        disp = "CSE 3200"
+    elif clean_id.startswith("CSE4000"):
+        disp = "CSE 4000"
+    else:
+        disp = c.id
+
     return CourseOut(
         id=c.id,
+        display_code=disp,
         title=c.title,
         batch_id=c.batch_id,
         kind=c.kind,
@@ -345,6 +355,11 @@ def _course_to_out(c: CourseModel, db: Session) -> CourseOut:
 
 
 def _sync_course_assignments(course: CourseModel, db: Session):
+    clean_id = course.id.replace(" ", "").upper()
+    if clean_id in ("CSE3200", "CSE4000") or clean_id.startswith("CSE4000"):
+        db.query(AssignmentModel).filter_by(course_id=course.id).delete()
+        return
+
     batch = db.query(BatchModel).filter_by(id=course.batch_id).first()
     sections = [s.strip() for s in batch.sections.split(",") if s.strip()] if batch else ["A", "B"]
     groups = [g.strip() for g in batch.groups.split(",") if g.strip()] if batch else ["G1", "G2"]

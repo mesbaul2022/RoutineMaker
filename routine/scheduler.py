@@ -228,7 +228,7 @@ class RoutineScheduler:
                 self.model.AddAtMostOne(lits)
 
     def _c_theory_spread_and_symmetry(self) -> None:
-        """H4. Meetings of one theory course fall on distinct days.
+        """H4. Meetings of one theory or multi-block course for the same cohort fall on distinct days.
 
         Also breaks the symmetry between interchangeable sibling meetings by
         forcing them into increasing slot order. Without this the solver wastes
@@ -236,9 +236,7 @@ class RoutineScheduler:
         """
         groups: dict[tuple, list[Event]] = {}
         for ev in self.p.events:
-            if ev.is_lab:
-                continue
-            groups.setdefault((ev.course.code, ev.batch_id, ev.section), []).append(ev)
+            groups.setdefault((ev.course.code, ev.batch_id, ev.section, ev.group), []).append(ev)
 
         for key, evs in groups.items():
             evs.sort(key=lambda e: e.meeting_index)

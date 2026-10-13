@@ -303,8 +303,11 @@ def _render_table(problem: Problem, cells) -> str:
         if i in break_after:
             br = break_after[i]
             head.append(
-                f"<th class='brk'><span>{html.escape(br.name)}</span>"
-                f"<span class='ptime'>{br.start}-{br.end}</span></th>"
+                f"<th class='brk'>"
+                f"<div class='brk-header-wrap'>"
+                f"<span class='brk-title'>{html.escape(br.name)}</span>"
+                f"<span class='brk-time'>{html.escape(br.start)}–{html.escape(br.end)}</span>"
+                f"</div></th>"
             )
     head.append("</tr>")
 
@@ -1319,9 +1322,9 @@ table.routine {{
 
 table.routine th, table.routine td {{
   border: 1px solid var(--border);
-  padding: 0.45rem 0.6rem;
-  vertical-align: top;
-  text-align: left;
+  padding: 0.45rem 0.5rem;
+  vertical-align: middle;
+  text-align: center;
 }}
 
 table.routine thead th {{
@@ -1330,42 +1333,75 @@ table.routine thead th {{
   font-weight: 700;
   font-size: 0.8rem;
   white-space: nowrap;
+  text-align: center;
+  vertical-align: middle;
 }}
 
-.pname {{ display: block; }}
-.ptime {{ display: block; color: var(--text-dim); font-weight: 500; font-size: 0.72rem; }}
+.pname {{
+  display: block;
+  font-weight: 700;
+  text-align: center;
+}}
+
+.ptime {{
+  display: block;
+  color: var(--text-dim);
+  font-weight: 500;
+  font-size: 0.72rem;
+  text-align: center;
+}}
 
 th.corner, th.day {{
   background: var(--bg-header-alt);
-  width: 110px;
+  width: 90px;
+  min-width: 80px;
   font-size: 0.85rem;
   font-weight: 700;
+  text-align: center;
+  vertical-align: middle;
 }}
 
 td.free {{
   background: #FFFFFF;
+  text-align: center;
+  vertical-align: middle;
 }}
 
 td.theory {{
   background: #FFFFFF;
+  text-align: center;
+  vertical-align: middle;
 }}
 
 td.lab {{
   background: var(--lab-bg);
   border-left: 3px solid var(--lab-border);
+  text-align: center;
+  vertical-align: middle;
 }}
 
-.ent {{ font-size: 0.82rem; }}
+.ent {{
+  font-size: 0.82rem;
+  text-align: center;
+}}
+
+.ent b {{
+  display: inline-block;
+  text-align: center;
+}}
+
 .ent + .ent {{
   margin-top: 0.35rem;
   padding-top: 0.35rem;
   border-top: 1px dashed var(--border);
+  text-align: center;
 }}
 
 .grp {{
   color: var(--lab-text);
   font-size: 0.76rem;
   font-weight: 600;
+  text-align: center;
 }}
 
 .meta {{
@@ -1373,17 +1409,48 @@ td.lab {{
   color: var(--text-dim);
   font-size: 0.74rem;
   margin-top: 0.15rem;
+  text-align: center;
 }}
 
 .brk {{
   background: repeating-linear-gradient(135deg, rgba(203, 213, 225, 0.4) 0 5px, #F8FAFC 5px 10px);
-  width: 44px;
+  width: 68px;
+  min-width: 64px;
   font-size: 0.68rem;
   color: var(--break-text);
   text-align: center;
+  vertical-align: middle;
+  padding: 0.35rem 0.2rem;
 }}
 
-.brk span {{ writing-mode: vertical-rl; font-weight: 600; }}
+.brk-header-wrap {{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  text-align: center;
+}}
+
+.brk-title {{
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-main);
+  text-align: center;
+  line-height: 1.25;
+  text-transform: capitalize;
+}}
+
+.brk-time {{
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #475569;
+  text-align: center;
+  white-space: nowrap;
+  line-height: 1.2;
+}}
 
 footer {{
   margin-top: 3rem;
@@ -1701,14 +1768,49 @@ footer {{
   }}
   table.routine th, table.routine td, table.master-table th, table.master-table td {{
     border-color: #334155 !important;
+    text-align: center !important;
+    vertical-align: middle !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }}
   table.routine thead th, th.corner, th.day, table.master-table thead th {{
     background: #E2E8F0 !important;
     color: #000000 !important;
+    text-align: center !important;
+    vertical-align: middle !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }}
+  th.corner, th.day {{
+    width: 80px !important;
+    text-align: center !important;
+  }}
+  .ent, .meta, .grp, .pname, .ptime {{
+    text-align: center !important;
+  }}
+  .brk {{
+    width: 68px !important;
+    min-width: 64px !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+    padding: 2px !important;
+  }}
+  .brk-header-wrap {{
+    text-align: center !important;
+  }}
+  .brk-title {{
+    font-size: 8px !important;
+    font-weight: 700 !important;
+    line-height: 1.2 !important;
+    text-align: center !important;
+    display: block !important;
+  }}
+  .brk-time {{
+    font-size: 7.5px !important;
+    font-weight: 600 !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    display: block !important;
   }}
   td.lab, td.m-cell-lab {{
     background: #FEF9C3 !important;
@@ -1987,7 +2089,23 @@ function downloadElementAsPDF(element, filename, format, btn) {
       t.style.breakInside = 'avoid';
     });
     clone.querySelectorAll('table.routine th, table.routine td').forEach(td => {
-      td.style.padding = '3px 5px';
+      td.style.padding = '4px 3px';
+      td.style.textAlign = 'center';
+      td.style.verticalAlign = 'middle';
+    });
+    clone.querySelectorAll('table.routine th.corner, table.routine th.day').forEach(th => {
+      th.style.width = '80px';
+      th.style.textAlign = 'center';
+    });
+    clone.querySelectorAll('table.routine th.brk, table.routine td.brk').forEach(brk => {
+      brk.style.width = '68px';
+      brk.style.minWidth = '64px';
+      brk.style.textAlign = 'center';
+      brk.style.verticalAlign = 'middle';
+      brk.style.padding = '3px 2px';
+    });
+    clone.querySelectorAll('.ent, .meta, .grp, .pname, .ptime, .brk-title, .brk-time, .brk-header-wrap').forEach(el => {
+      el.style.textAlign = 'center';
     });
 
     // Clean page break before each subsequent section (e.g. Section B on page 2)
@@ -2017,7 +2135,7 @@ function downloadElementAsPDF(element, filename, format, btn) {
   container.style.margin = '0 auto';
   container.style.color = '#000000';
   container.style.fontFamily = '"Source Sans 3", system-ui, -apple-system, sans-serif';
-  container.style.width = isWide ? '1700px' : '1020px';
+  container.style.width = isWide ? '1700px' : '1050px';
 
   const headerHtml = `
     <div style="text-align: center; margin-bottom: 10px; padding: 6px 0 6px; border-bottom: 2px solid #0F172A;">
@@ -2037,7 +2155,7 @@ function downloadElementAsPDF(element, filename, format, btn) {
     filename: filename,
     image: { type: 'jpeg', quality: 0.98 },
     html2canvas: {
-      scale: 1.5,
+      scale: 2,
       useCORS: true,
       logging: false,
       scrollY: 0,

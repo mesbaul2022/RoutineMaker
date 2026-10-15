@@ -251,6 +251,8 @@ def load_problem_from_db(db: Session, options_override: Optional[dict] = None) -
             course_code = "CSE 3200"
         elif clean_id.startswith("CSE4000"):
             course_code = "CSE 4000"
+        elif clean_id == "CSE3230":
+            course_code = "CSE 3230"
         else:
             course_code = c.id
 
@@ -260,7 +262,7 @@ def load_problem_from_db(db: Session, options_override: Optional[dict] = None) -
                 title=c.title,
                 batch=c.batch_id,
                 kind=c.kind,
-                room_kind=c.room_kind,
+                room_kind="seminar_501" if clean_id == "CSE3230" else c.room_kind,
                 periods_per_week=c.periods_per_week or (3 if c.kind == THEORY else 0),
                 blocks_per_week=c.blocks_per_week or (1 if c.kind != THEORY else 0),
                 credit=course_credit,
@@ -320,6 +322,38 @@ def _build_events(
                         )
                     )
                     eid += 1
+            continue
+
+        if clean_code == "CSE3230":
+            # CSE 3230: Technical Writing and Seminar:
+            # Taken jointly for both Section A and Section B at the same time in CSE Room 501
+            lab_tids = [t for t in [course.teacher1_id, course.teacher2_id] if t]
+            if not lab_tids:
+                all_g_tids = []
+                for s in batch.sections:
+                    for g in batch.groups:
+                        for tid in course.lab_teachers(s, g):
+                            if tid and tid not in all_g_tids:
+                                all_g_tids.append(tid)
+                lab_tids = all_g_tids
+            if not lab_tids:
+                lab_tids = ["km_azharul_hasan", "kazi_saeed_alam"]
+
+            events.append(
+                Event(
+                    eid=eid,
+                    course=course,
+                    batch_id=batch.id,
+                    section="A/B",
+                    group=None,
+                    length=grid.lab_periods,
+                    teacher_ids=lab_tids,
+                    room_kind="seminar_501",
+                    size=min(batch.section_size, 70),
+                    meeting_index=0,
+                )
+            )
+            eid += 1
             continue
 
         t1 = course.teacher1_id

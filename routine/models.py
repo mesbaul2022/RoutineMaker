@@ -140,6 +140,8 @@ class Problem:
 
     def cohorts_of(self, event: Event) -> list[tuple]:
         batch = self.batches[event.batch_id]
+        if event.section in ("A/B", "ALL", "A+B", "AB"):
+            return [(event.batch_id, s, g) for s in batch.sections for g in batch.groups]
         if event.group is None:
             return [(event.batch_id, event.section, g) for g in batch.groups]
         if "/" in event.group or "," in event.group:

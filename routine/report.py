@@ -182,7 +182,8 @@ def _section_grid(problem: Problem, solution: Solution, batch_id: str, section: 
     relevant = [
         a
         for a in solution.assignments
-        if a.event.batch_id == batch_id and a.event.section == section
+        if a.event.batch_id == batch_id
+        and (a.event.section == section or a.event.section in ("A/B", "ALL", "A+B", "AB"))
     ]
     merged: dict[tuple, dict] = {}
     for a in relevant:
@@ -224,13 +225,20 @@ def _section_grid(problem: Problem, solution: Solution, batch_id: str, section: 
         else:
             t_str = ", ".join(problem.teachers[t].short for t in ev.teacher_ids if t in problem.teachers)
 
-        grp_label = format_display_group(ev.group, ev.section)
-        if ev.paired_event_id is not None:
-            grp_label = f"{grp_label} (0.75cr alt)" if grp_label else "(0.75cr alt)"
+        if ev.section in ("A/B", "ALL", "A+B", "AB"):
+            code_display = f"{ev.course.code} {ev.section}"
+            if "CSE3230" in code_display.replace(" ", ""):
+                code_display = f"CSE 3230 {ev.section}"
+            grp_label = ""
+        else:
+            code_display = ev.course.code
+            grp_label = format_display_group(ev.group, ev.section)
+            if ev.paired_event_id is not None:
+                grp_label = f"{grp_label} (0.75cr alt)" if grp_label else "(0.75cr alt)"
 
         bucket["entries"].append(
             {
-                "code": ev.course.code,
+                "code": code_display,
                 "group": grp_label,
                 "room": problem.rooms[a.room_id].name,
                 "teachers": t_str,

@@ -59,6 +59,18 @@ def verify(problem: Problem, solution: Solution) -> list[str]:
         elif clean_code == "CSE3230":
             if a.room_id != "CSE-501":
                 faults.append(f"H5 {ev.label} must be placed in CSE Room 501 (got {room.name})")
+        elif clean_code in ("EEE1208", "EEE2118"):
+            if a.room_id != "EEE-LAB":
+                faults.append(f"H5 {ev.label} must be placed in EEE Lab (got {room.name})")
+        elif clean_code == "ME2170":
+            if a.room_id != "MECHA-LAB":
+                faults.append(f"H5 {ev.label} must be placed in Mecha Lab (got {room.name})")
+        elif clean_code in ("ECE2214", "ECE2208"):
+            if a.room_id != "ECE-104":
+                faults.append(f"H5 {ev.label} must be placed in ECE Lab (got {room.name})")
+        elif clean_code == "CHEM1208":
+            if a.room_id != "CHEM-LAB":
+                faults.append(f"H5 {ev.label} must be placed in Chemistry Lab (got {room.name})")
         elif ev.room_kind in software_kinds:
             if a.room_id not in software_lab_rooms:
                 faults.append(f"H5 {ev.label} placed in non-software room {room.name}")

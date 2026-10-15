@@ -331,6 +331,7 @@ def _build_events(
                         )
                     )
                     eid += 1
+                else:
                     # Standard 1.5 or 3.0 cr weekly lab (meets every week for each group)
                     # All labs must be conducted by both assigned teachers
                     for gi, group in enumerate(batch.groups):

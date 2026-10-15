@@ -188,6 +188,26 @@ class Problem:
             if "CSE-501" in self.rooms:
                 return [self.rooms["CSE-501"]]
 
+        # Non-Departmental Specific Labs
+        if event.room_kind == "eee_lab" or clean_code in ("EEE1208", "EEE2118"):
+            if "EEE-LAB" in self.rooms:
+                return [self.rooms["EEE-LAB"]]
+        if event.room_kind == "mecha_lab" or clean_code == "ME2170":
+            if "MECHA-LAB" in self.rooms:
+                return [self.rooms["MECHA-LAB"]]
+        if event.room_kind == "ece_lab" or clean_code in ("ECE2214", "ECE2208"):
+            if "ECE-104" in self.rooms:
+                return [self.rooms["ECE-104"]]
+        if event.room_kind == "chem_lab" or clean_code == "CHEM1208":
+            if "CHEM-LAB" in self.rooms:
+                return [self.rooms["CHEM-LAB"]]
+        if event.room_kind == "hum_lab" or clean_code == "HUM1108":
+            if "HUM-LAB" in self.rooms:
+                return [self.rooms["HUM-LAB"]]
+        if event.room_kind == "phy_lab" or clean_code == "PHY1108":
+            if "PHY-LAB" in self.rooms:
+                return [self.rooms["PHY-LAB"]]
+
         # Departmental Software Labs: CSE Lab 103, 104, 201, 202, 305, and dual-use backup CSE Room 306
         if event.room_kind in ("cse_lab", "year1_cse_lab", "ai_lab", "network_lab"):
             software_ids = ["CSE-103", "CSE-104", "CSE-201", "CSE-202", "CSE-305", "CSE-306"]

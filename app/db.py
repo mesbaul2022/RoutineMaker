@@ -201,7 +201,7 @@ def _migrate_schema():
             ("CHEM1207", "Chemistry", "1-2", "theory", "theory", 3, None, 3.0, "core", None),
             ("CHEM1208", "Chemistry Laboratory", "1-2", "sessional", "chem_lab", None, 1, 0.75, "core", None),
             ("EEE1207", "Basic Electrical Engineering", "1-2", "theory", "theory", 3, None, 3.0, "core", None),
-            ("EEE1208", "Basic Electrical Engineering Laboratory", "1-2", "sessional", "ece_lab", None, 1, 1.5, "core", None),
+            ("EEE1208", "Basic Electrical Engineering Laboratory", "1-2", "sessional", "eee_lab", None, 1, 1.5, "core", None),
             ("MATH1207", "Coordinate Geometry and Differential Equations", "1-2", "theory", "theory", 3, None, 3.0, "core", None),
 
             # --- 3rd Year 1st Term (3-1) ---
@@ -374,7 +374,9 @@ def _migrate_schema():
             ("CSE-107", "CSE Lab 107", "hardware_lab_107", 35),
             ("CSE-108", "CSE Lab 108", "hardware_lab_108", 35),
             # Non-Departmental Labs
-            ("ECE-104", "ECE Lab 104", "ece_lab", 35),
+            ("ECE-104", "ECE Lab", "ece_lab", 35),
+            ("EEE-LAB", "EEE Lab", "eee_lab", 35),
+            ("MECHA-LAB", "Mecha Lab", "mecha_lab", 35),
             ("CHEM-LAB", "Chemistry Lab", "chem_lab", 35),
             ("HUM-LAB", "English Language Lab", "hum_lab", 35),
             ("PHY-LAB", "Physics Lab", "phy_lab", 35),
@@ -414,7 +416,7 @@ def _migrate_schema():
                 (new_id, old_id),
             )
 
-        # Update course room_kind classifications
+        # Update course room_kind, credits and assignment rules
         cur.execute("UPDATE courses SET room_kind = 'theory' WHERE kind = 'theory'")
         cur.execute("UPDATE courses SET room_kind = 'hardware_lab_107' WHERE id IN ('CSE3106', 'CSE2104')")
         cur.execute("UPDATE courses SET room_kind = 'hardware_lab_108' WHERE id = 'CSE1204'")
@@ -422,10 +424,24 @@ def _migrate_schema():
         cur.execute("UPDATE courses SET room_kind = 'chem_lab' WHERE id = 'CHEM1208'")
         cur.execute("UPDATE courses SET room_kind = 'hum_lab' WHERE id = 'HUM1108'")
         cur.execute("UPDATE courses SET room_kind = 'phy_lab' WHERE id = 'PHY1108'")
-        cur.execute("UPDATE courses SET room_kind = 'ece_lab' WHERE id IN ('EEE1208', 'EEE2118', 'ECE2208', 'ECE2214')")
+
+        # User specified lab course assignments:
+        # EEE Lab: EEE1208 (1.50 Cr.), EEE2118 (.75 Cr.)
+        # Mecha Lab: ME2170 (.75 Cr.)
+        # ECE Lab: ECE2214 (.75 Cr.)
+        cur.execute("UPDATE courses SET room_kind = 'eee_lab', credit = 1.5, blocks_per_week = 1 WHERE id = 'EEE1208'")
+        cur.execute("UPDATE courses SET room_kind = 'eee_lab', credit = 0.75, blocks_per_week = 1 WHERE id = 'EEE2118'")
+        cur.execute("UPDATE courses SET room_kind = 'mecha_lab', credit = 0.75, blocks_per_week = 1 WHERE id = 'ME2170'")
+        cur.execute("UPDATE courses SET room_kind = 'ece_lab', credit = 0.75, blocks_per_week = 1 WHERE id = 'ECE2214'")
+
+        # Remap any old scheduled assignments to the appropriate new lab rooms
+        cur.execute("UPDATE scheduled_assignments SET room_id = 'EEE-LAB' WHERE course_code IN ('EEE1208', 'EEE2118')")
+        cur.execute("UPDATE scheduled_assignments SET room_id = 'MECHA-LAB' WHERE course_code = 'ME2170'")
+        cur.execute("UPDATE scheduled_assignments SET room_id = 'ECE-104' WHERE course_code = 'ECE2214'")
+
         # All remaining sessional courses (except project/thesis which sit in theory homerooms) are software labs
         cur.execute(
-            "UPDATE courses SET room_kind = 'cse_lab' WHERE kind = 'sessional' AND id NOT IN ('CSE3200', 'CSE4000', 'CSE4000_41', 'CSE3106', 'CSE2104', 'CSE1204', 'CSE3230', 'CHEM1208', 'HUM1108', 'PHY1108', 'EEE1208', 'EEE2118', 'ECE2208', 'ECE2214')"
+            "UPDATE courses SET room_kind = 'cse_lab' WHERE kind = 'sessional' AND id NOT IN ('CSE3200', 'CSE4000', 'CSE4000_41', 'CSE3106', 'CSE2104', 'CSE1204', 'CSE3230', 'CHEM1208', 'HUM1108', 'PHY1108', 'EEE1208', 'EEE2118', 'ME2170', 'ECE2208', 'ECE2214')"
         )
 
         con.commit()

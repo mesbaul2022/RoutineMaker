@@ -47,8 +47,9 @@ def reconstruct(problem, csv_path):
                 home_rooms = problem.options.get("home_rooms", {})
                 room_id = home_rooms.get(f"{ev.batch_id}|{ev.section}", "CSE-501")
             else:
+                r_name = (row["room"] or "").strip()
                 room_id = next(
-                    (r.id for r in problem.rooms.values() if r.name == row["room"]),
+                    (r.id for r in problem.rooms.values() if r.name == r_name or (r_name == "ECE Lab 104" and r.id == "ECE-104")),
                     "CSE-501"
                 )
             assignments.append(Assignment(ev, room_id, start))

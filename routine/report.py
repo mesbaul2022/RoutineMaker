@@ -513,32 +513,104 @@ def _render_master_teachers_table(problem: Problem, solution: Solution, teachers
 
 
 def _render_master_labs_table(problem: Problem, solution: Solution) -> str:
-    """Render Labs Master Routine table matching Image 2 upper section."""
+    """Render Labs & Rooms Master Routine table with categorized columns on the left:
+    1. Theory Classrooms (displaying theory classes)
+    2. Departmental Labs (Software Lab, Hardware Lab)
+    3. Non-Departmental Labs (Chemistry Lab, English Language Lab, Physics Lab, ECE Lab, EEE Lab, Mecha Lab)
+    """
     grid = problem.grid
 
-    # Collect and order lab rooms per official departmental categories
-    lab_order = [
-        "CSE-103",   # Software
-        "CSE-104",   # Software
-        "CSE-201",   # Software
-        "CSE-202",   # Software
-        "CSE-305",   # Software
-        "CSE-306",   # Software backup / Theory dual-use
-        "CSE-107",   # Hardware (CSE 3106, CSE 2104)
-        "CSE-108",   # Hardware (CSE 1204)
-        "ECE-104",   # Non-Dept
-        "CHEM-LAB",  # Non-Dept
-        "HUM-LAB",   # Non-Dept
-        "PHY-LAB",   # Non-Dept
-        "CSE-501",   # Theory / Seminar (CSE 3230)
+    # Hierarchical room structure
+    # (Category Name, [(Type Name, [(Room ID, Default Display Name)])])
+    ROOM_HIERARCHY = [
+        (
+            "Theory Classrooms",
+            [
+                (
+                    "Theory Class",
+                    [
+                        ("CSE-501", "CSE Room 501"),
+                        ("CSE-502", "CSE Room 502"),
+                        ("CSE-401", "CSE Room 401"),
+                        ("CSE-402", "CSE Room 402"),
+                        ("CSE-105", "CSE Room 105"),
+                        ("CSE-306", "CSE Room 306"),
+                        ("CSE-101", "CSE Room 101"),
+                        ("CSE-102", "CSE Room 102"),
+                    ],
+                ),
+            ],
+        ),
+        (
+            "Departmental Labs",
+            [
+                (
+                    "Software Lab",
+                    [
+                        ("CSE-103", "CSE Lab 103"),
+                        ("CSE-104", "CSE Lab 104"),
+                        ("CSE-201", "CSE Lab 201"),
+                        ("CSE-202", "CSE Lab 202"),
+                        ("CSE-305", "CSE Lab 305"),
+                    ],
+                ),
+                (
+                    "Hardware Lab",
+                    [
+                        ("CSE-107", "CSE Lab 107"),
+                        ("CSE-108", "CSE Lab 108"),
+                    ],
+                ),
+            ],
+        ),
+        (
+            "Non-Departmental Labs",
+            [
+                (
+                    "Non-Dept Lab",
+                    [
+                        ("CHEM-LAB", "Chemistry Lab"),
+                        ("HUM-LAB", "English Language Lab"),
+                        ("PHY-LAB", "Physics Lab"),
+                        ("ECE-104", "ECE Lab"),
+                        ("EEE-LAB", "EEE Lab"),
+                        ("MECHA-LAB", "Mecha Lab"),
+                    ],
+                ),
+            ],
+        ),
     ]
-    lab_rooms = [problem.rooms[rid] for rid in lab_order if rid in problem.rooms]
-    for r in problem.rooms.values():
-        if r not in lab_rooms and r.kind != "theory":
-            lab_rooms.append(r)
+
+    # Resolve hierarchy using rooms present in problem
+    known_rids = {rid for _, types in ROOM_HIERARCHY for _, rooms in types for rid, _ in rooms}
+    resolved_hierarchy = []
+    all_room_ids = []
+    for cat_name, type_list in ROOM_HIERARCHY:
+        res_types = []
+        for type_name, room_list in type_list:
+            res_rooms = [
+                (rid, problem.rooms[rid].name if rid in problem.rooms else def_name)
+                for rid, def_name in room_list
+                if rid in problem.rooms
+            ]
+            if res_rooms:
+                res_types.append((type_name, res_rooms))
+                for rid, _ in res_rooms:
+                    all_room_ids.append(rid)
+        if res_types:
+            resolved_hierarchy.append((cat_name, res_types))
+
+    # Any extra rooms not in standard hierarchy
+    extra_rooms = [
+        (r.id, r.name) for r in problem.rooms.values() if r.id not in known_rids
+    ]
+    if extra_rooms:
+        resolved_hierarchy.append(("Other Facilities", [("Facility", extra_rooms)]))
+        for rid, _ in extra_rooms:
+            all_room_ids.append(rid)
 
     # Pre-index room assignments
-    r_grids = {r.id: [[None] * grid.n_periods for _ in range(grid.n_days)] for r in lab_rooms}
+    r_grids = {rid: [[None] * grid.n_periods for _ in range(grid.n_days)] for rid in all_room_ids}
     for a in solution.assignments:
         if a.room_id in r_grids:
             ev = a.event
@@ -552,6 +624,7 @@ def _render_master_labs_table(problem: Problem, solution: Solution) -> str:
                 "section": ev.section,
                 "group": disp_grp,
                 "teachers": t_str,
+                "is_lab": ev.is_lab,
             }
             for k in range(1, ev.length):
                 if p + k < grid.n_periods:
@@ -559,7 +632,9 @@ def _render_master_labs_table(problem: Problem, solution: Solution) -> str:
 
     head_r1 = [
         "<tr>",
-        "<th rowspan='2' class='m-th-teacher' style='min-width: 220px;'>Laboratory / Facility</th>",
+        "<th rowspan='2' class='m-th-cat'>Category</th>",
+        "<th rowspan='2' class='m-th-type'>Type</th>",
+        "<th rowspan='2' class='m-th-room'>Laboratory / Room</th>",
     ]
     for day in grid.days:
         head_r1.append(f"<th colspan='{grid.n_periods}' class='m-th-day'>{html.escape(day.upper())}</th>")
@@ -578,36 +653,59 @@ def _render_master_labs_table(problem: Problem, solution: Solution) -> str:
     head_r2.append("</tr>")
 
     body = []
-    for r in lab_rooms:
-        row = [
-            f"<tr data-room-id='{html.escape(r.id)}'>",
-            f"<td class='m-td-teacher' style='font-weight: 700; color: #1E293B;'>{html.escape(r.name)}</td>",
-        ]
-        for d in range(grid.n_days):
-            p = 0
-            while p < grid.n_periods:
-                cell = r_grids[r.id][d][p]
-                if cell == "skip":
-                    p += 1
-                    continue
-                elif cell is None:
-                    border_cls = " brk-sep" if p in (2, 5) else ""
-                    row.append(f"<td class='m-free{border_cls}'></td>")
-                    p += 1
-                else:
-                    span = cell["span"]
-                    end_p = p + span - 1
-                    border_cls = " brk-sep" if end_p in (2, 5) else ""
-                    grp_txt = f" ({cell['group']})" if cell["group"] else ""
+    for cat_name, type_list in resolved_hierarchy:
+        cat_total_rooms = sum(len(rooms) for _, rooms in type_list)
+        first_row_in_cat = True
+
+        for type_name, room_list in type_list:
+            type_total_rooms = len(room_list)
+            first_row_in_type = True
+
+            for rid, rname in room_list:
+                row = [
+                    f"<tr data-room-id='{html.escape(rid)}' data-cat='{html.escape(cat_name)}' data-type='{html.escape(type_name)}' data-room-name='{html.escape(rname)}'>"
+                ]
+                if first_row_in_cat:
                     row.append(
-                        f"<td class='m-cell-lab{border_cls}' colspan='{span}'>"
-                        f"<div class='m-code'>{html.escape(cell['code'])}</div>"
-                        f"<div class='m-meta'>{html.escape(cell['batch'])} {html.escape(cell['section'])}{html.escape(grp_txt)} · {html.escape(cell['teachers'])}</div>"
-                        f"</td>"
+                        f"<td rowspan='{cat_total_rooms}' class='m-td-cat'>{html.escape(cat_name)}</td>"
                     )
-                    p += span
-        row.append("</tr>")
-        body.append("".join(row))
+                    first_row_in_cat = False
+
+                if first_row_in_type:
+                    row.append(
+                        f"<td rowspan='{type_total_rooms}' class='m-td-type'>{html.escape(type_name)}</td>"
+                    )
+                    first_row_in_type = False
+
+                row.append(f"<td class='m-td-room'>{html.escape(rname)}</td>")
+
+                for d in range(grid.n_days):
+                    p = 0
+                    while p < grid.n_periods:
+                        cell = r_grids[rid][d][p]
+                        if cell == "skip":
+                            p += 1
+                            continue
+                        elif cell is None:
+                            border_cls = " brk-sep" if p in (2, 5) else ""
+                            row.append(f"<td class='m-free{border_cls}'></td>")
+                            p += 1
+                        else:
+                            span = cell["span"]
+                            end_p = p + span - 1
+                            border_cls = " brk-sep" if end_p in (2, 5) else ""
+                            cell_cls = "m-cell-lab" if cell.get("is_lab") else "m-cell-theory"
+                            grp_txt = f" ({cell['group']})" if cell["group"] else ""
+                            teacher_txt = f" · {cell['teachers']}" if cell["teachers"] else ""
+                            row.append(
+                                f"<td class='{cell_cls}{border_cls}' colspan='{span}'>"
+                                f"<div class='m-code'>{html.escape(cell['code'])}</div>"
+                                f"<div class='m-meta'>{html.escape(cell['batch'])} {html.escape(cell['section'])}{html.escape(grp_txt)}{html.escape(teacher_txt)}</div>"
+                                f"</td>"
+                            )
+                            p += span
+                row.append("</tr>")
+                body.append("".join(row))
 
     return (
         "<div class='master-table-scroll'>"
@@ -1050,6 +1148,72 @@ th.m-th-teacher {{
   text-align: left;
   padding-left: 0.6rem;
   background: #E2E8F0 !important;
+}}
+
+th.m-th-cat {{
+  width: 140px;
+  min-width: 130px;
+  background: #E2E8F0 !important;
+  color: #0F172A;
+  font-weight: 700;
+  text-align: center;
+}}
+
+th.m-th-type {{
+  width: 120px;
+  min-width: 110px;
+  background: #E2E8F0 !important;
+  color: #0F172A;
+  font-weight: 700;
+  text-align: center;
+}}
+
+th.m-th-room {{
+  width: 170px;
+  min-width: 160px;
+  background: #E2E8F0 !important;
+  color: #0F172A;
+  font-weight: 700;
+  text-align: center;
+  border-right: 2px solid #334155 !important;
+}}
+
+td.m-td-cat {{
+  background: #F8FAFC;
+  color: #0F172A;
+  font-weight: 800;
+  font-size: 0.8rem;
+  text-align: center;
+  vertical-align: middle;
+  padding: 0.5rem 0.4rem;
+  border-right: 2px solid #64748B !important;
+  border-bottom: 1px solid #94A3B8;
+  letter-spacing: 0.02em;
+}}
+
+td.m-td-type {{
+  background: #F1F5F9;
+  color: #334155;
+  font-weight: 700;
+  font-size: 0.76rem;
+  text-align: center;
+  vertical-align: middle;
+  padding: 0.45rem 0.35rem;
+  border-right: 1px solid #94A3B8 !important;
+  border-bottom: 1px solid #94A3B8;
+}}
+
+td.m-td-room {{
+  background: #FFFFFF;
+  color: #1E293B;
+  font-weight: 700;
+  font-size: 0.78rem;
+  text-align: center;
+  vertical-align: middle;
+  padding: 0.45rem 0.55rem;
+  white-space: nowrap;
+  border-right: 2px solid #475569 !important;
+  border-bottom: 1px solid #94A3B8;
 }}
 
 th.m-th-day {{
@@ -1906,13 +2070,67 @@ function showMasterSubView(view) {
     const el = document.getElementById('view-master-' + v);
     if (el) el.style.display = (v === view ? 'block' : 'none');
   });
+  const sInput = document.getElementById('master-search-input');
+  if (sInput && sInput.value) {
+    onMasterSearchInput(sInput.value);
+  }
+}
+
+// Check initial hash on load
+const initHash = (window.location.hash || '').replace('#', '').trim();
+if (initHash === 'labs' || initHash === 'batches' || initHash === 'teachers') {
+  show('master');
+  showMasterSubView(initHash);
+} else if (initHash) {
+  show(initHash);
 }
 
 // Master Routine Table Filter
 function onMasterSearchInput(val) {
   val = (val || '').toLowerCase().trim();
-  const activeTable = document.querySelector('.master-view-panel:not([style*="display: none"]) table');
+  const activePanel = document.querySelector('.master-view-panel:not([style*="display: none"])');
+  if (!activePanel) return;
+  const activeTable = activePanel.querySelector('table');
   if (!activeTable) return;
+
+  if (activeTable.id === 'table-master-labs') {
+    if (!activeTable.dataset.origHtml) {
+      activeTable.dataset.origHtml = activeTable.innerHTML;
+    }
+    if (!val) {
+      activeTable.innerHTML = activeTable.dataset.origHtml;
+      return;
+    }
+    const rows = activeTable.querySelectorAll('tbody tr');
+    rows.forEach(r => {
+      const cat = r.dataset.cat || '';
+      const type = r.dataset.type || '';
+      const rname = r.dataset.roomName || '';
+      const txt = (cat + ' ' + type + ' ' + rname + ' ' + r.textContent).toLowerCase();
+      const match = txt.includes(val);
+      if (match) {
+        r.style.display = '';
+        if (!r.querySelector('.m-td-cat')) {
+          const catTd = document.createElement('td');
+          catTd.className = 'm-td-cat';
+          catTd.textContent = cat;
+          r.insertBefore(catTd, r.firstChild);
+        }
+        if (!r.querySelector('.m-td-type')) {
+          const typeTd = document.createElement('td');
+          typeTd.className = 'm-td-type';
+          typeTd.textContent = type;
+          const roomTd = r.querySelector('.m-td-room');
+          r.insertBefore(typeTd, roomTd);
+        }
+        r.querySelectorAll('td[rowspan]').forEach(td => td.removeAttribute('rowspan'));
+      } else {
+        r.style.display = 'none';
+      }
+    });
+    return;
+  }
+
   const rows = activeTable.querySelectorAll('tbody tr');
   rows.forEach(r => {
     if (!val) {

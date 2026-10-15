@@ -190,7 +190,9 @@ ROOMS = [
     {"id": "CSE-107", "name": "CSE Lab 107", "kind": "hardware_lab_107", "capacity": 35},
     {"id": "CSE-108", "name": "CSE Lab 108", "kind": "hardware_lab_108", "capacity": 35},
     # Non-Departmental Labs
-    {"id": "ECE-104", "name": "ECE Lab 104", "kind": "ece_lab", "capacity": 35},
+    {"id": "ECE-104", "name": "ECE Lab", "kind": "ece_lab", "capacity": 35},
+    {"id": "EEE-LAB", "name": "EEE Lab", "kind": "eee_lab", "capacity": 35},
+    {"id": "MECHA-LAB", "name": "Mecha Lab", "kind": "mecha_lab", "capacity": 35},
     {"id": "CHEM-LAB", "name": "Chemistry Lab", "kind": "chem_lab", "capacity": 35},
     {"id": "HUM-LAB", "name": "English Language Lab", "kind": "hum_lab", "capacity": 35},
     {"id": "PHY-LAB", "name": "Physics Lab", "kind": "phy_lab", "capacity": 35},
@@ -364,7 +366,7 @@ COURSES = [
     # VERIFY: FH and FRH both appear on ECE2213 instances
     theory("ECE2213", "Digital Electronics", "2-2", 3, "md_faisal_hossain", room_kind="theory"),
     sessional("ECE2214", "Digital Electronics Laboratory", "2-2", "ece_lab",
-              "mushfiqur_rahman_masuk", "md_minhajul_islam_arnab"),
+              "mushfiqur_rahman_masuk", "md_minhajul_islam_arnab", credit=0.75),
 
     # VERIFY: ARJ and HZ both appear on MATH2207 instances (this term's sheet)
     theory("MATH2207", "Complex Variable, Vector Analysis and Statistics", "2-2", 3,
@@ -388,11 +390,11 @@ COURSES = [
               "md_rejvi_kaysir", "akash_biswas"),
 
     theory("EEE2117", "Analog Electronics", "2-1", 3, "jeesun_patra_papon", room_kind="theory"),
-    sessional("EEE2118", "Analog Electronics Laboratory", "2-1", "ece_lab",
-              "md_rejvi_kaysir", "akash_biswas"),
+    sessional("EEE2118", "Analog Electronics Laboratory", "2-1", "eee_lab",
+              "md_rejvi_kaysir", "akash_biswas", credit=0.75),
 
-    sessional("ME2170", "Computer Aided Design Laboratory", "2-1", "cse_lab",
-              "md_mahbubur_rahman", "miir_anjirin_tazrin"),
+    sessional("ME2170", "Computer Aided Design Laboratory", "2-1", "mecha_lab",
+              "md_mahbubur_rahman", "miir_anjirin_tazrin", credit=0.75),
 
     theory("MATH2107", "Fourier Analysis and Linear Algebra", "2-1", 3, "sm_arif_hossen"),
 ]

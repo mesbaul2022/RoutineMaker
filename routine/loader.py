@@ -195,7 +195,7 @@ def _build_events(
                             group=None,
                             length=grid.lab_periods,
                             teacher_ids=[],
-                            room_kind=course.room_kind,
+                            room_kind="no_room",
                             size=batch.section_size,
                             meeting_index=k,
                         )
@@ -460,9 +460,15 @@ def validate(problem: Problem) -> tuple[list[str], list[str]]:
             )
 
     # Room supply: peak simultaneous demand per room kind.
-    for kind in {r.kind for r in problem.rooms.values()}:
+    for kind in {r.kind for r in problem.rooms.values() if r.kind != "no_room"}:
         supply = sum(1 for r in problem.rooms.values() if r.kind == kind)
-        demand = sum(ev.length for ev in problem.events if ev.room_kind == kind)
+        demand = sum(
+            ev.length
+            for ev in problem.events
+            if ev.room_kind == kind
+            and ev.course.code.replace(" ", "").upper() not in ("CSE3200", "CSE4000")
+            and not ev.course.code.replace(" ", "").upper().startswith("CSE4000")
+        )
         capacity = supply * grid.n_slots
         if demand > capacity:
             errors.append(

@@ -128,6 +128,10 @@ class Problem:
     events: list[Event]
     options: dict
 
+    def __post_init__(self) -> None:
+        if "NO_ROOM" not in self.rooms:
+            self.rooms["NO_ROOM"] = Room(id="NO_ROOM", name="", kind="no_room", capacity=999)
+
     # ------------------------------------------------------------- cohorts
 
     def cohorts(self) -> list[tuple]:
@@ -151,17 +155,8 @@ class Problem:
 
     def feasible_rooms(self, event: Event) -> list[Room]:
         clean_code = event.course.code.replace(" ", "").upper()
-        if clean_code in ("CSE3200", "CSE4000") or clean_code.startswith("CSE4000"):
-            home_rooms = self.options.get("home_rooms", {})
-            home_id = home_rooms.get(f"{event.batch_id}|{event.section}")
-            cand = []
-            if home_id and home_id in self.rooms:
-                cand.append(self.rooms[home_id])
-            for r in self.rooms.values():
-                if r.capacity >= event.size and r.kind == "theory":
-                    if r not in cand:
-                        cand.append(r)
-            return cand or list(self.rooms.values())
+        if clean_code in ("CSE3200", "CSE4000") or clean_code.startswith("CSE4000") or event.room_kind in ("no_room", "none", ""):
+            return [self.rooms["NO_ROOM"]]
 
         if not event.is_lab:
             home_rooms = self.options.get("home_rooms", {})

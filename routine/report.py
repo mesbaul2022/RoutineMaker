@@ -129,22 +129,22 @@ def write_csv(problem: Problem, solution: Solution, path: str | Path) -> Path:
             d, p = grid.day_of(a.start), grid.period_of(a.start)
             end_p = p + ev.length - 1
             clean_code = ev.course.code.replace(" ", "").upper()
-            is_project = clean_code in ("CSE3200", "CSE4000") or clean_code.startswith("CSE4000")
+            is_project = clean_code in ("CSE3200", "CSE4000") or clean_code.startswith("CSE4000") or a.room_id in ("NO_ROOM", "", None) or ev.room_kind == "no_room"
             if is_project:
                 t_str = ""
-                room_str = problem.rooms[a.room_id].name
-                disp_code = "CSE 3200" if "3200" in clean_code else "CSE 4000"
+                room_str = ""
+                disp_code = "CSE 3200" if "3200" in clean_code else ("CSE 4000" if "4000" in clean_code else ev.course.code)
             elif ev.is_shared:
                 t_str = "/".join(problem.teachers[t].name for t in ev.teacher_ids if t in problem.teachers)
-                room_str = problem.rooms[a.room_id].name
+                room_str = problem.rooms[a.room_id].name if a.room_id in problem.rooms else a.room_id
                 disp_code = ev.course.code
             elif ev.is_lab:
                 t_str = " + ".join(problem.teachers[t].name for t in ev.teacher_ids if t in problem.teachers)
-                room_str = problem.rooms[a.room_id].name
+                room_str = problem.rooms[a.room_id].name if a.room_id in problem.rooms else a.room_id
                 disp_code = ev.course.code
             else:
                 t_str = ", ".join(problem.teachers[t].name for t in ev.teacher_ids if t in problem.teachers)
-                room_str = problem.rooms[a.room_id].name
+                room_str = problem.rooms[a.room_id].name if a.room_id in problem.rooms else a.room_id
                 disp_code = ev.course.code
 
             grp = format_display_group(ev.group, ev.section)
@@ -190,7 +190,7 @@ def _section_grid(problem: Problem, solution: Solution, batch_id: str, section: 
         ev = a.event
         d, p = grid.day_of(a.start), grid.period_of(a.start)
         clean_code = ev.course.code.replace(" ", "").upper()
-        is_project = clean_code in ("CSE3200", "CSE4000") or clean_code.startswith("CSE4000")
+        is_project = clean_code in ("CSE3200", "CSE4000") or clean_code.startswith("CSE4000") or ev.room_kind == "no_room" or a.room_id in ("NO_ROOM", "", None)
 
         if ev.paired_event_id is not None:
             key = (d, p, "paired_075_lab")
@@ -610,7 +610,7 @@ def _render_master_labs_table(problem: Problem, solution: Solution) -> str:
 
     # Any extra rooms not in standard hierarchy
     extra_rooms = [
-        (r.id, r.name) for r in problem.rooms.values() if r.id not in known_rids
+        (r.id, r.name) for r in problem.rooms.values() if r.id not in known_rids and r.id not in ("NO_ROOM", "", None)
     ]
     if extra_rooms:
         resolved_hierarchy.append(("Other Facilities", [("Facility", extra_rooms)]))
@@ -620,6 +620,9 @@ def _render_master_labs_table(problem: Problem, solution: Solution) -> str:
     # Pre-index room assignments
     r_grids = {rid: [[None] * grid.n_periods for _ in range(grid.n_days)] for rid in all_room_ids}
     for a in solution.assignments:
+        clean_code = a.event.course.code.replace(" ", "").upper()
+        if clean_code in ("CSE3200", "CSE4000") or clean_code.startswith("CSE4000") or a.room_id in ("NO_ROOM", "", None) or a.event.room_kind == "no_room":
+            continue
         if a.room_id in r_grids:
             ev = a.event
             d, p = grid.day_of(a.start), grid.period_of(a.start)

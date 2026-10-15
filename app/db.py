@@ -312,9 +312,9 @@ def _migrate_schema():
 
         # 6. Project & Thesis courses (CSE 3200 in 3-2, CSE 4000 in 4-1 & 4-2)
         project_courses = [
-            ("CSE3200", "System Development Project", "3-2", "sessional", "theory", None, 1, 1.5, "core", None),
-            ("CSE4000_41", "Capstone Project/Thesis", "4-1", "sessional", "theory", None, 1, 1.5, "core", None),
-            ("CSE4000", "Capstone Project/Thesis", "4-2", "sessional", "theory", None, 2, 3.0, "core", None),
+            ("CSE3200", "System Development Project", "3-2", "sessional", "no_room", None, 1, 1.5, "core", None),
+            ("CSE4000_41", "Capstone Project/Thesis", "4-1", "sessional", "no_room", None, 1, 1.5, "core", None),
+            ("CSE4000", "Capstone Project/Thesis", "4-2", "sessional", "no_room", None, 2, 3.0, "core", None),
         ]
         for cid, title, bid, kind, rkind, periods, blocks, credit, category, paired in project_courses:
             cur.execute("SELECT id FROM courses WHERE id = ?", (cid,))
@@ -439,10 +439,12 @@ def _migrate_schema():
         cur.execute("UPDATE scheduled_assignments SET room_id = 'MECHA-LAB' WHERE course_code = 'ME2170'")
         cur.execute("UPDATE scheduled_assignments SET room_id = 'ECE-104' WHERE course_code = 'ECE2214'")
 
-        # All remaining sessional courses (except project/thesis which sit in theory homerooms) are software labs
+        # All remaining sessional courses (except project/thesis which have no physical room) are software labs
         cur.execute(
             "UPDATE courses SET room_kind = 'cse_lab' WHERE kind = 'sessional' AND id NOT IN ('CSE3200', 'CSE4000', 'CSE4000_41', 'CSE3106', 'CSE2104', 'CSE1204', 'CSE3230', 'CHEM1208', 'HUM1108', 'PHY1108', 'EEE1208', 'EEE2118', 'ME2170', 'ECE2208', 'ECE2214')"
         )
+        cur.execute("UPDATE courses SET room_kind = 'no_room' WHERE id IN ('CSE3200', 'CSE4000', 'CSE4000_41')")
+        cur.execute("UPDATE scheduled_assignments SET room_id = 'NO_ROOM' WHERE course_code LIKE '%3200%' OR course_code LIKE '%4000%'")
 
         con.commit()
 

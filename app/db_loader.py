@@ -249,12 +249,16 @@ def load_problem_from_db(db: Session, options_override: Optional[dict] = None) -
         clean_id = c.id.replace(" ", "").upper()
         if clean_id.startswith("CSE3200"):
             course_code = "CSE 3200"
+            course_rkind = "no_room"
         elif clean_id.startswith("CSE4000"):
             course_code = "CSE 4000"
+            course_rkind = "no_room"
         elif clean_id == "CSE3230":
             course_code = "CSE 3230"
+            course_rkind = "seminar_501"
         else:
             course_code = c.id
+            course_rkind = c.room_kind
 
         courses.append(
             RoutineCourse(
@@ -262,7 +266,7 @@ def load_problem_from_db(db: Session, options_override: Optional[dict] = None) -
                 title=c.title,
                 batch=c.batch_id,
                 kind=c.kind,
-                room_kind="seminar_501" if clean_id == "CSE3230" else c.room_kind,
+                room_kind=course_rkind,
                 periods_per_week=c.periods_per_week or (3 if c.kind == THEORY else 0),
                 blocks_per_week=c.blocks_per_week or (1 if c.kind != THEORY else 0),
                 credit=course_credit,
@@ -303,7 +307,7 @@ def _build_events(
         clean_code = course.code.replace(" ", "").upper()
         if clean_code in ("CSE3200", "CSE4000") or clean_code.startswith("CSE4000"):
             # Project / Thesis courses: section-wide weekly slot (not group-wise)
-            # Supervised individually, no classroom teachers assigned
+            # Supervised individually, no classroom teachers or physical rooms assigned
             n_blocks = course.blocks_per_week or (2 if course.credit == 3.0 else 1)
             for section in batch.sections:
                 for k in range(n_blocks):
@@ -316,7 +320,7 @@ def _build_events(
                             group=None,
                             length=grid.lab_periods,
                             teacher_ids=[],
-                            room_kind=course.room_kind,
+                            room_kind="no_room",
                             size=batch.section_size,
                             meeting_index=k,
                         )
@@ -581,7 +585,7 @@ def validate_db_problem(problem: Problem, db: Session | None = None) -> tuple[li
             )
 
     # 5. Room supply
-    for kind in {r.kind for r in problem.rooms.values()}:
+    for kind in {r.kind for r in problem.rooms.values() if r.kind != "no_room"}:
         supply = sum(1 for r in problem.rooms.values() if r.kind == kind)
         demand = sum(
             ev.length

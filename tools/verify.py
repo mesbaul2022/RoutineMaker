@@ -19,7 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from routine.loader import load_problem  # noqa: E402
-from routine.models import Problem  # noqa: E402
+from routine.models import Problem, Room  # noqa: E402
 from routine.scheduler import Solution, solve_routine  # noqa: E402
 
 
@@ -38,11 +38,11 @@ def verify(problem: Problem, solution: Solution) -> list[str]:
 
     for a in solution.assignments:
         ev = a.event
-        room = problem.rooms[a.room_id]
+        room = problem.rooms.get(a.room_id, Room(id="NO_ROOM", name="", kind="no_room", capacity=999))
 
         theory_kinds = {"theory", "year1_theory"}
         clean_code = ev.course.code.replace(" ", "").upper()
-        is_project = clean_code in ("CSE3200", "CSE4000") or clean_code.startswith("CSE4000")
+        is_project = clean_code in ("CSE3200", "CSE4000") or clean_code.startswith("CSE4000") or a.room_id in ("NO_ROOM", "", None) or ev.room_kind == "no_room"
         software_lab_rooms = {"CSE-103", "CSE-104", "CSE-201", "CSE-202", "CSE-305", "CSE-306"}
         software_kinds = {"cse_lab", "year1_cse_lab", "ai_lab", "network_lab"}
 
@@ -74,9 +74,9 @@ def verify(problem: Problem, solution: Solution) -> list[str]:
         elif ev.room_kind in software_kinds:
             if a.room_id not in software_lab_rooms:
                 faults.append(f"H5 {ev.label} placed in non-software room {room.name}")
-        elif room.kind != ev.room_kind:
+        elif not is_project and room.kind != ev.room_kind:
             faults.append(f"H5 {ev.label} placed in {room.name} of kind {room.kind}")
-        if room.capacity < ev.size:
+        if not is_project and room.capacity < ev.size:
             faults.append(
                 f"H5 {ev.label} ({ev.size} students) placed in {room.name} "
                 f"(capacity {room.capacity})"
@@ -104,7 +104,8 @@ def verify(problem: Problem, solution: Solution) -> list[str]:
                         f"H7 {problem.teachers[tid].name} booked for {ev.label} at "
                         f"{grid.describe(s)} but is unavailable then"
                     )
-            room_use[(a.room_id, s)].append(ev.label)
+            if not is_project and a.room_id not in ("NO_ROOM", "", None):
+                room_use[(a.room_id, s)].append(ev.label)
 
     for (ck, s), items in cohort_use.items():
         if len(items) > 1:
@@ -117,8 +118,9 @@ def verify(problem: Problem, solution: Solution) -> list[str]:
             )
     for (rid, s), items in room_use.items():
         if len(items) > 1:
+            rname = problem.rooms[rid].name if rid in problem.rooms else rid
             faults.append(
-                f"H3 {problem.rooms[rid].name} double-booked at "
+                f"H3 {rname} double-booked at "
                 f"{grid.describe(s)}: {items}"
             )
 

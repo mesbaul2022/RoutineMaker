@@ -141,7 +141,7 @@ Monday,P4,10:40,13:10,3,3-2,B,B2,CSE3210,Artificial Intelligence Laboratory,sess
 Monday,P5,11:30,12:20,1,3-2,A,,CSE3217,Mobile Computing,theory,CSE Room 401,Ms. Most. Kaniz Fatema Isha
 Monday,P7,14:30,17:00,3,3-2,A,A2,CSE3210,Artificial Intelligence Laboratory,sessional,CSE Lab 201,Mr. Waliul Islam Sumon + Mst. Sadia Islam
 Monday,P7,14:30,17:00,3,3-2,B,B1/B2,CSE3212,Compiler Design Laboratory,sessional,CSE Lab 202,Dr. Md. Abdul Awal + Ms. Dola Das
-Tuesday,P1,08:00,10:30,3,3-2,A,,CSE 3200,System Development Project,sessional,CSE Room 501,
+Tuesday,P1,08:00,10:30,3,3-2,A,,CSE 3200,System Development Project,sessional,,
 Tuesday,P3,09:40,10:30,1,3-2,B,,CSE3209,Artificial Intelligence,theory,CSE Room 402,Mr. Waliul Islam Sumon
 Tuesday,P4,10:40,11:30,1,3-2,A,,CSE3209,Artificial Intelligence,theory,CSE Room 401,Mr. Waliul Islam Sumon
 Tuesday,P4,10:40,11:30,1,3-2,B,,CSE3217,Mobile Computing,theory,CSE Room 402,Ms. Most. Kaniz Fatema Isha
@@ -165,14 +165,14 @@ Thursday,P5,11:30,12:20,1,3-2,B,,CSE3211,Compiler Design,theory,CSE Room 402,Dr.
 Thursday,P6,12:20,13:10,1,3-2,A,,CSE3211,Compiler Design,theory,CSE Room 401,Dr. Md. Abdul Awal
 Thursday,P6,12:20,13:10,1,3-2,B,,CSE3219,Software Engineering and Project Management,theory,CSE Room 402,Mr. Nabil Faiyaz Sadi
 Thursday,P7,14:30,15:20,1,3-2,A,,CSE3209,Artificial Intelligence,theory,CSE Room 401,Mr. Waliul Islam Sumon
-Thursday,P7,14:30,17:00,3,3-2,B,,CSE 3200,System Development Project,sessional,CSE Room 105,
+Thursday,P7,14:30,17:00,3,3-2,B,,CSE 3200,System Development Project,sessional,,
 Sunday,P1,08:00,10:30,3,4-1,A,A2,CSE4102,Computer Graphics and Image Processing Laboratory,sessional,CSE Lab 103,Mr. Md Tajmilur Rahman + Mr. Md. Mubtashim Abrar Nihal
 Sunday,P1,08:00,08:50,1,4-1,B,,CSE4111,Machine Learning,theory,CSE Room 502,Dr. Muhammad Aminul Haque
 Sunday,P2,08:50,09:40,1,4-1,B,,CSE4105,Computer Networks,theory,CSE Room 502,Mr. Md. Sakhawat Hossain
 Sunday,P3,09:40,10:30,1,4-1,B,,CSE4115,Computer Security,theory,CSE Room 502,Ms. Dola Das
 Sunday,P4,10:40,13:10,3,4-1,A,A1,CSE4106,Computer Networks Laboratory,sessional,CSE Lab 103,Dr. Sk. Imran Hossain + Mr. Md. Sakhawat Hossain
 Sunday,P4,10:40,13:10,3,4-1,A,A2,CSE4122,Natural Language Processing Laboratory,sessional,CSE Lab 104,Dr. K. M. Azharul Hasan + Mr. Md. Nazirulhasan Shawon
-Sunday,P4,10:40,13:10,3,4-1,B,,CSE 4000,Capstone Project/Thesis,sessional,CSE Room 501,
+Sunday,P4,10:40,13:10,3,4-1,B,,CSE 4000,Capstone Project/Thesis,sessional,,
 Sunday,P7,14:30,17:00,3,4-1,A,A1,CSE4122,Natural Language Processing Laboratory,sessional,CSE Lab 104,Dr. K. M. Azharul Hasan + Mr. Md. Nazirulhasan Shawon
 Monday,P1,08:00,10:30,3,4-1,A,A2,CSE4116,Computer Security Laboratory,sessional,CSE Lab 104,Dr. Kazi Md. Rokibul Alam + Ms. Dola Das
 Monday,P2,08:50,09:40,1,4-1,B,,CSE4105,Computer Networks,theory,CSE Room 502,Mr. Md. Sakhawat Hossain
@@ -195,7 +195,7 @@ Tuesday,P5,11:30,12:20,1,4-1,A,,CSE4101,Computer Graphics and Image Processing,t
 Tuesday,P6,12:20,13:10,1,4-1,A,,CSE4121,Natural Language Processing,theory,CSE Room 501,Mr. Safin Ahmmed
 Tuesday,P7,14:30,15:20,1,4-1,A,,CSE4111,Machine Learning,theory,CSE Room 501,Dr. Muhammad Aminul Haque
 Tuesday,P7,14:30,17:00,3,4-1,B,B2,CSE4106,Computer Networks Laboratory,sessional,CSE Lab 103,Dr. Sk. Imran Hossain + Mr. Md. Sakhawat Hossain
-Wednesday,P1,08:00,10:30,3,4-1,A,,CSE 4000,Capstone Project/Thesis,sessional,CSE Room 105,
+Wednesday,P1,08:00,10:30,3,4-1,A,,CSE 4000,Capstone Project/Thesis,sessional,,
 Wednesday,P1,08:00,10:30,3,4-1,B,B1,CSE4116,Computer Security Laboratory,sessional,CSE Lab 103,Dr. Kazi Md. Rokibul Alam + Ms. Dola Das
 Wednesday,P1,08:00,10:30,3,4-1,B,B2,CSE4112,Machine Learning Laboratory,sessional,CSE Lab 104,Dr. Muhammad Aminul Haque + Mr. Nabil Faiyaz Sadi
 Wednesday,P4,10:40,11:30,1,4-1,A,,CSE4115,Computer Security,theory,CSE Room 501,Ms. Dola Das

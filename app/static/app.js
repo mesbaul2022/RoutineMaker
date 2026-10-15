@@ -964,7 +964,7 @@ function renderCourseAssignmentCard(batch, course, assignMap) {
           </div>
         </div>
         <div style="margin-top: 0.75rem; padding: 0.85rem 1rem; background: #F0FDF4; border-radius: var(--radius); border-left: 4px solid #10B981; font-size: 0.85rem; color: #065F46; line-height: 1.5;">
-          🎓 <b>Individual Faculty Supervision:</b> This course is conducted by individually assigned faculty supervisors (1–2 students per supervisor). No classroom teachers are assigned. The scheduler automatically assigns ${weeklySlotCount} weekly 3-period slot(s) for each section (Section A and Section B, section-wide). In the timetable, only the course code <b>${escapeHtml(dispCode)}</b> is displayed without teacher names.
+          🎓 <b>Individual Faculty Supervision (No Room Needed):</b> This course is conducted by individually assigned faculty supervisors (1–2 students per supervisor). No classroom teachers or physical rooms are assigned. The scheduler automatically allocates ${weeklySlotCount} weekly 3-period slot(s) for each section (Section A and Section B, both groups combinedly) with no room assigned. In the timetable, only the course code <b>${escapeHtml(dispCode)}</b> is displayed without teacher names or rooms.
         </div>
       </div>
     `;

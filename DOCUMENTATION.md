@@ -19,6 +19,7 @@
    - 3.5 [Master Routine & Multi-Perspective Viewing](#35-master-routine--multi-perspective-viewing)
    - 3.6 [Incremental / Freeze Routine Generation](#36-incremental--freeze-routine-generation)
    - 3.7 [Independent Verification & Multi-Format Exports](#37-independent-verification--multi-format-exports)
+   - 3.8 [Project & Thesis Courses (`CSE 3200` & `CSE 4000`) - Individual Supervision & Roomless Model](#38-project--thesis-courses-cse-3200--cse-4000---individual-supervision--roomless-model)
 4. [Mathematical Formulation & CP-SAT Solver Logic](#4-mathematical-formulation--cp-sat-solver-logic)
    - 4.1 [Time Grid & Slot Topology](#41-time-grid--slot-topology)
    - 4.2 [Decision Variables](#42-decision-variables)
@@ -148,6 +149,30 @@ The lifecycle of routine generation follows a deterministic 7-stage pipeline:
 - **Printable Responsive HTML (`out/routine.html`)**: Beautiful, academic light-themed printable routine with tabbed batch schedules.
 - **CSV Data Exchange (`out/routine.csv`)**: Normalized tabular export suitable for university ERP systems and registrar archives.
 
+### 3.8 Project & Thesis Courses (`CSE 3200` & `CSE 4000`) - Individual Supervision & Roomless Model
+- **Academic Courses Covered**:
+  - `CSE 3200 System Development Project` (Term 3-2, 1.5 Credits, 1 weekly 3-period block).
+  - `CSE 4000 Capstone Project/Thesis` (Term 4-1, 1.5 Credits, 1 weekly 3-period block).
+  - `CSE 4000 Capstone Project/Thesis` (Term 4-2, 3.0 Credits, 2 weekly 3-period blocks).
+- **Individual Faculty Supervision**:
+  - Supervised on a 1-to-1 or small-group basis by individually assigned faculty supervisors.
+  - No central classroom teacher is assigned, and individual supervisors are not shown on the timetable cards.
+- **Section-Wide Slot Allocation (Both Groups Combinedly)**:
+  - Unlike standard sessionals that split a section into Group G1 and Group G2, project courses are scheduled section-wide (`group = None`).
+  - Both groups of Section A (or Section B) attend combinedly in the exact same weekly time slot.
+- **Weekly Slot Rules & Multi-Block Day Spread**:
+  - **Term 3-2 (`CSE 3200`)**: Exactly 1 weekly 3-period slot for Section A, and 1 weekly 3-period slot for Section B.
+  - **Term 4-1 (`CSE 4000`)**: Exactly 1 weekly 3-period slot for Section A, and 1 weekly 3-period slot for Section B.
+  - **Term 4-2 (`CSE 4000`)**: Exactly 2 weekly 3-period slots for Section A on **distinct days**, and 2 weekly 3-period slots for Section B on **distinct days** (enforced via CP-SAT distinct day spread constraint).
+- **Zero Physical Room Allocation (`NO_ROOM`)**:
+  - Students execute project and thesis work in software laboratories, project workspaces, or individually. They **do not require and must not occupy** any physical theory classrooms (e.g., CSE Room 501, 105) or scheduled departmental labs.
+  - Modeled with virtual `room_kind = "no_room"` and `room_id = "NO_ROOM"`.
+  - Excluded from physical room non-overlap (`_c_room_conflicts`) and physical room supply checks so they never conflict with or occupy physical classroom space.
+- **Multi-Perspective Table Display Compliance**:
+  - **Labs & Rooms Master Routine (`table-master-labs`)**: Completely excluded. They never occupy rows under CSE Room 501, CSE Room 105, or any laboratory.
+  - **Batches & Sections Master Routine (`table-master-batches`)**: Placed on their designated weekly time slots for each batch/section, rendered with the course code only (`CSE 3200`, `CSE 4000`), with no classroom or teacher name.
+  - **CSV Export**: The `room` field is rendered empty (`""`).
+
 ---
 
 ## 4. Mathematical Formulation & CP-SAT Solver Logic
@@ -226,17 +251,23 @@ $$\sum_{e \in E(t)} \sum_{\substack{(r, s): \\ s \le \tau < s + \text{len}(e)}} 
 ---
 
 #### Constraint 4: Room Non-Overlap & Capacity
-A room cannot host multiple events simultaneously:
-$$\sum_{e \in E} \sum_{\substack{s: \\ s \le t < s + \text{len}(e)}} x_{e, r, s} \le 1, \quad \forall r \in R, \; \forall t \in [0, 44]$$
+A physical room cannot host multiple events simultaneously:
+$$\sum_{e \in E} \sum_{\substack{s: \\ s \le t < s + \text{len}(e)}} x_{e, r, s} \le 1, \quad \forall r \in R \setminus \{\text{NO\_ROOM}\}, \; \forall t \in [0, 44]$$
+Virtual non-physical rooms (`NO_ROOM`) used for Project & Thesis courses (`CSE 3200`, `CSE 4000`) are explicitly excluded from physical room conflict tracking so that multiple project or thesis cohorts can conduct self-directed work at the same time without spatial conflict.
+
 Additionally, feasible rooms $R_e$ for event $e$ are filtered before variable creation such that $\text{capacity}(r) \ge \text{size}(e)$ and $\text{kind}(r) == \text{room\_kind}(e)$.
-- **Code Reference**: [routine/scheduler.py:210-221](file:///f:/routine_maker/routine/scheduler.py#L210-L221)
+- **Code Reference**: [routine/scheduler.py:220-229](file:///f:/routine_maker/routine/scheduler.py#L220-L229)
   ```python
   def _c_room_conflicts(self) -> None:
-      for r in self.p.rooms:
-          for t in range(self.grid.n_slots):
-              active = [var for ev in self.p.events for var in self._active_at_room(ev, r, t)]
-              if len(active) > 1:
-                  self.model.Add(sum(active) <= 1)
+      buckets: dict[tuple[str, int], list] = {}
+      for ev in self.p.events:
+          for (room_id, t), lits in self.cover_room[ev.eid].items():
+              if room_id in ("NO_ROOM", "", None):
+                  continue
+              buckets.setdefault((room_id, t), []).extend(lits)
+      for lits in buckets.values():
+          if len(lits) > 1:
+              self.model.AddAtMostOne(lits)
   ```
 
 ---
@@ -292,7 +323,7 @@ $$S_{\text{HUM1108}} = S_{\text{PHY1108}}$$
 When running routine generation in **Incremental Mode**, events belonging to running batches designated to stay unchanged are pinned to their exact previous placements $(r^*, s^*)$:
 $$x_{e, r^*, s^*} = 1, \quad \forall e \in E_{\text{frozen}}$$
 This forces CP-SAT to keep existing timetables completely fixed while scheduling incoming terms around them.
-- **Code Reference**: [routine/scheduler.py:307-325](file:///f:/routine_maker/routine/scheduler.py#L307-L325)
+- **Code Reference**: [routine/scheduler.py:322-340](file:///f:/routine_maker/routine/scheduler.py#L322-L340)
   ```python
   def _c_freeze(self, freeze: dict[int, tuple[str, int]]) -> None:
       for eid, (room_id, start) in freeze.items():
@@ -300,8 +331,17 @@ This forces CP-SAT to keep existing timetables completely fixed while scheduling
           if not cells:
               continue
           key = (room_id, start)
+          if key not in cells and ("NO_ROOM", start) in cells:
+              key = ("NO_ROOM", start)
           self.model.Add(cells[key] == 1)
   ```
+
+---
+
+#### Constraint 9: Project & Thesis Multi-Block Day Spread
+For multi-block project courses such as `CSE 4000` in Term 4-2 (3.0 Credits, 2 weekly blocks), the 2 meetings for the same section must fall on **distinct days**:
+$$\lfloor S_{e_1} / n_{\text{periods}} \rfloor \ne \lfloor S_{e_2} / n_{\text{periods}} \rfloor, \quad \forall e_1, e_2 \in \text{Meetings}(\text{CSE 4000}, \text{sec})$$
+This prevents back-to-back project block scheduling and guarantees distributed study throughout the academic week.
 
 ---
 

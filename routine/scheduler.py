@@ -130,7 +130,9 @@ class RoutineScheduler:
         home_rooms = {**default_homerooms, **self.opt.get("home_rooms", {})}
         for ev in self.p.events:
             rooms = self.p.feasible_rooms(ev)
-            if not ev.is_lab:
+            clean_c = ev.course.code.replace(" ", "").upper()
+            is_proj = clean_c in ("CSE3200", "CSE4000") or clean_c.startswith("CSE4000") or ev.room_kind in ("no_room", "none", "")
+            if not ev.is_lab and not is_proj:
                 home = home_rooms.get(f"{ev.batch_id}|{ev.section}")
                 if home:
                     match = [r for r in rooms if r.id == home]
@@ -221,8 +223,10 @@ class RoutineScheduler:
         """H3. A room hosts one class at a time."""
         buckets: dict[tuple[str, int], list] = {}
         for ev in self.p.events:
-            for key, lits in self.cover_room[ev.eid].items():
-                buckets.setdefault(key, []).extend(lits)
+            for (room_id, t), lits in self.cover_room[ev.eid].items():
+                if room_id in ("NO_ROOM", "", None):
+                    continue
+                buckets.setdefault((room_id, t), []).extend(lits)
         for lits in buckets.values():
             if len(lits) > 1:
                 self.model.AddAtMostOne(lits)
@@ -332,10 +336,13 @@ class RoutineScheduler:
                 continue
             key = (room_id, start)
             if key not in cells:
-                raise ValueError(
-                    f"Cannot freeze event {eid} at {key}: that placement is no "
-                    f"longer legal under the current data."
-                )
+                if ("NO_ROOM", start) in cells:
+                    key = ("NO_ROOM", start)
+                else:
+                    raise ValueError(
+                        f"Cannot freeze event {eid} at {key}: that placement is no "
+                        f"longer legal under the current data."
+                    )
             self.model.Add(cells[key] == 1)
 
     # -- soft constraints ----------------------------------------------------

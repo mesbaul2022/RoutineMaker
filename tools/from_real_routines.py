@@ -171,35 +171,29 @@ TEACHERS = [
 # solvable; correct them to your real room inventory.
 
 ROOMS = [
-    {"id": "B-306", "name": "Room B-306", "kind": "theory", "capacity": 70},
-    {"id": "B-102", "name": "Room B-102", "kind": "theory", "capacity": 70},
-    {"id": "B-105", "name": "Room B-105", "kind": "theory", "capacity": 70},
-    {"id": "D-401", "name": "Room D-401", "kind": "theory", "capacity": 70},
-    {"id": "D-402", "name": "Room D-402", "kind": "theory", "capacity": 70},
+    # Theory rooms
+    {"id": "CSE-501", "name": "CSE Room 501", "kind": "theory", "capacity": 70},
+    {"id": "CSE-502", "name": "CSE Room 502", "kind": "theory", "capacity": 70},
+    {"id": "CSE-401", "name": "CSE Room 401", "kind": "theory", "capacity": 70},
+    {"id": "CSE-402", "name": "CSE Room 402", "kind": "theory", "capacity": 70},
+    {"id": "CSE-105", "name": "CSE Room 105", "kind": "theory", "capacity": 70},
+    {"id": "CSE-306", "name": "CSE Room 306", "kind": "theory", "capacity": 70},
+    {"id": "CSE-101", "name": "CSE Room 101", "kind": "theory", "capacity": 70},
+    {"id": "CSE-102", "name": "CSE Room 102", "kind": "theory", "capacity": 70},
+    # Departmental Software Labs
     {"id": "CSE-103", "name": "CSE Lab 103", "kind": "cse_lab", "capacity": 35},
-    {"id": "CSE-103-2", "name": "CSE Lab 103 (2nd room)", "kind": "cse_lab", "capacity": 35},  # VERIFY: guessed 2nd room
+    {"id": "CSE-104", "name": "CSE Lab 104", "kind": "cse_lab", "capacity": 35},
+    {"id": "CSE-201", "name": "CSE Lab 201", "kind": "cse_lab", "capacity": 35},
     {"id": "CSE-202", "name": "CSE Lab 202", "kind": "cse_lab", "capacity": 35},
-    {"id": "CSE-107", "name": "CSE Lab 107", "kind": "cse_lab", "capacity": 35},
-    {"id": "CSE-305", "name": "CSE Lab 305 (AI)", "kind": "ai_lab", "capacity": 35},
-    {"id": "CSE-306", "name": "Room CSE-306", "kind": "seminar", "capacity": 70},
-    {"id": "CSE-501", "name": "Room CSE-501", "kind": "seminar", "capacity": 70},
+    {"id": "CSE-305", "name": "CSE Lab 305", "kind": "cse_lab", "capacity": 35},
+    # Departmental Hardware Labs
+    {"id": "CSE-107", "name": "CSE Lab 107", "kind": "hardware_lab_107", "capacity": 35},
+    {"id": "CSE-108", "name": "CSE Lab 108", "kind": "hardware_lab_108", "capacity": 35},
+    # Non-Departmental Labs
     {"id": "ECE-104", "name": "ECE Lab 104", "kind": "ece_lab", "capacity": 35},
-    # -- 1st Year 1st Term --
-    {"id": "CSE-101", "name": "Room CSE-101 (1st yr homeroom)", "kind": "year1_theory", "capacity": 70},
-    {"id": "CSE-102", "name": "Room CSE-102 (1st yr homeroom)", "kind": "year1_theory", "capacity": 70},
-    {"id": "CSE-104-1yr", "name": "CSE Lab 104 (1st yr)", "kind": "year1_cse_lab", "capacity": 35},
-    {"id": "PHY-LAB", "name": "Physics Lab", "kind": "phy_lab", "capacity": 35},  # VERIFY: not named in footnote
-    {"id": "HUM-LAB", "name": "English Language Lab", "kind": "hum_lab", "capacity": 35},  # VERIFY: not named in footnote
-    # -- 4th Year 1st Term --
-    {"id": "CSE-501", "name": "Room CSE-501", "kind": "theory", "capacity": 70},
-    {"id": "CSE-502", "name": "Room CSE-502", "kind": "theory", "capacity": 70},
-    {"id": "CSE-201", "name": "CSE Lab 201", "kind": "network_lab", "capacity": 35},
     {"id": "CHEM-LAB", "name": "Chemistry Lab", "kind": "chem_lab", "capacity": 35},
-    # CSE4102/CSE4122 (4th year) share the SAME physical CSE-305 as CSE3210
-    # (3rd year AI lab) per both footnotes -- reusing the "ai_lab" room above
-    # rather than adding a duplicate. CSE4112/CSE4116 (4th year) draw from the
-    # shared "cse_lab" pool above rather than a dedicated CSE-104-for-4th-year
-    # room, since that pool already has spare capacity.  # VERIFY
+    {"id": "HUM-LAB", "name": "English Language Lab", "kind": "hum_lab", "capacity": 35},
+    {"id": "PHY-LAB", "name": "Physics Lab", "kind": "phy_lab", "capacity": 35},
 ]
 
 # ------------------------------------------------------------------- batches

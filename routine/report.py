@@ -132,7 +132,7 @@ def write_csv(problem: Problem, solution: Solution, path: str | Path) -> Path:
             is_project = clean_code in ("CSE3200", "CSE4000") or clean_code.startswith("CSE4000")
             if is_project:
                 t_str = ""
-                room_str = ""
+                room_str = problem.rooms[a.room_id].name
                 disp_code = "CSE 3200" if "3200" in clean_code else "CSE 4000"
             elif ev.is_shared:
                 t_str = "/".join(problem.teachers[t].name for t in ev.teacher_ids if t in problem.teachers)
@@ -516,13 +516,26 @@ def _render_master_labs_table(problem: Problem, solution: Solution) -> str:
     """Render Labs Master Routine table matching Image 2 upper section."""
     grid = problem.grid
 
-    # Collect lab rooms
-    lab_rooms = [
-        r for r in problem.rooms.values()
-        if r.kind != "theory" or "lab" in r.id.lower() or "103" in r.id or "201" in r.id or "202" in r.id or "305" in r.id
+    # Collect and order lab rooms per official departmental categories
+    lab_order = [
+        "CSE-103",   # Software
+        "CSE-104",   # Software
+        "CSE-201",   # Software
+        "CSE-202",   # Software
+        "CSE-305",   # Software
+        "CSE-306",   # Software backup / Theory dual-use
+        "CSE-107",   # Hardware (CSE 3106, CSE 2104)
+        "CSE-108",   # Hardware (CSE 1204)
+        "ECE-104",   # Non-Dept
+        "CHEM-LAB",  # Non-Dept
+        "HUM-LAB",   # Non-Dept
+        "PHY-LAB",   # Non-Dept
+        "CSE-501",   # Theory / Seminar (CSE 3230)
     ]
-    # Sort CSE labs first, then others
-    lab_rooms.sort(key=lambda r: (0 if "cse" in r.id.lower() or "305" in r.id or "201" in r.id or "202" in r.id or "107" in r.id or "103" in r.id or "104" in r.id else 1, r.name))
+    lab_rooms = [problem.rooms[rid] for rid in lab_order if rid in problem.rooms]
+    for r in problem.rooms.values():
+        if r not in lab_rooms and r.kind != "theory":
+            lab_rooms.append(r)
 
     # Pre-index room assignments
     r_grids = {r.id: [[None] * grid.n_periods for _ in range(grid.n_days)] for r in lab_rooms}

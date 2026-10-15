@@ -194,22 +194,22 @@ def _migrate_schema():
         # 4. Seed courses for the 3 new terms (1-2, 3-1, 4-2) with no teachers assigned
         new_courses = [
             # --- 1st Year 2nd Term (1-2) ---
-            ("CSE1203", "Digital Logic Design", "1-2", "theory", "year1_theory", 3, None, 3.0, "core", None),
-            ("CSE1204", "Digital Logic Design Laboratory", "1-2", "sessional", "cse_lab", None, 1, 1.5, "core", None),
-            ("CSE1205", "Object Oriented Programming", "1-2", "theory", "year1_theory", 3, None, 3.0, "core", None),
+            ("CSE1203", "Digital Logic Design", "1-2", "theory", "theory", 3, None, 3.0, "core", None),
+            ("CSE1204", "Digital Logic Design Laboratory", "1-2", "sessional", "hardware_lab_108", None, 1, 1.5, "core", None),
+            ("CSE1205", "Object Oriented Programming", "1-2", "theory", "theory", 3, None, 3.0, "core", None),
             ("CSE1206", "Object Oriented Programming Laboratory", "1-2", "sessional", "cse_lab", None, 1, 1.5, "core", None),
-            ("CHEM1207", "Chemistry", "1-2", "theory", "year1_theory", 3, None, 3.0, "core", None),
+            ("CHEM1207", "Chemistry", "1-2", "theory", "theory", 3, None, 3.0, "core", None),
             ("CHEM1208", "Chemistry Laboratory", "1-2", "sessional", "chem_lab", None, 1, 0.75, "core", None),
-            ("EEE1207", "Basic Electrical Engineering", "1-2", "theory", "year1_theory", 3, None, 3.0, "core", None),
+            ("EEE1207", "Basic Electrical Engineering", "1-2", "theory", "theory", 3, None, 3.0, "core", None),
             ("EEE1208", "Basic Electrical Engineering Laboratory", "1-2", "sessional", "ece_lab", None, 1, 1.5, "core", None),
-            ("MATH1207", "Coordinate Geometry and Differential Equations", "1-2", "theory", "year1_theory", 3, None, 3.0, "core", None),
+            ("MATH1207", "Coordinate Geometry and Differential Equations", "1-2", "theory", "theory", 3, None, 3.0, "core", None),
 
             # --- 3rd Year 1st Term (3-1) ---
             ("CSE3100", "Web Programming Laboratory", "3-1", "sessional", "cse_lab", None, 1, 1.5, "core", None),
             ("CSE3101", "Operating Systems", "3-1", "theory", "theory", 3, None, 3.0, "core", None),
             ("CSE3102", "Operating Systems Laboratory", "3-1", "sessional", "cse_lab", None, 1, 1.5, "core", None),
             ("CSE3105", "Embedded Systems and Internet of Things", "3-1", "theory", "theory", 3, None, 3.0, "core", None),
-            ("CSE3106", "Embedded Systems and Internet of Things Laboratory", "3-1", "sessional", "cse_lab", None, 1, 0.75, "core", "CSE3120"),
+            ("CSE3106", "Embedded Systems and Internet of Things Laboratory", "3-1", "sessional", "hardware_lab_107", None, 1, 0.75, "core", "CSE3120"),
             ("CSE3107", "Applied Statistics and Queuing Theory", "3-1", "theory", "theory", 3, None, 3.0, "core", None),
             ("CSE3109", "Database Systems", "3-1", "theory", "theory", 3, None, 3.0, "core", None),
             ("CSE3110", "Database Systems Laboratory", "3-1", "sessional", "cse_lab", None, 1, 1.5, "core", None),
@@ -217,7 +217,7 @@ def _migrate_schema():
             ("CSE3120", "Information Systems Design Laboratory", "3-1", "sessional", "cse_lab", None, 1, 0.75, "core", "CSE3106"),
 
             # --- 4th Year 2nd Term (4-2) Core ---
-            ("CSE4000", "Capstone Project/Thesis", "4-2", "sessional", "cse_lab", None, 2, 3.0, "core", None),
+            ("CSE4000", "Capstone Project/Thesis", "4-2", "sessional", "theory", None, 2, 3.0, "core", None),
             ("IEM4227", "Industrial Management", "4-2", "theory", "theory", 3, None, 3.0, "core", None),
             ("HUM4207", "Entrepreneurship Development", "4-2", "theory", "theory", 2, None, 2.0, "core", None),
 
@@ -244,9 +244,9 @@ def _migrate_schema():
             ("CSE4203", "Peripherals and Interfacing", "4-2", "theory", "theory", 3, None, 3.0, "optional_iii", None),
             ("CSE4204", "Peripherals and Interfacing Laboratory", "4-2", "sessional", "cse_lab", None, 1, 0.75, "optional_iii", None),
             ("CSE4217", "Computer Vision", "4-2", "theory", "theory", 3, None, 3.0, "optional_iii", None),
-            ("CSE4218", "Computer Vision Laboratory", "4-2", "sessional", "ai_lab", None, 1, 0.75, "optional_iii", None),
+            ("CSE4218", "Computer Vision Laboratory", "4-2", "sessional", "cse_lab", None, 1, 0.75, "optional_iii", None),
             ("CSE4221", "High Performance Computing", "4-2", "theory", "theory", 3, None, 3.0, "optional_iii", None),
-            ("CSE4222", "High Performance Computing Laboratory", "4-2", "sessional", "network_lab", None, 1, 0.75, "optional_iii", None),
+            ("CSE4222", "High Performance Computing Laboratory", "4-2", "sessional", "cse_lab", None, 1, 0.75, "optional_iii", None),
             ("CSE4223", "Digital System Design", "4-2", "theory", "theory", 3, None, 3.0, "optional_iii", None),
             ("CSE4224", "Digital System Design Laboratory", "4-2", "sessional", "cse_lab", None, 1, 0.75, "optional_iii", None),
             ("CSE4225", "Real-time Embedded Systems", "4-2", "theory", "theory", 3, None, 3.0, "optional_iii", None),
@@ -352,6 +352,81 @@ def _migrate_schema():
                 )"""
             )
             cur.execute("CREATE INDEX IF NOT EXISTS idx_sched_batch ON scheduled_assignments(batch_id)")
+
+        # 8. Room reallocation & official room names migration
+        ROOM_SPECS = [
+            # Theory rooms
+            ("CSE-501", "CSE Room 501", "theory", 70),
+            ("CSE-502", "CSE Room 502", "theory", 70),
+            ("CSE-401", "CSE Room 401", "theory", 70),
+            ("CSE-402", "CSE Room 402", "theory", 70),
+            ("CSE-105", "CSE Room 105", "theory", 70),
+            ("CSE-306", "CSE Room 306", "theory", 70),
+            ("CSE-101", "CSE Room 101", "theory", 70),
+            ("CSE-102", "CSE Room 102", "theory", 70),
+            # Departmental Software Labs
+            ("CSE-103", "CSE Lab 103", "cse_lab", 35),
+            ("CSE-104", "CSE Lab 104", "cse_lab", 35),
+            ("CSE-201", "CSE Lab 201", "cse_lab", 35),
+            ("CSE-202", "CSE Lab 202", "cse_lab", 35),
+            ("CSE-305", "CSE Lab 305", "cse_lab", 35),
+            # Departmental Hardware Labs
+            ("CSE-107", "CSE Lab 107", "hardware_lab_107", 35),
+            ("CSE-108", "CSE Lab 108", "hardware_lab_108", 35),
+            # Non-Departmental Labs
+            ("ECE-104", "ECE Lab 104", "ece_lab", 35),
+            ("CHEM-LAB", "Chemistry Lab", "chem_lab", 35),
+            ("HUM-LAB", "English Language Lab", "hum_lab", 35),
+            ("PHY-LAB", "Physics Lab", "phy_lab", 35),
+        ]
+        for rid, rname, rkind, rcap in ROOM_SPECS:
+            cur.execute("SELECT id FROM rooms WHERE id = ?", (rid,))
+            if cur.fetchone():
+                cur.execute(
+                    "UPDATE rooms SET name = ?, kind = ?, capacity = ? WHERE id = ?",
+                    (rname, rkind, rcap, rid),
+                )
+            else:
+                cur.execute(
+                    "INSERT INTO rooms (id, name, kind, capacity) VALUES (?, ?, ?, ?)",
+                    (rid, rname, rkind, rcap),
+                )
+
+        # Delete obsolete rooms
+        obsolete_room_ids = ["B-306", "B-102", "B-105", "D-401", "D-402", "CSE-103-2", "CSE-501-sem", "CSE-104-1yr"]
+        for old_id in obsolete_room_ids:
+            cur.execute("DELETE FROM rooms WHERE id = ?", (old_id,))
+
+        # Remap existing scheduled assignments to updated room IDs
+        room_remapping = {
+            "CSE-103-2": "CSE-103",
+            "CSE-501-sem": "CSE-501",
+            "CSE-104-1yr": "CSE-104",
+            "B-102": "CSE-105",
+            "B-105": "CSE-306",
+            "B-306": "CSE-401",
+            "D-401": "CSE-402",
+            "D-402": "CSE-402",
+        }
+        for old_id, new_id in room_remapping.items():
+            cur.execute(
+                "UPDATE scheduled_assignments SET room_id = ? WHERE room_id = ?",
+                (new_id, old_id),
+            )
+
+        # Update course room_kind classifications
+        cur.execute("UPDATE courses SET room_kind = 'theory' WHERE kind = 'theory'")
+        cur.execute("UPDATE courses SET room_kind = 'hardware_lab_107' WHERE id IN ('CSE3106', 'CSE2104')")
+        cur.execute("UPDATE courses SET room_kind = 'hardware_lab_108' WHERE id = 'CSE1204'")
+        cur.execute("UPDATE courses SET room_kind = 'seminar_501' WHERE id = 'CSE3230'")
+        cur.execute("UPDATE courses SET room_kind = 'chem_lab' WHERE id = 'CHEM1208'")
+        cur.execute("UPDATE courses SET room_kind = 'hum_lab' WHERE id = 'HUM1108'")
+        cur.execute("UPDATE courses SET room_kind = 'phy_lab' WHERE id = 'PHY1108'")
+        cur.execute("UPDATE courses SET room_kind = 'ece_lab' WHERE id IN ('EEE1208', 'EEE2118', 'ECE2208', 'ECE2214')")
+        # All remaining sessional courses (except project/thesis which sit in theory homerooms) are software labs
+        cur.execute(
+            "UPDATE courses SET room_kind = 'cse_lab' WHERE kind = 'sessional' AND id NOT IN ('CSE3200', 'CSE4000', 'CSE4000_41', 'CSE3106', 'CSE2104', 'CSE1204', 'CSE3230', 'CHEM1208', 'HUM1108', 'PHY1108', 'EEE1208', 'EEE2118', 'ECE2208', 'ECE2214')"
+        )
 
         con.commit()
 

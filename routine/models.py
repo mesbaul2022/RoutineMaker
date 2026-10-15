@@ -156,7 +156,7 @@ class Problem:
             if home_id and home_id in self.rooms:
                 cand.append(self.rooms[home_id])
             for r in self.rooms.values():
-                if r.capacity >= event.size:
+                if r.capacity >= event.size and r.kind == "theory":
                     if r not in cand:
                         cand.append(r)
             return cand or list(self.rooms.values())
@@ -167,14 +167,37 @@ class Problem:
             if home_id and home_id in self.rooms:
                 return [self.rooms[home_id]]
 
-            if event.room_kind in ("theory", "year1_theory"):
-                cand = [
-                    r
-                    for r in self.rooms.values()
-                    if r.kind in ("theory", "year1_theory") and r.capacity >= event.size
-                ]
-                if cand:
-                    return cand
+            cand = [
+                r
+                for r in self.rooms.values()
+                if r.kind == "theory" and r.capacity >= event.size
+            ]
+            if cand:
+                return cand
+
+        # Specific hardware labs
+        if event.room_kind == "hardware_lab_107" or clean_code in ("CSE3106", "CSE2104"):
+            if "CSE-107" in self.rooms:
+                return [self.rooms["CSE-107"]]
+        if event.room_kind == "hardware_lab_108" or clean_code == "CSE1204":
+            if "CSE-108" in self.rooms:
+                return [self.rooms["CSE-108"]]
+
+        # Technical Writing and Seminar (CSE 3230) in CSE Room 501
+        if event.room_kind == "seminar_501" or clean_code == "CSE3230":
+            if "CSE-501" in self.rooms:
+                return [self.rooms["CSE-501"]]
+
+        # Departmental Software Labs: CSE Lab 103, 104, 201, 202, 305, and dual-use backup CSE Room 306
+        if event.room_kind in ("cse_lab", "year1_cse_lab", "ai_lab", "network_lab"):
+            software_ids = ["CSE-103", "CSE-104", "CSE-201", "CSE-202", "CSE-305", "CSE-306"]
+            cand = [
+                self.rooms[rid]
+                for rid in software_ids
+                if rid in self.rooms and self.rooms[rid].capacity >= event.size
+            ]
+            if cand:
+                return cand
 
         return [
             r

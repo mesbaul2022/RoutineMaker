@@ -43,11 +43,25 @@ def verify(problem: Problem, solution: Solution) -> list[str]:
         theory_kinds = {"theory", "year1_theory"}
         clean_code = ev.course.code.replace(" ", "").upper()
         is_project = clean_code in ("CSE3200", "CSE4000") or clean_code.startswith("CSE4000")
+        software_lab_rooms = {"CSE-103", "CSE-104", "CSE-201", "CSE-202", "CSE-305", "CSE-306"}
+        software_kinds = {"cse_lab", "year1_cse_lab", "ai_lab", "network_lab"}
 
         if is_project:
             pass
         elif not ev.is_lab and room.kind in theory_kinds and ev.room_kind in theory_kinds:
             pass
+        elif clean_code in ("CSE3106", "CSE2104"):
+            if a.room_id != "CSE-107":
+                faults.append(f"H5 {ev.label} must be placed in CSE Lab 107 (got {room.name})")
+        elif clean_code == "CSE1204":
+            if a.room_id != "CSE-108":
+                faults.append(f"H5 {ev.label} must be placed in CSE Lab 108 (got {room.name})")
+        elif clean_code == "CSE3230":
+            if a.room_id != "CSE-501":
+                faults.append(f"H5 {ev.label} must be placed in CSE Room 501 (got {room.name})")
+        elif ev.room_kind in software_kinds:
+            if a.room_id not in software_lab_rooms:
+                faults.append(f"H5 {ev.label} placed in non-software room {room.name}")
         elif room.kind != ev.room_kind:
             faults.append(f"H5 {ev.label} placed in {room.name} of kind {room.kind}")
         if room.capacity < ev.size:
@@ -173,11 +187,21 @@ def verify(problem: Problem, solution: Solution) -> list[str]:
 
 
 def main() -> int:
-    data = sys.argv[1] if len(sys.argv) > 1 else "data/kuet_cse.json"
-    problem = load_problem(data)
-    problem.options["solver"]["max_seconds"] = float(
-        sys.argv[2] if len(sys.argv) > 2 else 90
-    )
+    db_file = Path(__file__).resolve().parents[1] / "routine.db"
+    if len(sys.argv) > 1 and sys.argv[1].endswith(".json"):
+        problem = load_problem(sys.argv[1])
+        problem.options["solver"]["max_seconds"] = float(sys.argv[2] if len(sys.argv) > 2 else 90)
+    elif db_file.exists():
+        from app.db import SessionLocal
+        from app.db_loader import load_problem_from_db
+        with SessionLocal() as db:
+            problem = load_problem_from_db(db)
+        problem.options["solver"]["max_seconds"] = float(sys.argv[1] if len(sys.argv) > 1 else 90)
+    else:
+        data = "data/kuet_cse.json"
+        problem = load_problem(data)
+        problem.options["solver"]["max_seconds"] = float(sys.argv[1] if len(sys.argv) > 1 else 90)
+
     solution = solve_routine(problem)
     if not solution.ok:
         print(f"no solution ({solution.status})")

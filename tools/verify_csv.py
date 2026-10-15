@@ -43,10 +43,14 @@ def reconstruct(problem, csv_path):
             d = grid.day_index(row["day"])
             p = grid.period_index(row["start_period"])
             start = grid.slot(d, p)
-            room_id = next(
-                (r.id for r in problem.rooms.values() if r.name == row["room"]),
-                "theory"
-            )
+            if not row["room"]:
+                home_rooms = problem.options.get("home_rooms", {})
+                room_id = home_rooms.get(f"{ev.batch_id}|{ev.section}", "CSE-501")
+            else:
+                room_id = next(
+                    (r.id for r in problem.rooms.values() if r.name == row["room"]),
+                    "CSE-501"
+                )
             assignments.append(Assignment(ev, room_id, start))
     return Solution(status="FROM_CSV", assignments=assignments)
 

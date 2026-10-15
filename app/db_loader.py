@@ -58,14 +58,14 @@ DEFAULT_HOME_ROOMS = {
     "1-1|B": "CSE-102",
     "1-2|A": "CSE-101",
     "1-2|B": "CSE-102",
-    "2-1|A": "B-102",
-    "2-1|B": "B-105",
-    "2-2|A": "D-402",
-    "2-2|B": "B-102",
-    "3-1|A": "B-306",
-    "3-1|B": "D-401",
-    "3-2|A": "B-306",
-    "3-2|B": "D-401",
+    "2-1|A": "CSE-105",
+    "2-1|B": "CSE-306",
+    "2-2|A": "CSE-105",
+    "2-2|B": "CSE-306",
+    "3-1|A": "CSE-401",
+    "3-1|B": "CSE-402",
+    "3-2|A": "CSE-401",
+    "3-2|B": "CSE-402",
     "4-1|A": "CSE-501",
     "4-1|B": "CSE-502",
     "4-2|A": "CSE-501",
@@ -85,6 +85,7 @@ DEFAULT_OPTIONS = {
         "room_churn": 4,
         "theory_slot_priority": 2,
         "block_gap": 10,
+        "lab_room_priority": 2,
     },
     "solver": {"max_seconds": 180, "workers": 8, "log": False},
 }
@@ -555,6 +556,9 @@ def validate_db_problem(problem: Problem, db: Session | None = None) -> tuple[li
             and ev.course.code.replace(" ", "").upper() not in ("CSE3200", "CSE4000")
             and not ev.course.code.replace(" ", "").upper().startswith("CSE4000")
         )
+        if kind == "theory":
+            # Technical Writing & Seminar (CSE 3230) runs in CSE Room 501
+            demand += sum(ev.length for ev in problem.events if ev.room_kind == "seminar_501")
         capacity = supply * grid.n_slots
         if demand > capacity:
             errors.append(

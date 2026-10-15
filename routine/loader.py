@@ -16,14 +16,20 @@ from .timegrid import TimeGrid
 DEFAULT_HOME_ROOMS = {
     "1-1|A": "CSE-101",
     "1-1|B": "CSE-102",
-    "2-1|A": "B-102",
-    "2-1|B": "B-105",
-    "2-2|A": "D-402",
-    "2-2|B": "B-102",
-    "3-2|A": "B-306",
-    "3-2|B": "D-401",
+    "1-2|A": "CSE-101",
+    "1-2|B": "CSE-102",
+    "2-1|A": "CSE-105",
+    "2-1|B": "CSE-306",
+    "2-2|A": "CSE-105",
+    "2-2|B": "CSE-306",
+    "3-1|A": "CSE-401",
+    "3-1|B": "CSE-402",
+    "3-2|A": "CSE-401",
+    "3-2|B": "CSE-402",
     "4-1|A": "CSE-501",
     "4-1|B": "CSE-502",
+    "4-2|A": "CSE-501",
+    "4-2|B": "CSE-502",
 }
 
 DEFAULT_OPTIONS = {
@@ -39,6 +45,7 @@ DEFAULT_OPTIONS = {
         "room_churn": 4,
         "theory_slot_priority": 2,
         "block_gap": 10,
+        "lab_room_priority": 2,
     },
     "solver": {"max_seconds": 180, "workers": 8, "log": False},
 }

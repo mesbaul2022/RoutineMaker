@@ -64,7 +64,7 @@ class RoutineScheduler:
         self.p = problem
         self.grid = problem.grid
         self.opt = problem.options
-        self.w = self.opt["weights"]
+        self.w = {"lab_room_priority": 2, **self.opt.get("weights", {})}
 
         self.model = cp_model.CpModel()
         self.x: dict[int, dict[tuple[str, int], cp_model.IntVar]] = {}
@@ -114,14 +114,14 @@ class RoutineScheduler:
             "1-1|B": "CSE-102",
             "1-2|A": "CSE-101",
             "1-2|B": "CSE-102",
-            "2-1|A": "B-102",
-            "2-1|B": "B-105",
-            "2-2|A": "D-402",
-            "2-2|B": "B-102",
-            "3-1|A": "B-306",
-            "3-1|B": "D-401",
-            "3-2|A": "B-306",
-            "3-2|B": "D-401",
+            "2-1|A": "CSE-105",
+            "2-1|B": "CSE-306",
+            "2-2|A": "CSE-105",
+            "2-2|B": "CSE-306",
+            "3-1|A": "CSE-401",
+            "3-1|B": "CSE-402",
+            "3-2|A": "CSE-401",
+            "3-2|B": "CSE-402",
             "4-1|A": "CSE-501",
             "4-1|B": "CSE-502",
             "4-2|A": "CSE-501",
@@ -475,6 +475,53 @@ class RoutineScheduler:
                     self.model.Add(bg2 >= busy[d * P + 3] + busy[d * P + 5] - busy[d * P + 4] - 1)
                     block_gaps.append(bg2)
         self.penalty_terms["block_gap"] = block_gaps
+
+        # S9. Departmental Software Lab room priority & overflow handling:
+        # - CSE Lab 103 priority: CSE 3218 > CSE 42** > CSE 41**
+        # - CSE Lab 104 priority (if 103 filled): CSE 42** > CSE 41**
+        # - CSE Room 306: dual-use theory/lab, overflow only (high penalty)
+        # - Other departmental labs: CSE Lab 201, 202, 305 used normally
+        lab_room_terms = []
+        if self._wants("lab_room_priority"):
+            for ev in self.p.events:
+                if ev.is_lab and ev.room_kind in ("cse_lab", "year1_cse_lab", "ai_lab", "network_lab"):
+                    clean_c = ev.course.code.replace(" ", "").upper()
+                    is_3218 = (clean_c == "CSE3218")
+                    is_42xx = clean_c.startswith("CSE42")
+                    is_41xx = clean_c.startswith("CSE41")
+
+                    for (rid, _), var in self.x[ev.eid].items():
+                        if rid == "CSE-306":
+                            # Dual-use overflow backup only
+                            lab_room_terms.append(1000 * var)
+                        elif is_3218:
+                            if rid == "CSE-103":
+                                pass
+                            elif rid == "CSE-104":
+                                lab_room_terms.append(50 * var)
+                            else:
+                                lab_room_terms.append(200 * var)
+                        elif is_42xx:
+                            if rid == "CSE-103":
+                                pass
+                            elif rid == "CSE-104":
+                                lab_room_terms.append(15 * var)
+                            else:
+                                lab_room_terms.append(100 * var)
+                        elif is_41xx:
+                            if rid == "CSE-103":
+                                lab_room_terms.append(25 * var)
+                            elif rid == "CSE-104":
+                                lab_room_terms.append(30 * var)
+                            else:
+                                lab_room_terms.append(80 * var)
+                        else:
+                            # Other software labs (1st, 2nd, 3rd year labs other than 3218)
+                            if rid in ("CSE-103", "CSE-104"):
+                                lab_room_terms.append(35 * var)
+                            else:
+                                pass
+        self.penalty_terms["lab_room_priority"] = lab_room_terms
 
         for name, vars_ in self.penalty_terms.items():
             weight = self.w.get(name, 0)

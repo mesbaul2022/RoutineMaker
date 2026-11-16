@@ -33,6 +33,9 @@
         <button id="nav-master" class="nav-tab" data-tab="master" role="tab">
           <span>📊</span> Master Routine
         </button>
+        <button id="nav-timeslots" class="nav-tab" data-tab="timeslots" role="tab">
+          <span>⏰</span> Time Slots
+        </button>
         <button id="nav-generate" class="nav-tab" data-tab="generate" role="tab">
           <span>⚡</span> Generate
         </button>
@@ -184,7 +187,153 @@
     </section>
 
     <!-- ===================================================================== -->
-    <!-- 5. Generate Routine Tab -->
+    <!-- 5. Time Slots & Schedule Customizer Tab -->
+    <!-- ===================================================================== -->
+    <section id="tab-timeslots" class="tab-content" role="tabpanel">
+      <!-- Active Department Timing Banner -->
+      <div class="time-grid-banner">
+        <div class="time-grid-banner-content">
+          <div class="time-grid-banner-icon">⏰</div>
+          <div>
+            <h3 style="font-size: 1.15rem; font-weight: 700; color: #1E3A8A; margin-bottom: 2px;">Department Class Time Slots &amp; Schedule</h3>
+            <p id="active-schedule-summary" style="font-size: 0.9rem; color: #3B82F6;">
+              Active Schedule: <b>08:00 AM – 05:00 PM</b> • 9 classes/day (50m each) • 2 breaks • 5 working days (Sun–Thu)
+            </p>
+          </div>
+        </div>
+        <div style="display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center;">
+          <button type="button" class="btn btn-primary" onclick="handleSaveTimeGrid()">
+            💾 Save Department Time Slots
+          </button>
+          <button type="button" class="btn btn-outline" onclick="handleResetTimeGrid()">
+            ↺ Reset to KUET CSE Default
+          </button>
+        </div>
+      </div>
+
+      <div class="time-grid-layout">
+        <!-- Left: Configuration Form -->
+        <div class="time-grid-form-col">
+          <div class="time-grid-card">
+            <div class="time-grid-card-head">
+              <h4>⚙️ Class &amp; Day Timing Parameters</h4>
+              <p>Configure class duration, number of classes per day, and daily start time for the whole department.</p>
+            </div>
+            <div class="time-grid-card-body">
+              <div class="time-grid-inputs-grid">
+                <div class="form-group">
+                  <label for="cfg-day-start">Day Start Time *</label>
+                  <input type="time" id="cfg-day-start" value="08:00" oninput="onTimeGridInputChange()" />
+                  <div class="form-hint">Start time of the 1st class in the morning (default: 08:00 AM).</div>
+                </div>
+
+                <div class="form-group">
+                  <label for="cfg-period-duration">Class Duration (Minutes) *</label>
+                  <input type="number" id="cfg-period-duration" min="20" max="120" step="5" value="50" oninput="onTimeGridInputChange()" />
+                  <div class="form-hint">Duration of each single lecture period (default: 50 minutes).</div>
+                </div>
+
+                <div class="form-group">
+                  <label for="cfg-periods-per-day">Class Number per Day *</label>
+                  <input type="number" id="cfg-periods-per-day" min="4" max="14" value="9" oninput="onPeriodsPerDayChange()" />
+                  <div class="form-hint">Total number of academic class periods per day (default: 9 periods, P1–P9).</div>
+                </div>
+
+                <div class="form-group">
+                  <label for="cfg-lab-periods">Lab Session Length (Periods) *</label>
+                  <input type="number" id="cfg-lab-periods" min="1" max="6" value="3" oninput="onTimeGridInputChange()" />
+                  <div class="form-hint">Periods per lab session (default: 3 periods = 2h 30m).</div>
+                </div>
+              </div>
+
+              <!-- Working Days Checkboxes -->
+              <div class="form-group" style="margin-top: 1.25rem;">
+                <label>Institutional Working Days *</label>
+                <div class="working-days-pills" id="working-days-container">
+                  <label class="day-pill selected"><input type="checkbox" value="Sunday" checked onchange="onTimeGridInputChange()"> Sunday</label>
+                  <label class="day-pill selected"><input type="checkbox" value="Monday" checked onchange="onTimeGridInputChange()"> Monday</label>
+                  <label class="day-pill selected"><input type="checkbox" value="Tuesday" checked onchange="onTimeGridInputChange()"> Tuesday</label>
+                  <label class="day-pill selected"><input type="checkbox" value="Wednesday" checked onchange="onTimeGridInputChange()"> Wednesday</label>
+                  <label class="day-pill selected"><input type="checkbox" value="Thursday" checked onchange="onTimeGridInputChange()"> Thursday</label>
+                  <label class="day-pill"><input type="checkbox" value="Friday" onchange="onTimeGridInputChange()"> Friday</label>
+                  <label class="day-pill"><input type="checkbox" value="Saturday" onchange="onTimeGridInputChange()"> Saturday</label>
+                </div>
+                <div class="form-hint">Weekly days when department classes and labs are scheduled.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Breaks Between Classes Card -->
+          <div class="time-grid-card" style="margin-top: 1.25rem;">
+            <div class="time-grid-card-head" style="display: flex; justify-content: space-between; align-items: flex-start;">
+              <div>
+                <h4>☕ Breaks Between Classes (Academic Block Cutters)</h4>
+                <p>Breaks partition the day into contiguous blocks. Labs fit inside unbroken blocks and cannot cross breaks.</p>
+              </div>
+              <button type="button" class="btn btn-outline btn-sm" onclick="addNewBreakRow()">
+                + Add Break
+              </button>
+            </div>
+            <div class="time-grid-card-body">
+              <div id="breaks-list-container" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <!-- Populated dynamically with break rows -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Live Computed Preview -->
+        <div class="time-grid-preview-col">
+          <div class="time-grid-card">
+            <div class="time-grid-card-head">
+              <h4>📊 Live Daily Schedule Timeline Preview</h4>
+              <p>Real-time calculation of all periods and breaks based on your current inputs before saving.</p>
+            </div>
+            <div class="time-grid-card-body">
+              <!-- Statistics summary pills -->
+              <div class="time-grid-stats-row">
+                <div class="stat-pill" style="border-left: 3px solid #2563EB;">
+                  <span class="stat-label">Daily Department Span</span>
+                  <span class="stat-val" id="prev-day-span" style="color: #1E40AF; font-size: 1rem;">08:00 AM – 05:00 PM</span>
+                </div>
+                <div class="stat-pill" style="border-left: 3px solid #10B981;">
+                  <span class="stat-label">Total Teaching Time</span>
+                  <span class="stat-val" id="prev-active-time" style="color: #047857; font-size: 1rem;">450 min (7.5 hrs)</span>
+                </div>
+                <div class="stat-pill" style="border-left: 3px solid #F59E0B;">
+                  <span class="stat-label">Total Break Time</span>
+                  <span class="stat-val" id="prev-break-time" style="color: #B45309; font-size: 1rem;">90 min (1.5 hrs)</span>
+                </div>
+                <div class="stat-pill" style="border-left: 3px solid #8B5CF6;">
+                  <span class="stat-label">Contiguous Blocks</span>
+                  <span class="stat-val" id="prev-blocks-count" style="color: #6D28D9; font-size: 1rem;">3 Blocks</span>
+                </div>
+              </div>
+
+              <!-- Computed Timeline Table -->
+              <div class="table-responsive" style="margin-top: 1.25rem;">
+                <table class="data-table" id="preview-timeline-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 120px;">Period / Break</th>
+                      <th style="width: 140px;">Time Window</th>
+                      <th style="width: 100px;">Duration</th>
+                      <th>Academic Block Allocation</th>
+                    </tr>
+                  </thead>
+                  <tbody id="preview-timeline-tbody">
+                    <!-- Populated dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- 6. Generate Routine Tab -->
     <!-- ===================================================================== -->
     <section id="tab-generate" class="tab-content" role="tabpanel">
       <div class="generate-panel">

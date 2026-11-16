@@ -127,11 +127,21 @@ class ScheduledAssignment(Base):
     start_slot = Column(Integer, nullable=False)
 
 
+class AppSetting(Base):
+    __tablename__ = "app_settings"
+
+    key = Column(String, primary_key=True)
+    value = Column(String, nullable=False)
+
+
 def _migrate_schema():
     """Ensure newly added columns exist in SQLite and backfill from assignments."""
     import sqlite3
     with sqlite3.connect(DB_PATH) as con:
         cur = con.cursor()
+
+        # App settings table
+        cur.execute("CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
 
         # 1. Batches table migration: add status column
         cur.execute("PRAGMA table_info(batches)")
@@ -641,5 +651,54 @@ def delete_course_slot_rule(db: Session, rule_id: int) -> bool:
     db.delete(rule)
     db.commit()
     return True
+
+
+# -----------------------------------------------------------------------------
+# Time Grid Settings Storage
+# -----------------------------------------------------------------------------
+
+def get_db_time_grid_config(con_or_db) -> dict:
+    """Retrieve saved time grid configuration from DB, falling back to default."""
+    import json
+    from routine.timegrid import DEFAULT_TIME_GRID_CONFIG
+    try:
+        if isinstance(con_or_db, Session):
+            setting = con_or_db.query(AppSetting).filter_by(key="time_grid").first()
+            if setting and setting.value:
+                return json.loads(setting.value)
+        else:
+            cur = con_or_db.cursor()
+            cur.execute("SELECT value FROM app_settings WHERE key = 'time_grid'")
+            row = cur.fetchone()
+            if row and row[0]:
+                return json.loads(row[0])
+    except Exception:
+        pass
+    return dict(DEFAULT_TIME_GRID_CONFIG)
+
+
+def save_db_time_grid_config(con_or_db, config: dict) -> dict:
+    """Save time grid configuration to DB."""
+    import json
+    val_str = json.dumps(config)
+    if isinstance(con_or_db, Session):
+        setting = con_or_db.query(AppSetting).filter_by(key="time_grid").first()
+        if not setting:
+            setting = AppSetting(key="time_grid", value=val_str)
+            con_or_db.add(setting)
+        else:
+            setting.value = val_str
+        con_or_db.commit()
+    else:
+        cur = con_or_db.cursor()
+        cur.execute("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('time_grid', ?)", (val_str,))
+        con_or_db.commit()
+    return config
+
+
+def reset_db_time_grid_config(con_or_db) -> dict:
+    """Reset time grid configuration to KUET CSE defaults."""
+    from routine.timegrid import DEFAULT_TIME_GRID_CONFIG
+    return save_db_time_grid_config(con_or_db, dict(DEFAULT_TIME_GRID_CONFIG))
 
 

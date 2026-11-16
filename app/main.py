@@ -33,15 +33,23 @@ from .db import (
     delete_teacher_unavailability_rule,
     get_course_slot_rules,
     get_db,
+    get_db_time_grid_config,
     get_saved_placements_map,
     get_scheduled_batches_summary,
     get_teacher_unavailability_records,
     init_db,
+    reset_db_time_grid_config,
+    save_db_time_grid_config,
     save_solution_assignments,
     set_course_slot_rules,
     set_teacher_unavailability_rules,
 )
 from .db_loader import _load_config, load_problem_from_db, validate_db_problem
+from routine.timegrid import (
+    DEFAULT_TIME_GRID_CONFIG,
+    compute_time_grid_details,
+    build_time_grid_from_config,
+)
 
 BATCH_ORDER = ["1-1", "1-2", "2-1", "2-2", "3-1", "3-2", "4-1", "4-2"]
 
@@ -272,6 +280,21 @@ class GenerateRequest(BaseModel):
     frozen_batches: Optional[List[str]] = None
 
 
+class BreakConfig(BaseModel):
+    name: str = "Break"
+    after_period: str = "P3"
+    duration_minutes: int = 15
+
+
+class TimeGridConfigPayload(BaseModel):
+    day_start: str = "08:00"
+    period_duration_minutes: int = 50
+    periods_per_day: int = 9
+    lab_periods: int = 3
+    days: List[str] = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"]
+    breaks: List[BreakConfig] = []
+
+
 # -----------------------------------------------------------------------------
 # Helpers
 # -----------------------------------------------------------------------------
@@ -391,6 +414,68 @@ def _teacher_to_out(teacher: TeacherModel, db: Session, grid=None) -> TeacherOut
         unavailable_count=total_blocked,
         unavailable_summary=summary,
     )
+
+
+# -----------------------------------------------------------------------------
+# Time Grid & Class Schedule Customizer API
+# -----------------------------------------------------------------------------
+
+
+@app.get("/api/time-grid")
+def get_time_grid(db: Session = Depends(get_db)):
+    """Retrieve currently active department time grid configuration and computed timeline."""
+    config = get_db_time_grid_config(db)
+    computed = compute_time_grid_details(config)
+    return {
+        "config": config,
+        "computed": computed,
+        "is_default": config == DEFAULT_TIME_GRID_CONFIG,
+    }
+
+
+@app.post("/api/time-grid")
+def save_time_grid(payload: TimeGridConfigPayload, db: Session = Depends(get_db)):
+    """Save custom department-wide time grid parameters (class number, duration, breaks)."""
+    config = payload.model_dump()
+    if config["period_duration_minutes"] <= 0:
+        raise HTTPException(status_code=400, detail="Period duration must be greater than 0.")
+    if config["periods_per_day"] < 4 or config["periods_per_day"] > 16:
+        raise HTTPException(status_code=400, detail="Periods per day must be between 4 and 16.")
+    if not config["days"]:
+        raise HTTPException(status_code=400, detail="At least one working day must be selected.")
+
+    saved_cfg = save_db_time_grid_config(db, config)
+    computed = compute_time_grid_details(saved_cfg)
+    return {
+        "config": saved_cfg,
+        "computed": computed,
+        "is_default": saved_cfg == DEFAULT_TIME_GRID_CONFIG,
+        "message": "Department time slots successfully updated.",
+    }
+
+
+@app.post("/api/time-grid/preview")
+def preview_time_grid(payload: TimeGridConfigPayload):
+    """Calculate and preview daily timeline from candidate settings without saving."""
+    config = payload.model_dump()
+    computed = compute_time_grid_details(config)
+    return {
+        "config": config,
+        "computed": computed,
+    }
+
+
+@app.post("/api/time-grid/reset")
+def reset_time_grid(db: Session = Depends(get_db)):
+    """Reset department time slots to KUET CSE institutional defaults (8:00 AM – 5:00 PM)."""
+    reset_cfg = reset_db_time_grid_config(db)
+    computed = compute_time_grid_details(reset_cfg)
+    return {
+        "config": reset_cfg,
+        "computed": computed,
+        "is_default": True,
+        "message": "Time slots successfully reset to KUET CSE defaults.",
+    }
 
 
 # -----------------------------------------------------------------------------

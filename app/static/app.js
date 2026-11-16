@@ -13,6 +13,8 @@ const state = {
   showOnLeave: false,
   editingTeacherId: null,
   editingCourseId: null,
+  timeGridConfig: null,
+  timeGridComputed: null,
 };
 
 // Curriculum Order Canonical Array
@@ -59,6 +61,8 @@ function switchTab(tabId) {
     loadAssignmentsData();
   } else if (tabId === "master") {
     loadMasterRoutine();
+  } else if (tabId === "timeslots") {
+    loadTimeGrid();
   } else if (tabId === "generate") {
     checkLatestRoutine();
   }
@@ -95,7 +99,7 @@ function setupEventListeners() {
 }
 
 async function loadAllData() {
-  await Promise.all([loadBatches(), loadTeachers(), loadCourses(), loadAssignments()]);
+  await Promise.all([loadBatches(), loadTeachers(), loadCourses(), loadAssignments(), loadTimeGrid()]);
 }
 
 // -----------------------------------------------------------------------------
@@ -2713,4 +2717,351 @@ function escapeHtml(text) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+// -----------------------------------------------------------------------------
+// Time Slots & Class Schedule Customizer
+// -----------------------------------------------------------------------------
+
+async function loadTimeGrid() {
+  try {
+    const res = await fetch("/api/time-grid");
+    if (!res.ok) throw new Error("Failed to load time grid configuration");
+    const data = await res.json();
+    state.timeGridConfig = data.config;
+    state.timeGridComputed = data.computed;
+
+    renderTimeGridForm(state.timeGridConfig, state.timeGridComputed);
+    renderTimeGridPreview(state.timeGridComputed);
+    populateAllPeriodSelectDropdowns(state.timeGridComputed);
+  } catch (err) {
+    showToast(`Error loading time grid: ${err.message}`, true);
+  }
+}
+
+function renderTimeGridForm(config, computed) {
+  if (!config) return;
+
+  const dayStartInput = document.getElementById("cfg-day-start");
+  const periodDurationInput = document.getElementById("cfg-period-duration");
+  const periodsPerDayInput = document.getElementById("cfg-periods-per-day");
+  const labPeriodsInput = document.getElementById("cfg-lab-periods");
+
+  if (dayStartInput) dayStartInput.value = config.day_start || "08:00";
+  if (periodDurationInput) periodDurationInput.value = config.period_duration_minutes || 50;
+  if (periodsPerDayInput) periodsPerDayInput.value = config.periods_per_day || 9;
+  if (labPeriodsInput) labPeriodsInput.value = config.lab_periods || 3;
+
+  // Working days pills
+  const workingDays = config.days || ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"];
+  document.querySelectorAll("#working-days-container input[type='checkbox']").forEach((chk) => {
+    const isChecked = workingDays.includes(chk.value);
+    chk.checked = isChecked;
+    chk.closest(".day-pill")?.classList.toggle("selected", isChecked);
+  });
+
+  // Render breaks
+  renderBreakRows(config.breaks || [], config.periods_per_day || 9);
+
+  // Active summary
+  updateActiveScheduleSummary(computed);
+}
+
+function updateActiveScheduleSummary(computed) {
+  const el = document.getElementById("active-schedule-summary");
+  if (!el || !computed) return;
+  const breakCount = (computed.breaks || []).length;
+  const daysCount = (computed.days || []).length;
+  el.innerHTML = `Active Schedule: <b>${escapeHtml(computed.day_span_formatted)}</b> • ${computed.periods_per_day} classes/day (${computed.period_duration_minutes}m each) • ${breakCount} break(s) • ${daysCount} working days (Sun–Thu)`;
+}
+
+function renderBreakRows(breaks, periodsCount) {
+  const container = document.getElementById("breaks-list-container");
+  if (!container) return;
+
+  if (breaks.length === 0) {
+    container.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 1rem; border: 1px dashed #CBD5E1; border-radius: var(--radius); font-size: 0.85rem;">No breaks configured. Classes run continuously. Click <b>+ Add Break</b> above to add one.</div>`;
+    return;
+  }
+
+  let html = "";
+  breaks.forEach((b, idx) => {
+    const afterPeriod = (b.after_period || "P3").toUpperCase();
+    const duration = b.duration_minutes || b.length_minutes || 15;
+    const name = b.name || `Break ${idx + 1}`;
+
+    let opts = "";
+    for (let p = 1; p < periodsCount; p++) {
+      const pName = `P${p}`;
+      opts += `<option value="${pName}" ${afterPeriod === pName ? "selected" : ""}>After Period ${p} (${pName})</option>`;
+    }
+
+    html += `
+      <div class="break-row-card" data-break-index="${idx}">
+        <div>
+          <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 2px;">Break Name</label>
+          <input type="text" class="break-name-input" value="${escapeHtml(name)}" placeholder="e.g. Snack break, Lunch" oninput="onTimeGridInputChange()" style="font-size: 0.85rem; width: 100%; padding: 0.4rem 0.5rem; border: 1px solid var(--card-border); border-radius: var(--radius);" />
+        </div>
+        <div>
+          <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 2px;">After Period</label>
+          <select class="break-after-select" onchange="onTimeGridInputChange()" style="font-size: 0.85rem; width: 100%; padding: 0.4rem 0.5rem; border: 1px solid var(--card-border); border-radius: var(--radius);">
+            ${opts}
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 2px;">Duration (min)</label>
+          <input type="number" class="break-duration-input" min="5" max="180" step="5" value="${duration}" oninput="onTimeGridInputChange()" style="font-size: 0.85rem; width: 100%; padding: 0.4rem 0.5rem; border: 1px solid var(--card-border); border-radius: var(--radius);" />
+        </div>
+        <div style="padding-top: 16px;">
+          <button type="button" class="btn btn-danger-outline btn-sm" onclick="removeBreakRow(${idx})" title="Delete this break" style="padding: 0.35rem 0.6rem;">
+            🗑️
+          </button>
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+function addNewBreakRow() {
+  const currentConfig = collectTimeGridFormData();
+  const periodsCount = currentConfig.periods_per_day || 9;
+  const breaks = currentConfig.breaks || [];
+
+  // Pick a sensible default after_period
+  let nextP = "P3";
+  if (breaks.length === 1) nextP = "P6";
+  else if (breaks.length >= 2) nextP = `P${Math.min(periodsCount - 1, breaks.length * 2 + 1)}`;
+
+  breaks.push({
+    name: breaks.length === 0 ? "Snack break" : (breaks.length === 1 ? "Lunch & prayer" : "Recess"),
+    after_period: nextP,
+    duration_minutes: breaks.length === 1 ? 80 : 15,
+  });
+
+  currentConfig.breaks = breaks;
+  renderBreakRows(breaks, periodsCount);
+  onTimeGridInputChange();
+}
+
+function removeBreakRow(idx) {
+  const currentConfig = collectTimeGridFormData();
+  const breaks = currentConfig.breaks || [];
+  if (idx >= 0 && idx < breaks.length) {
+    breaks.splice(idx, 1);
+    currentConfig.breaks = breaks;
+    renderBreakRows(breaks, currentConfig.periods_per_day);
+    onTimeGridInputChange();
+  }
+}
+
+function onPeriodsPerDayChange() {
+  const currentConfig = collectTimeGridFormData();
+  const periodsCount = currentConfig.periods_per_day;
+  renderBreakRows(currentConfig.breaks, periodsCount);
+  onTimeGridInputChange();
+}
+
+function collectTimeGridFormData() {
+  const day_start = document.getElementById("cfg-day-start")?.value || "08:00";
+  const period_duration_minutes = parseInt(document.getElementById("cfg-period-duration")?.value, 10) || 50;
+  const periods_per_day = parseInt(document.getElementById("cfg-periods-per-day")?.value, 10) || 9;
+  const lab_periods = parseInt(document.getElementById("cfg-lab-periods")?.value, 10) || 3;
+
+  const days = [];
+  document.querySelectorAll("#working-days-container input[type='checkbox']").forEach((chk) => {
+    if (chk.checked) days.push(chk.value);
+    chk.closest(".day-pill")?.classList.toggle("selected", chk.checked);
+  });
+
+  const breaks = [];
+  document.querySelectorAll("#breaks-list-container .break-row-card").forEach((card) => {
+    const name = card.querySelector(".break-name-input")?.value.trim() || "Break";
+    const after_period = card.querySelector(".break-after-select")?.value || "P3";
+    const duration_minutes = parseInt(card.querySelector(".break-duration-input")?.value, 10) || 15;
+    breaks.push({ name, after_period, duration_minutes });
+  });
+
+  return {
+    day_start,
+    period_duration_minutes,
+    periods_per_day,
+    lab_periods,
+    days: days.length > 0 ? days : ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"],
+    breaks,
+  };
+}
+
+let previewDebounceTimer = null;
+function onTimeGridInputChange() {
+  clearTimeout(previewDebounceTimer);
+  previewDebounceTimer = setTimeout(async () => {
+    const formData = collectTimeGridFormData();
+    try {
+      const res = await fetch("/api/time-grid/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        renderTimeGridPreview(data.computed);
+      }
+    } catch (e) {
+      console.warn("Live preview calculation error:", e);
+    }
+  }, 100);
+}
+
+function renderTimeGridPreview(computed) {
+  if (!computed) return;
+
+  const spanEl = document.getElementById("prev-day-span");
+  const activeTimeEl = document.getElementById("prev-active-time");
+  const breakTimeEl = document.getElementById("prev-break-time");
+  const blocksCountEl = document.getElementById("prev-blocks-count");
+  const tbody = document.getElementById("preview-timeline-tbody");
+
+  if (spanEl) spanEl.textContent = computed.day_span_formatted;
+  if (activeTimeEl) {
+    const activeHrs = (computed.total_active_minutes / 60).toFixed(1);
+    activeTimeEl.textContent = `${computed.total_active_minutes} min (${activeHrs} hrs)`;
+  }
+  if (breakTimeEl) {
+    const breakHrs = (computed.total_break_minutes / 60).toFixed(1);
+    breakTimeEl.textContent = `${computed.total_break_minutes} min (${breakHrs} hrs)`;
+  }
+  if (blocksCountEl) {
+    blocksCountEl.textContent = `${(computed.blocks || []).length} Block(s)`;
+  }
+
+  if (!tbody) return;
+
+  // Build row list mixing periods and breaks in sequence
+  const breakMap = {};
+  (computed.breaks || []).forEach((b) => {
+    breakMap[b.after_period] = b;
+  });
+
+  // Map each period to its containing block
+  const periodToBlock = {};
+  (computed.blocks || []).forEach((blk) => {
+    blk.period_names.forEach((pName) => {
+      periodToBlock[pName] = blk;
+    });
+  });
+
+  let rowsHtml = "";
+  (computed.periods || []).forEach((p) => {
+    const blk = periodToBlock[p.name];
+    const labBadge = blk && blk.can_fit_lab
+      ? `<span class="badge" style="background: #ECFDF5; color: #047857; border: 1px solid #A7F3D0; font-size: 0.72rem; margin-left: 0.4rem;">🔬 Fits ${computed.lab_periods}-period Lab</span>`
+      : "";
+
+    rowsHtml += `
+      <tr>
+        <td><strong style="color: var(--navy-deep); font-size: 0.95rem;">${escapeHtml(p.name)}</strong></td>
+        <td><span style="font-weight: 600; color: #1E293B;">${escapeHtml(p.start)} – ${escapeHtml(p.end)}</span></td>
+        <td style="color: var(--text-muted);">${p.duration_minutes} min</td>
+        <td>
+          <span style="font-weight: 600; color: #475569;">Block ${blk ? blk.block_index : 1}</span>
+          <span style="font-size: 0.78rem; color: var(--text-dim); margin-left: 0.3rem;">(${blk ? blk.period_names.join(', ') : p.name})</span>
+          ${labBadge}
+        </td>
+      </tr>
+    `;
+
+    if (breakMap[p.name]) {
+      const br = breakMap[p.name];
+      rowsHtml += `
+        <tr class="timeline-break-tr">
+          <td><span>☕ <b>${escapeHtml(br.name)}</b></span></td>
+          <td><b>${escapeHtml(br.start)} – ${escapeHtml(br.end)}</b></td>
+          <td><b>${br.duration_minutes} min</b></td>
+          <td><span style="font-size: 0.8rem; font-style: italic;">Academic Block Separation Boundary</span></td>
+        </tr>
+      `;
+    }
+  });
+
+  tbody.innerHTML = rowsHtml;
+}
+
+async function handleSaveTimeGrid() {
+  const formData = collectTimeGridFormData();
+  try {
+    const res = await fetch("/api/time-grid", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(formData),
+    });
+    if (!res.ok) {
+      const errData = await res.json();
+      throw new Error(errData.detail || "Failed to save time slots");
+    }
+    const data = await res.json();
+    state.timeGridConfig = data.config;
+    state.timeGridComputed = data.computed;
+
+    renderTimeGridForm(state.timeGridConfig, state.timeGridComputed);
+    renderTimeGridPreview(state.timeGridComputed);
+    populateAllPeriodSelectDropdowns(state.timeGridComputed);
+
+    showToast("✓ Department time slots successfully saved! Department routine will now use these time slots.");
+  } catch (err) {
+    showToast(`Error: ${err.message}`, true);
+  }
+}
+
+async function handleResetTimeGrid() {
+  if (!confirm("Are you sure you want to reset department time slots back to standard KUET CSE defaults (08:00 AM – 05:00 PM, 9 periods, 50m each)?")) {
+    return;
+  }
+  try {
+    const res = await fetch("/api/time-grid/reset", { method: "POST" });
+    if (!res.ok) throw new Error("Failed to reset time slots");
+    const data = await res.json();
+    state.timeGridConfig = data.config;
+    state.timeGridComputed = data.computed;
+
+    renderTimeGridForm(state.timeGridConfig, state.timeGridComputed);
+    renderTimeGridPreview(state.timeGridComputed);
+    populateAllPeriodSelectDropdowns(state.timeGridComputed);
+
+    showToast("✓ Time slots successfully reset to KUET CSE defaults (08:00 AM – 05:00 PM).");
+  } catch (err) {
+    showToast(`Error: ${err.message}`, true);
+  }
+}
+
+function populateAllPeriodSelectDropdowns(computed) {
+  if (!computed) return;
+
+  const teacherSelect = document.getElementById("rule-select-period");
+  const courseSelect = document.getElementById("course-rule-select-period");
+
+  const buildOptions = (isCourse) => {
+    let html = "";
+    // Blocks options
+    (computed.blocks || []).forEach((blk) => {
+      const pList = blk.period_names.join(",");
+      const pDisplay = blk.period_names.join(", ");
+      html += `<option value="${pList}">${blk.start} – ${blk.end} (Block ${blk.block_index}: ${pDisplay})</option>`;
+    });
+
+    // Full day option
+    html += `<option value="all">Full Day (All Periods P1–P${computed.periods_per_day})</option>`;
+
+    // Individual periods
+    (computed.periods || []).forEach((p, idx) => {
+      html += `<option value="${p.name}">Period ${idx + 1} (${p.start} – ${p.end})</option>`;
+    });
+
+    return html;
+  };
+
+  const optionsHtml = buildOptions(false);
+  if (teacherSelect) teacherSelect.innerHTML = optionsHtml;
+  if (courseSelect) courseSelect.innerHTML = buildOptions(true);
 }

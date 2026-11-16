@@ -507,12 +507,13 @@ def _render_master_teachers_table(problem: Problem, solution: Solution, teachers
         head_r1.append(f"<th colspan='{grid.n_periods}' class='m-th-day'>{html.escape(day.upper())}</th>")
     head_r1.append("</tr>")
 
-    # Header Row 2: Periods 1 to 9 with times
+    # Header Row 2: Periods with times
+    break_periods = {grid.period_index(b.after_period) for b in grid.breaks if b.after_period in grid._period_index}
     head_r2 = ["<tr>"]
     for day_idx, day in enumerate(grid.days):
         for p, per in enumerate(grid.periods):
-            # Mark divider line after P3 and P6
-            border_cls = " brk-sep" if p in (2, 5) else ""
+            # Mark divider line after break periods
+            border_cls = " brk-sep" if p in break_periods else ""
             head_r2.append(
                 f"<th class='m-th-per{border_cls}'>"
                 f"<span class='m-pnum'>{p + 1}</span>"
@@ -542,7 +543,7 @@ def _render_master_teachers_table(problem: Problem, solution: Solution, teachers
                     p += 1
                     continue
                 elif cell is None:
-                    border_cls = " brk-sep" if p in (2, 5) else ""
+                    border_cls = " brk-sep" if p in break_periods else ""
                     slot_idx = grid.slot(d, p)
                     if slot_idx in t.unavailable:
                         row.append(
@@ -556,7 +557,7 @@ def _render_master_teachers_table(problem: Problem, solution: Solution, teachers
                 else:
                     span = cell["span"]
                     end_p = p + span - 1
-                    border_cls = " brk-sep" if end_p in (2, 5) else ""
+                    border_cls = " brk-sep" if end_p in break_periods else ""
                     klass = "m-cell-lab" if cell["lab"] else "m-cell-theory"
                     grp = cell["group"]
                     if grp:
@@ -737,10 +738,11 @@ def _render_master_labs_table(problem: Problem, solution: Solution) -> str:
         head_r1.append(f"<th colspan='{grid.n_periods}' class='m-th-day'>{html.escape(day.upper())}</th>")
     head_r1.append("</tr>")
 
+    break_periods = {grid.period_index(b.after_period) for b in grid.breaks if b.after_period in grid._period_index}
     head_r2 = ["<tr>"]
     for day in grid.days:
         for p, per in enumerate(grid.periods):
-            border_cls = " brk-sep" if p in (2, 5) else ""
+            border_cls = " brk-sep" if p in break_periods else ""
             head_r2.append(
                 f"<th class='m-th-per{border_cls}'>"
                 f"<span class='m-pnum'>{p + 1}</span>"
@@ -784,13 +786,13 @@ def _render_master_labs_table(problem: Problem, solution: Solution) -> str:
                             p += 1
                             continue
                         elif cell is None:
-                            border_cls = " brk-sep" if p in (2, 5) else ""
+                            border_cls = " brk-sep" if p in break_periods else ""
                             row.append(f"<td class='m-free{border_cls}'></td>")
                             p += 1
                         else:
                             span = cell["span"]
                             end_p = p + span - 1
-                            border_cls = " brk-sep" if end_p in (2, 5) else ""
+                            border_cls = " brk-sep" if end_p in break_periods else ""
                             cell_cls = "m-cell-lab" if cell.get("is_lab") else "m-cell-theory"
                             grp_txt = f" ({cell['group']})" if cell["group"] else ""
                             teacher_txt = f" · {cell['teachers']}" if cell["teachers"] else ""
@@ -840,10 +842,11 @@ def _render_master_batches_table(problem: Problem, solution: Solution) -> str:
         head_r1.append(f"<th colspan='{grid.n_periods}' class='m-th-day'>{html.escape(day.upper())}</th>")
     head_r1.append("</tr>")
 
+    break_periods = {grid.period_index(b.after_period) for b in grid.breaks if b.after_period in grid._period_index}
     head_r2 = ["<tr>"]
     for day in grid.days:
         for p, per in enumerate(grid.periods):
-            border_cls = " brk-sep" if p in (2, 5) else ""
+            border_cls = " brk-sep" if p in break_periods else ""
             head_r2.append(
                 f"<th class='m-th-per{border_cls}'>"
                 f"<span class='m-pnum'>{p + 1}</span>"
@@ -867,13 +870,13 @@ def _render_master_batches_table(problem: Problem, solution: Solution) -> str:
                     p += 1
                     continue
                 elif cell is None:
-                    border_cls = " brk-sep" if p in (2, 5) else ""
+                    border_cls = " brk-sep" if p in break_periods else ""
                     row.append(f"<td class='m-free{border_cls}'></td>")
                     p += 1
                 else:
                     span = cell["span"]
                     end_p = p + span - 1
-                    border_cls = " brk-sep" if end_p in (2, 5) else ""
+                    border_cls = " brk-sep" if end_p in break_periods else ""
                     klass = "m-cell-lab" if cell["lab"] else "m-cell-theory"
                     entries_html = []
                     for e in cell["entries"]:

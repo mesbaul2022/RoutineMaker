@@ -106,17 +106,18 @@ def _merge(base: dict, override: dict) -> dict:
 
 
 def _load_config() -> tuple[TimeGrid, dict]:
-    """Load grid and solver options from real json if available, else defaults."""
-    json_path = ROOT / "data" / "kuet_cse_real.json"
-    if json_path.exists():
-        try:
-            raw = json.loads(json_path.read_text(encoding="utf-8"))
-            cfg = raw.get("config", {})
-            grid = TimeGrid.from_dict(cfg)
-            opts = _merge(DEFAULT_OPTIONS, cfg.get("options", {}))
-            return grid, opts
-        except Exception:
-            pass
+    """Load grid and solver options from DB if available, else defaults."""
+    import sqlite3
+    from routine.timegrid import build_time_grid_from_config
+    from .db import DB_PATH, get_db_time_grid_config
+
+    try:
+        with sqlite3.connect(DB_PATH) as con:
+            cfg = get_db_time_grid_config(con)
+            grid = build_time_grid_from_config(cfg)
+            return grid, dict(DEFAULT_OPTIONS)
+    except Exception:
+        pass
 
     periods = [Period(**p) for p in DEFAULT_PERIODS]
     breaks = [Break(**b) for b in DEFAULT_BREAKS]

@@ -1537,14 +1537,163 @@ table.data-table tr:hover td {
 .avail-rule-chip.chip-allowed button:hover {
   color: #DC2626;
 }
+
+/* =============================================================================
+   Time Slots & Class Schedule Customizer Styles
+   ============================================================================= */
+.time-grid-banner {
+  background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+  border: 1px solid #BFDBFE;
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.time-grid-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.time-grid-banner-icon {
+  font-size: 2rem;
+  background: #FFFFFF;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid #BFDBFE;
+}
+
+.time-grid-layout {
+  display: grid;
+  grid-template-columns: minmax(380px, 1fr) minmax(420px, 1.25fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .time-grid-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.time-grid-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.time-grid-card-head {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--card-border);
+  background: #FAFAFA;
+}
+
+.time-grid-card-head h4 {
+  font-size: 1rem;
   font-weight: 700;
-  padding: 0.15rem 0.45rem;
-  border-radius: 4px;
-  background: #ECFDF5;
-  color: #047857;
-  border: 1px solid #A7F3D0;
-  margin-top: 0.3rem;
-  white-space: nowrap;
+  color: var(--text-main);
+  margin-bottom: 0.2rem;
+}
+
+.time-grid-card-head p {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.time-grid-card-body {
+  padding: 1.25rem;
+}
+
+.time-grid-inputs-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 600px) {
+  .time-grid-inputs-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.working-days-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.day-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+  background: #F1F5F9;
+  border: 1px solid #CBD5E1;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+  transition: var(--transition);
+}
+
+.day-pill input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.day-pill.selected {
+  background: #EFF6FF;
+  border-color: #3B82F6;
+  color: #1D4ED8;
+}
+
+.break-row-card {
+  display: grid;
+  grid-template-columns: 1.4fr 1.2fr 1fr auto;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.6rem 0.75rem;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: var(--radius);
+  transition: var(--transition);
+}
+
+.break-row-card:hover {
+  background: #F1F5F9;
+  border-color: #CBD5E1;
+}
+
+.time-grid-stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.75rem;
+}
+
+.timeline-break-tr {
+  background: #FEF3C7 !important;
+  font-weight: 600;
+  color: #92400E;
+}
+
+.timeline-break-tr td {
+  border-top: 1px dashed #F59E0B !important;
+  border-bottom: 1px dashed #F59E0B !important;
+  padding: 0.55rem 0.75rem !important;
 }
 
 

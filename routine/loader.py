@@ -35,6 +35,7 @@ DEFAULT_HOME_ROOMS = {
 DEFAULT_OPTIONS = {
     "sync_group_labs": True,  # both groups of a section do their lab at the same time
     "max_consecutive_periods": 3,
+    "max_teacher_labs_per_day": 2,  # hard cap on daily lab sessions per teacher (not students)
     "home_rooms": DEFAULT_HOME_ROOMS,
     "weights": {
         "cohort_gap": 8,
@@ -46,6 +47,8 @@ DEFAULT_OPTIONS = {
         "theory_slot_priority": 2,
         "block_gap": 10,
         "lab_room_priority": 2,
+        "same_course_consecutive": 30,
+        "teacher_extra_lab_day": 120,
     },
     "solver": {"max_seconds": 180, "workers": 8, "log": False},
 }

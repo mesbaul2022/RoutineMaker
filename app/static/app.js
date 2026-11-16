@@ -136,7 +136,7 @@ function renderTeachers() {
   document.getElementById("teachers-count").textContent = filtered.length;
 
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">No teachers found matching criteria.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">No teachers found matching criteria.</td></tr>`;
     return;
   }
 
@@ -148,6 +148,15 @@ function renderTeachers() {
         ? `<span class="badge badge-active">Active</span>`
         : `<span class="badge badge-leave">On Leave</span>`;
 
+      let availBadge = "";
+      if (!isActive) {
+        availBadge = `<span class="badge-avail-leave" onclick="openTeacherAvailabilityModal('${t.id}')" title="Teacher on leave (All slots blocked across entire week)">🚫 On Leave</span>`;
+      } else if (t.unavailable_count > 0) {
+        availBadge = `<button type="button" class="badge-avail-restricted" onclick="openTeacherAvailabilityModal('${t.id}')" title="${escapeHtml(t.unavailable_summary)}">🕒 ${escapeHtml(t.unavailable_summary)}</button>`;
+      } else {
+        availBadge = `<button type="button" class="badge-avail-free" onclick="openTeacherAvailabilityModal('${t.id}')" title="Full week available. Click to block specific slots.">🕒 Full Week</button>`;
+      }
+
       return `
       <tr>
         <td>
@@ -158,11 +167,15 @@ function renderTeachers() {
         <td><span class="badge ${deptClass}">${escapeHtml(t.department)}</span></td>
         <td>${t.max_periods_per_day} periods/day</td>
         <td>
-          <button class="status-toggle" onclick="toggleTeacherStatus('${t.id}', '${t.status}')" title="Click to toggle status">
+          <button class="status-toggle" onclick="toggleTeacherStatus('${t.id}', '${t.status}')" title="Click to toggle status (Active / On Leave)">
             ${statusBadge}
           </button>
         </td>
-        <td style="text-align: right;">
+        <td>
+          ${availBadge}
+        </td>
+        <td style="text-align: right; white-space: nowrap;">
+          <button class="btn btn-outline btn-sm" onclick="openTeacherAvailabilityModal('${t.id}')" title="Configure custom unavailable slots">🕒 Slots</button>
           <button class="btn btn-outline btn-sm" onclick="openTeacherModal('${t.id}')">Edit</button>
           <button class="btn btn-danger-outline btn-sm" onclick="deleteTeacher('${t.id}')">Delete</button>
         </td>
@@ -281,6 +294,1044 @@ async function deleteTeacher(teacherId) {
     state.teachers = state.teachers.filter((t) => t.id !== teacherId);
     renderTeachers();
     showToast("Teacher deleted");
+  } catch (err) {
+    showToast(`Error: ${err.message}`, true);
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Teacher Availability Manager
+// -----------------------------------------------------------------------------
+
+const GRID_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"];
+const GRID_PERIODS = [
+  { name: "P1", start: "08:00", end: "08:50" },
+  { name: "P2", start: "08:50", end: "09:40" },
+  { name: "P3", start: "09:40", end: "10:30" },
+  { name: "P4", start: "10:40", end: "11:30" },
+  { name: "P5", start: "11:30", end: "12:20" },
+  { name: "P6", start: "12:20", end: "13:10" },
+  { name: "P7", start: "14:30", end: "15:20" },
+  { name: "P8", start: "15:20", end: "16:10" },
+  { name: "P9", start: "16:10", end: "17:00" },
+];
+
+let availState = {
+  teacherId: null,
+  teacher: null,
+  rules: [],
+  blockedSlots: new Set(),
+};
+
+function formatRuleDescription(day, periods) {
+  const d = (day || "").trim();
+  const p = (periods || "").trim();
+  const dLower = d.toLowerCase();
+  const pLower = p.toLowerCase();
+  const dayLabel = (dLower === "daily" || dLower === "all" || dLower === "*") ? "Daily" : (d.charAt(0).toUpperCase() + d.slice(1));
+
+  let perLabel = p.toUpperCase();
+  if (pLower === "all" || pLower === "*") {
+    perLabel = "All Periods (Full Day)";
+  } else if (pLower === "p1,p2,p3" || pLower === "p1, p2, p3") {
+    perLabel = "08:00 AM – 10:30 AM (P1–P3)";
+  } else if (pLower === "p4,p5,p6" || pLower === "p4, p5, p6") {
+    perLabel = "10:40 AM – 01:10 PM (P4–P6)";
+  } else if (pLower === "p7,p8,p9" || pLower === "p7, p8, p9") {
+    perLabel = "02:30 PM – 05:00 PM (P7–P9)";
+  }
+  return `${dayLabel}: ${perLabel}`;
+}
+
+function synthesizeRulesFromSlots() {
+  const dayPeriods = {};
+  for (let d = 0; d < 5; d++) dayPeriods[d] = [];
+  availState.blockedSlots.forEach((s) => {
+    const d = Math.floor(s / 9);
+    const p = s % 9;
+    if (dayPeriods[d]) dayPeriods[d].push(p);
+  });
+  for (let d = 0; d < 5; d++) {
+    dayPeriods[d].sort((a, b) => a - b);
+  }
+
+  const p0Str = dayPeriods[0].join(",");
+  const allSame = [1, 2, 3, 4].every((d) => dayPeriods[d].join(",") === p0Str);
+
+  const newRules = [];
+  if (allSame && dayPeriods[0].length > 0) {
+    const pNames = dayPeriods[0].map((p) => GRID_PERIODS[p].name).join(",");
+    newRules.push({
+      day: "daily",
+      periods: dayPeriods[0].length === 9 ? "all" : pNames,
+      description: formatRuleDescription("daily", dayPeriods[0].length === 9 ? "all" : pNames),
+    });
+  } else {
+    for (let d = 0; d < 5; d++) {
+      if (dayPeriods[d].length > 0) {
+        const pNames = dayPeriods[d].map((p) => GRID_PERIODS[p].name).join(",");
+        newRules.push({
+          day: GRID_DAYS[d],
+          periods: dayPeriods[d].length === 9 ? "all" : pNames,
+          description: formatRuleDescription(GRID_DAYS[d], dayPeriods[d].length === 9 ? "all" : pNames),
+        });
+      }
+    }
+  }
+  availState.rules = newRules;
+}
+
+async function openTeacherAvailabilityModal(teacherId) {
+  availState.teacherId = teacherId;
+  const teacher = state.teachers.find((t) => t.id === teacherId);
+  availState.teacher = teacher || null;
+
+  const modal = document.getElementById("modal-teacher-availability");
+  if (!modal) return;
+
+  // Set teacher info in modal header
+  document.getElementById("modal-avail-teacher-name").textContent = teacher ? teacher.full_name : teacherId;
+  document.getElementById("modal-avail-shortcode").textContent = teacher ? teacher.short_code : "";
+  document.getElementById("modal-avail-id").textContent = teacherId;
+  document.getElementById("modal-avail-status-text").textContent = teacher ? (teacher.status === "active" ? "Active" : "On Leave") : "";
+  const deptBadge = document.getElementById("modal-avail-dept-badge");
+  if (deptBadge && teacher) {
+    deptBadge.textContent = teacher.department;
+    deptBadge.className = `badge badge-${teacher.department.toLowerCase()}`;
+  }
+
+  try {
+    const res = await fetch(`/api/teachers/${teacherId}/availability`);
+    if (!res.ok) throw new Error("Failed to load teacher availability");
+    const data = await res.json();
+
+    availState.rules = (data.rules || []).map((r) => ({
+      id: r.id,
+      day: r.day,
+      periods: r.periods,
+      description: r.description || formatRuleDescription(r.day, r.periods),
+    }));
+    availState.blockedSlots = new Set(data.blocked_slots || []);
+
+    renderAvailabilityGrid();
+    renderAvailabilityRulesList();
+    updateAvailabilityStats();
+
+    modal.classList.add("open");
+  } catch (err) {
+    showToast(`Error: ${err.message}`, true);
+  }
+}
+
+function closeTeacherAvailabilityModal() {
+  const modal = document.getElementById("modal-teacher-availability");
+  if (modal) modal.classList.remove("open");
+  availState.teacherId = null;
+  availState.teacher = null;
+  availState.rules = [];
+  availState.blockedSlots.clear();
+}
+
+function updateAvailabilityStats() {
+  const countEl = document.getElementById("modal-avail-blocked-count");
+  if (countEl) {
+    countEl.textContent = `${availState.blockedSlots.size} / 45`;
+    countEl.style.color = availState.blockedSlots.size > 0 ? "#DC2626" : "#16A34A";
+  }
+}
+
+function renderAvailabilityGrid() {
+  const table = document.getElementById("avail-interactive-grid");
+  if (!table) return;
+
+  // 1. Header
+  let headHtml = `
+    <tr>
+      <th class="th-day-toggle" title="Click a day below to toggle whole day">Day ▾</th>
+  `;
+  GRID_PERIODS.forEach((p, idx) => {
+    headHtml += `
+      <th class="th-period-toggle" onclick="togglePeriodAvailability(${idx})" title="Click to toggle ${p.name} for all days">
+        <div>${p.name}</div>
+        <div style="font-size: 0.65rem; color: #64748B; font-weight: normal;">${p.start}</div>
+      </th>
+    `;
+    if (idx === 2) {
+      headHtml += `<th style="background: #FEF3C7; color: #92400E; font-size: 0.65rem; padding: 0.2rem 0.4rem;">☕ Break</th>`;
+    } else if (idx === 5) {
+      headHtml += `<th style="background: #FEF3C7; color: #92400E; font-size: 0.65rem; padding: 0.2rem 0.4rem;">🍱 Lunch</th>`;
+    }
+  });
+  headHtml += `</tr>`;
+  table.querySelector("thead").innerHTML = headHtml;
+
+  // 2. Body: 5 rows
+  let bodyHtml = "";
+  GRID_DAYS.forEach((day, dIdx) => {
+    bodyHtml += `<tr>`;
+    bodyHtml += `<th class="th-day-toggle" onclick="toggleDayAvailability(${dIdx})" title="Click to toggle all periods for ${day}">${day}</th>`;
+
+    GRID_PERIODS.forEach((p, pIdx) => {
+      const slot = dIdx * 9 + pIdx;
+      const isBlocked = availState.blockedSlots.has(slot);
+      const cellCls = isBlocked ? "slot-blocked" : "slot-free";
+      const cellTxt = isBlocked ? "OFF" : "Free";
+      const titleTxt = `${day} ${p.name} (${p.start}-${p.end}): ${isBlocked ? "Blocked (Unavailable)" : "Available"}. Click to toggle.`;
+
+      bodyHtml += `<td class="avail-slot-cell ${cellCls}" onclick="toggleAvailabilitySlot(${slot})" title="${titleTxt}">${cellTxt}</td>`;
+
+      if (pIdx === 2 || pIdx === 5) {
+        bodyHtml += `<td style="background: #F8FAFC; border: 1px solid #E2E8F0; width: 8px;"></td>`;
+      }
+    });
+
+    bodyHtml += `</tr>`;
+  });
+  table.querySelector("tbody").innerHTML = bodyHtml;
+}
+
+function toggleAvailabilitySlot(slot) {
+  if (availState.blockedSlots.has(slot)) {
+    availState.blockedSlots.delete(slot);
+  } else {
+    availState.blockedSlots.add(slot);
+  }
+  synthesizeRulesFromSlots();
+  renderAvailabilityGrid();
+  renderAvailabilityRulesList();
+  updateAvailabilityStats();
+}
+
+function toggleDayAvailability(dayIndex) {
+  let allBlocked = true;
+  for (let p = 0; p < 9; p++) {
+    if (!availState.blockedSlots.has(dayIndex * 9 + p)) {
+      allBlocked = false;
+      break;
+    }
+  }
+
+  for (let p = 0; p < 9; p++) {
+    const slot = dayIndex * 9 + p;
+    if (allBlocked) {
+      availState.blockedSlots.delete(slot);
+    } else {
+      availState.blockedSlots.add(slot);
+    }
+  }
+
+  synthesizeRulesFromSlots();
+  renderAvailabilityGrid();
+  renderAvailabilityRulesList();
+  updateAvailabilityStats();
+}
+
+function togglePeriodAvailability(periodIndex) {
+  let allBlocked = true;
+  for (let d = 0; d < 5; d++) {
+    if (!availState.blockedSlots.has(d * 9 + periodIndex)) {
+      allBlocked = false;
+      break;
+    }
+  }
+
+  for (let d = 0; d < 5; d++) {
+    const slot = d * 9 + periodIndex;
+    if (allBlocked) {
+      availState.blockedSlots.delete(slot);
+    } else {
+      availState.blockedSlots.add(slot);
+    }
+  }
+
+  synthesizeRulesFromSlots();
+  renderAvailabilityGrid();
+  renderAvailabilityRulesList();
+  updateAvailabilityStats();
+}
+
+function applyAvailabilityPreset(presetName) {
+  if (presetName === "daily_morning") {
+    // P1, P2, P3 for all 5 days
+    for (let d = 0; d < 5; d++) {
+      availState.blockedSlots.add(d * 9 + 0);
+      availState.blockedSlots.add(d * 9 + 1);
+      availState.blockedSlots.add(d * 9 + 2);
+    }
+    showToast("Preset applied: Block Daily 8:00 – 10:30 AM (P1–P3)");
+  } else if (presetName === "daily_afternoon") {
+    // P7, P8, P9 for all 5 days
+    for (let d = 0; d < 5; d++) {
+      availState.blockedSlots.add(d * 9 + 6);
+      availState.blockedSlots.add(d * 9 + 7);
+      availState.blockedSlots.add(d * 9 + 8);
+    }
+    showToast("Preset applied: Block Daily 2:30 – 5:00 PM (P7–P9)");
+  } else if (presetName === "daily_midday") {
+    // P4, P5, P6 for all 5 days
+    for (let d = 0; d < 5; d++) {
+      availState.blockedSlots.add(d * 9 + 3);
+      availState.blockedSlots.add(d * 9 + 4);
+      availState.blockedSlots.add(d * 9 + 5);
+    }
+    showToast("Preset applied: Block Daily 10:40 AM – 1:10 PM (P4–P6)");
+  } else if (presetName === "clear_all") {
+    availState.blockedSlots.clear();
+    availState.rules = [];
+    showToast("All slot restrictions cleared (100% Available)");
+  }
+
+  synthesizeRulesFromSlots();
+  renderAvailabilityGrid();
+  renderAvailabilityRulesList();
+  updateAvailabilityStats();
+}
+
+function handleAddAvailabilityRule() {
+  const day = document.getElementById("rule-select-day").value;
+  const periods = document.getElementById("rule-select-period").value;
+
+  const dayMap = {};
+  GRID_DAYS.forEach((d, idx) => { dayMap[d.toLowerCase()] = idx; });
+  const pMap = {};
+  GRID_PERIODS.forEach((p, idx) => { pMap[p.name.toLowerCase()] = idx; });
+
+  let days = [];
+  if (day === "daily" || day === "all") {
+    days = [0, 1, 2, 3, 4];
+  } else if (dayMap[day.toLowerCase()] !== undefined) {
+    days = [dayMap[day.toLowerCase()]];
+  }
+
+  let pers = [];
+  if (periods === "all") {
+    pers = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+  } else {
+    periods.split(",").forEach((tok) => {
+      tok = tok.trim().toLowerCase();
+      if (pMap[tok] !== undefined) pers.push(pMap[tok]);
+    });
+  }
+
+  days.forEach((d) => {
+    pers.forEach((p) => {
+      availState.blockedSlots.add(d * 9 + p);
+    });
+  });
+
+  synthesizeRulesFromSlots();
+  renderAvailabilityGrid();
+  renderAvailabilityRulesList();
+  updateAvailabilityStats();
+  showToast(`Added restriction: ${formatRuleDescription(day, periods)}`);
+}
+
+function handleDeleteAvailabilityRule(index) {
+  const r = availState.rules[index];
+  if (!r) return;
+
+  const dayMap = {};
+  GRID_DAYS.forEach((d, idx) => { dayMap[d.toLowerCase()] = idx; });
+  const pMap = {};
+  GRID_PERIODS.forEach((p, idx) => { pMap[p.name.toLowerCase()] = idx; });
+
+  let days = [];
+  if (r.day.toLowerCase() === "daily" || r.day.toLowerCase() === "all") {
+    days = [0, 1, 2, 3, 4];
+  } else if (dayMap[r.day.toLowerCase()] !== undefined) {
+    days = [dayMap[r.day.toLowerCase()]];
+  }
+
+  let pers = [];
+  if (r.periods.toLowerCase() === "all") {
+    pers = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+  } else {
+    r.periods.split(",").forEach((tok) => {
+      tok = tok.trim().toLowerCase();
+      if (pMap[tok] !== undefined) pers.push(pMap[tok]);
+    });
+  }
+
+  days.forEach((d) => {
+    pers.forEach((p) => {
+      availState.blockedSlots.delete(d * 9 + p);
+    });
+  });
+
+  availState.rules.splice(index, 1);
+  synthesizeRulesFromSlots();
+  renderAvailabilityGrid();
+  renderAvailabilityRulesList();
+  updateAvailabilityStats();
+}
+
+function renderAvailabilityRulesList() {
+  const container = document.getElementById("modal-avail-rules-list");
+  const countEl = document.getElementById("modal-avail-rules-count");
+  if (!container) return;
+
+  if (countEl) countEl.textContent = availState.rules.length;
+
+  if (availState.rules.length === 0) {
+    container.innerHTML = `
+      <div style="font-size: 0.82rem; color: #16A34A; background: #F0FDF4; padding: 0.45rem 0.75rem; border-radius: 6px; border: 1px solid #BBF7D0; width: 100%;">
+        ✓ No restrictions configured. Teacher is available across all slots this week.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = availState.rules
+    .map((r, idx) => {
+      const desc = r.description || formatRuleDescription(r.day, r.periods);
+      return `
+      <div class="avail-rule-chip">
+        <span>🔒 ${escapeHtml(desc)}</span>
+        <button type="button" onclick="handleDeleteAvailabilityRule(${idx})" title="Remove this restriction">&times;</button>
+      </div>
+    `;
+    })
+    .join("");
+}
+
+async function saveTeacherAvailability() {
+  if (!availState.teacherId) return;
+
+  synthesizeRulesFromSlots();
+
+  const payload = {
+    rules: availState.rules.map((r) => ({
+      day: r.day,
+      periods: r.periods,
+    })),
+  };
+
+  try {
+    const res = await fetch(`/api/teachers/${availState.teacherId}/availability`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.detail || "Failed to save availability");
+    }
+
+    await loadTeachers();
+    closeTeacherAvailabilityModal();
+    showToast("Teacher availability saved successfully!");
+  } catch (err) {
+    showToast(`Error: ${err.message}`, true);
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Course Slot Availability & Fixed Slots API (Constraint 3)
+// -----------------------------------------------------------------------------
+
+const courseAvailState = {
+  courseId: null,
+  course: null,
+  batch: null,
+  section: "ALL", // "ALL", "A", "B"
+  mode: "allowed", // "allowed" or "blocked"
+  rules: [],
+  allowedSlots: new Set(),
+  blockedSlots: new Set(),
+  sectionAllowed: {},
+  sectionBlocked: {},
+};
+
+function formatCourseRuleDesc(r) {
+  const rtype = (r.rule_type || "allowed").toLowerCase() === "allowed" ? "Allowed" : "Blocked";
+  const sec = r.section && r.section !== "ALL" ? `Sec ${r.section}: ` : "";
+  return `[${rtype}] ${sec}${r.day} (${r.periods})`;
+}
+
+async function openCourseAvailabilityModal(courseId) {
+  courseAvailState.courseId = courseId;
+  const course = state.courses.find((c) => c.id === courseId);
+  courseAvailState.course = course || null;
+  const batch = course ? state.batches.find((b) => b.id === course.batch_id) : null;
+  courseAvailState.batch = batch || null;
+  courseAvailState.section = "ALL";
+  courseAvailState.mode = "allowed";
+
+  const modal = document.getElementById("modal-course-availability");
+  if (!modal) return;
+
+  // Header and summary details
+  document.getElementById("modal-course-avail-name").textContent = course ? `${course.id}: ${course.title}` : courseId;
+  document.getElementById("modal-course-avail-batch").textContent = course ? `Term ${course.batch_id}` : "";
+  document.getElementById("modal-course-avail-id").textContent = courseId;
+
+  const kindBadge = document.getElementById("modal-course-avail-kind-badge");
+  if (kindBadge && course) {
+    if (course.kind === "theory") {
+      kindBadge.textContent = `Theory (${course.credit || 3.0} cr · ${course.periods_per_week || 3}/wk)`;
+      kindBadge.className = "badge badge-theory";
+    } else {
+      kindBadge.textContent = `Sessional (${course.credit || 1.5} cr)`;
+      kindBadge.className = "badge badge-sessional";
+    }
+  }
+
+  // Populate sections dropdown
+  const secSelect = document.getElementById("course-avail-section-select");
+  const ruleSecSelect = document.getElementById("course-rule-select-section");
+  if (secSelect && batch) {
+    const secList = (batch.sections || []).filter((s) => s);
+    let secOpts = `<option value="ALL">All Sections (Default)</option>`;
+    secList.forEach((s) => {
+      secOpts += `<option value="${s}">Section ${s}</option>`;
+    });
+    secSelect.innerHTML = secOpts;
+    secSelect.value = "ALL";
+
+    if (ruleSecSelect) {
+      let rOpts = `<option value="ALL">All Sections</option>`;
+      secList.forEach((s) => {
+        rOpts += `<option value="${s}">Section ${s}</option>`;
+      });
+      ruleSecSelect.innerHTML = rOpts;
+      ruleSecSelect.value = "ALL";
+    }
+  }
+
+  setCourseAvailMode("allowed");
+
+  try {
+    const res = await fetch(`/api/courses/${courseId}/availability`);
+    if (!res.ok) throw new Error("Failed to load course availability");
+    const data = await res.json();
+
+    courseAvailState.rules = (data.rules || []).map((r) => ({
+      id: r.id,
+      day: r.day,
+      periods: r.periods,
+      rule_type: (r.rule_type || "allowed").toLowerCase(),
+      section: r.section || "ALL",
+      note: r.note,
+      description: r.description || formatCourseRuleDesc(r),
+    }));
+
+    courseAvailState.allowedSlots = new Set(data.allowed_slots || []);
+    courseAvailState.blockedSlots = new Set(data.blocked_slots || []);
+    courseAvailState.sectionAllowed = {};
+    for (const [sec, slots] of Object.entries(data.section_allowed_slots || {})) {
+      courseAvailState.sectionAllowed[sec] = new Set(slots);
+    }
+    courseAvailState.sectionBlocked = {};
+    for (const [sec, slots] of Object.entries(data.section_blocked_slots || {})) {
+      courseAvailState.sectionBlocked[sec] = new Set(slots);
+    }
+
+    renderCourseAvailabilityGrid();
+    renderCourseAvailabilityRulesList();
+    updateCourseAvailabilityStats();
+
+    modal.classList.add("open");
+  } catch (err) {
+    showToast(`Error: ${err.message}`, true);
+  }
+}
+
+function closeCourseAvailabilityModal() {
+  const modal = document.getElementById("modal-course-availability");
+  if (modal) modal.classList.remove("open");
+  courseAvailState.courseId = null;
+  courseAvailState.course = null;
+  courseAvailState.batch = null;
+  courseAvailState.rules = [];
+  courseAvailState.allowedSlots.clear();
+  courseAvailState.blockedSlots.clear();
+  courseAvailState.sectionAllowed = {};
+  courseAvailState.sectionBlocked = {};
+}
+
+function setCourseAvailMode(mode) {
+  courseAvailState.mode = mode;
+  const btnAllowed = document.getElementById("btn-mode-allowed");
+  const btnBlocked = document.getElementById("btn-mode-blocked");
+  const ruleTypeSelect = document.getElementById("course-rule-select-type");
+
+  if (btnAllowed && btnBlocked) {
+    if (mode === "allowed") {
+      btnAllowed.className = "btn btn-sm btn-primary";
+      btnBlocked.className = "btn btn-sm btn-outline";
+      if (ruleTypeSelect) ruleTypeSelect.value = "allowed";
+    } else {
+      btnAllowed.className = "btn btn-sm btn-outline";
+      btnBlocked.className = "btn btn-sm btn-danger";
+      if (ruleTypeSelect) ruleTypeSelect.value = "blocked";
+    }
+  }
+  renderCourseAvailabilityGrid();
+}
+
+function onCourseAvailSectionChange() {
+  const sel = document.getElementById("course-avail-section-select");
+  if (sel) {
+    courseAvailState.section = sel.value;
+    const ruleSec = document.getElementById("course-rule-select-section");
+    if (ruleSec) ruleSec.value = sel.value;
+    renderCourseAvailabilityGrid();
+    updateCourseAvailabilityStats();
+  }
+}
+
+function getActiveSlotSets() {
+  const sec = courseAvailState.section;
+  let allowedSet, blockedSet;
+  if (sec === "ALL") {
+    allowedSet = courseAvailState.allowedSlots;
+    blockedSet = courseAvailState.blockedSlots;
+  } else {
+    if (!courseAvailState.sectionAllowed[sec]) courseAvailState.sectionAllowed[sec] = new Set();
+    if (!courseAvailState.sectionBlocked[sec]) courseAvailState.sectionBlocked[sec] = new Set();
+    allowedSet = courseAvailState.sectionAllowed[sec];
+    blockedSet = courseAvailState.sectionBlocked[sec];
+  }
+  return { allowedSet, blockedSet };
+}
+
+function updateCourseAvailabilityStats() {
+  const summaryBadge = document.getElementById("modal-course-avail-summary-badge");
+  if (!summaryBadge) return;
+
+  const { allowedSet, blockedSet } = getActiveSlotSets();
+  if (allowedSet.size > 0 && blockedSet.size > 0) {
+    summaryBadge.textContent = `${allowedSet.size} Fixed, ${blockedSet.size} Blocked`;
+    summaryBadge.style.color = "#1D4ED8";
+  } else if (allowedSet.size > 0) {
+    summaryBadge.textContent = `Fixed (${allowedSet.size} slots)`;
+    summaryBadge.style.color = "#1D4ED8";
+  } else if (blockedSet.size > 0) {
+    summaryBadge.textContent = `Blocked (${blockedSet.size} slots)`;
+    summaryBadge.style.color = "#DC2626";
+  } else {
+    summaryBadge.textContent = "Unrestricted (Any)";
+    summaryBadge.style.color = "#16A34A";
+  }
+}
+
+function renderCourseAvailabilityGrid() {
+  const table = document.getElementById("course-avail-interactive-grid");
+  if (!table) return;
+
+  const { allowedSet, blockedSet } = getActiveSlotSets();
+
+  let headHtml = `
+    <tr>
+      <th class="th-day-toggle" title="Click day to toggle entire row">Day ▾</th>
+  `;
+  GRID_PERIODS.forEach((p, pIdx) => {
+    headHtml += `
+      <th class="th-period-toggle" onclick="toggleCoursePeriod(${pIdx})" title="Click to toggle entire period across week">
+        <div><b>${escapeHtml(p.name)}</b></div>
+        <div style="font-size: 0.68rem; opacity: 0.75; font-weight: normal;">${escapeHtml(p.start)}</div>
+      </th>
+    `;
+  });
+  headHtml += "</tr>";
+
+  let bodyHtml = "";
+  GRID_DAYS.forEach((day, dIdx) => {
+    bodyHtml += `<tr>`;
+    bodyHtml += `
+      <th class="th-day-toggle" onclick="toggleCourseDay(${dIdx})" title="Click to toggle all slots for ${day}">
+        <b>${day}</b>
+      </th>
+    `;
+    GRID_PERIODS.forEach((p, pIdx) => {
+      const slotIdx = dIdx * 9 + pIdx;
+      const isAllowed = allowedSet.has(slotIdx);
+      const isBlocked = blockedSet.has(slotIdx);
+
+      let cellClass = "avail-slot-cell";
+      let cellText = "Free";
+      if (isAllowed) {
+        cellClass += " slot-allowed";
+        cellText = "📌 Fixed";
+      } else if (isBlocked) {
+        cellClass += " slot-blocked";
+        cellText = "🚫 Block";
+      } else {
+        cellClass += " slot-free";
+      }
+
+      bodyHtml += `
+        <td class="${cellClass}" onclick="toggleCourseSlot(${slotIdx})" title="Slot ${day} ${p.name}: click to toggle">
+          ${cellText}
+        </td>
+      `;
+    });
+    bodyHtml += `</tr>`;
+  });
+
+  table.querySelector("thead").innerHTML = headHtml;
+  table.querySelector("tbody").innerHTML = bodyHtml;
+}
+
+function toggleCourseSlot(slotIdx) {
+  const { allowedSet, blockedSet } = getActiveSlotSets();
+  const mode = courseAvailState.mode;
+
+  if (mode === "allowed") {
+    blockedSet.delete(slotIdx);
+    if (allowedSet.has(slotIdx)) {
+      allowedSet.delete(slotIdx);
+    } else {
+      allowedSet.add(slotIdx);
+    }
+  } else {
+    allowedSet.delete(slotIdx);
+    if (blockedSet.has(slotIdx)) {
+      blockedSet.delete(slotIdx);
+    } else {
+      blockedSet.add(slotIdx);
+    }
+  }
+
+  synthesizeCourseRules();
+  renderCourseAvailabilityGrid();
+  renderCourseAvailabilityRulesList();
+  updateCourseAvailabilityStats();
+}
+
+function toggleCourseDay(dayIdx) {
+  const { allowedSet, blockedSet } = getActiveSlotSets();
+  const mode = courseAvailState.mode;
+  const targetSet = mode === "allowed" ? allowedSet : blockedSet;
+  const otherSet = mode === "allowed" ? blockedSet : allowedSet;
+
+  const daySlots = [0, 1, 2, 3, 4, 5, 6, 7, 8].map((p) => dayIdx * 9 + p);
+  const allInTarget = daySlots.every((s) => targetSet.has(s));
+
+  daySlots.forEach((s) => {
+    otherSet.delete(s);
+    if (allInTarget) {
+      targetSet.delete(s);
+    } else {
+      targetSet.add(s);
+    }
+  });
+
+  synthesizeCourseRules();
+  renderCourseAvailabilityGrid();
+  renderCourseAvailabilityRulesList();
+  updateCourseAvailabilityStats();
+}
+
+function toggleCoursePeriod(periodIdx) {
+  const { allowedSet, blockedSet } = getActiveSlotSets();
+  const mode = courseAvailState.mode;
+  const targetSet = mode === "allowed" ? allowedSet : blockedSet;
+  const otherSet = mode === "allowed" ? blockedSet : allowedSet;
+
+  const perSlots = [0, 1, 2, 3, 4].map((d) => d * 9 + periodIdx);
+  const allInTarget = perSlots.every((s) => targetSet.has(s));
+
+  perSlots.forEach((s) => {
+    otherSet.delete(s);
+    if (allInTarget) {
+      targetSet.delete(s);
+    } else {
+      targetSet.add(s);
+    }
+  });
+
+  synthesizeCourseRules();
+  renderCourseAvailabilityGrid();
+  renderCourseAvailabilityRulesList();
+  updateCourseAvailabilityStats();
+}
+
+function synthesizeCourseRules() {
+  const newRules = [];
+
+  function rulesForSets(sec, allowedSet, blockedSet) {
+    for (let d = 0; d < 5; d++) {
+      const dSlots = [0, 1, 2, 3, 4, 5, 6, 7, 8].filter((p) => allowedSet.has(d * 9 + p));
+      if (dSlots.length === 9) {
+        newRules.push({
+          day: GRID_DAYS[d],
+          periods: "all",
+          rule_type: "allowed",
+          section: sec === "ALL" ? null : sec,
+          description: `[Allowed] ${sec !== "ALL" ? `Sec ${sec}: ` : ""}${GRID_DAYS[d]} (All Periods)`,
+        });
+      } else if (dSlots.length > 0) {
+        const pNames = dSlots.map((p) => GRID_PERIODS[p].name);
+        newRules.push({
+          day: GRID_DAYS[d],
+          periods: pNames.join(","),
+          rule_type: "allowed",
+          section: sec === "ALL" ? null : sec,
+          description: `[Allowed] ${sec !== "ALL" ? `Sec ${sec}: ` : ""}${GRID_DAYS[d]} (${pNames.join(",")})`,
+        });
+      }
+    }
+
+    for (let d = 0; d < 5; d++) {
+      const dSlots = [0, 1, 2, 3, 4, 5, 6, 7, 8].filter((p) => blockedSet.has(d * 9 + p));
+      if (dSlots.length === 9) {
+        newRules.push({
+          day: GRID_DAYS[d],
+          periods: "all",
+          rule_type: "blocked",
+          section: sec === "ALL" ? null : sec,
+          description: `[Blocked] ${sec !== "ALL" ? `Sec ${sec}: ` : ""}${GRID_DAYS[d]} (All Periods)`,
+        });
+      } else if (dSlots.length > 0) {
+        const pNames = dSlots.map((p) => GRID_PERIODS[p].name);
+        newRules.push({
+          day: GRID_DAYS[d],
+          periods: pNames.join(","),
+          rule_type: "blocked",
+          section: sec === "ALL" ? null : sec,
+          description: `[Blocked] ${sec !== "ALL" ? `Sec ${sec}: ` : ""}${GRID_DAYS[d]} (${pNames.join(",")})`,
+        });
+      }
+    }
+  }
+
+  // Course-wide (ALL)
+  rulesForSets("ALL", courseAvailState.allowedSlots, courseAvailState.blockedSlots);
+
+  // Section-specific
+  const allSecs = new Set([
+    ...Object.keys(courseAvailState.sectionAllowed || {}),
+    ...Object.keys(courseAvailState.sectionBlocked || {}),
+  ]);
+  allSecs.forEach((sec) => {
+    if (sec && sec !== "ALL") {
+      const aSet = courseAvailState.sectionAllowed[sec] || new Set();
+      const bSet = courseAvailState.sectionBlocked[sec] || new Set();
+      rulesForSets(sec, aSet, bSet);
+    }
+  });
+
+  courseAvailState.rules = newRules;
+}
+
+function applyCourseAvailabilityPreset(presetName) {
+  const { allowedSet, blockedSet } = getActiveSlotSets();
+
+  if (presetName === "clear_all") {
+    allowedSet.clear();
+    blockedSet.clear();
+    showToast("Cleared all restrictions for selected section");
+  } else if (presetName === "sunday_morning") {
+    setCourseAvailMode("allowed");
+    allowedSet.clear();
+    blockedSet.clear();
+    [0, 1, 2].forEach((p) => allowedSet.add(0 * 9 + p)); // Sunday P1-P3
+    showToast("Set fixed slot: Sunday P1–P3 (8:00 – 10:30 AM)");
+  } else if (presetName === "tuesday_morning") {
+    setCourseAvailMode("allowed");
+    allowedSet.clear();
+    blockedSet.clear();
+    [0, 1, 2].forEach((p) => allowedSet.add(2 * 9 + p)); // Tuesday P1-P3
+    showToast("Set fixed slot: Tuesday P1–P3 (8:00 – 10:30 AM)");
+  } else if (presetName === "thursday_morning") {
+    setCourseAvailMode("allowed");
+    allowedSet.clear();
+    blockedSet.clear();
+    [0, 1, 2].forEach((p) => allowedSet.add(4 * 9 + p)); // Thursday P1-P3
+    showToast("Set fixed slot: Thursday P1–P3 (8:00 – 10:30 AM)");
+  } else if (presetName === "morning_only") {
+    setCourseAvailMode("allowed");
+    allowedSet.clear();
+    blockedSet.clear();
+    for (let d = 0; d < 5; d++) {
+      [0, 1, 2].forEach((p) => allowedSet.add(d * 9 + p));
+    }
+    showToast("Set allowed slots: Daily Morning (P1–P3)");
+  } else if (presetName === "afternoon_only") {
+    setCourseAvailMode("allowed");
+    allowedSet.clear();
+    blockedSet.clear();
+    for (let d = 0; d < 5; d++) {
+      [6, 7, 8].forEach((p) => allowedSet.add(d * 9 + p));
+    }
+    showToast("Set allowed slots: Daily Afternoon (P7–P9)");
+  }
+
+  synthesizeCourseRules();
+  renderCourseAvailabilityGrid();
+  renderCourseAvailabilityRulesList();
+  updateCourseAvailabilityStats();
+}
+
+function handleAddCourseAvailabilityRule() {
+  const day = document.getElementById("course-rule-select-day").value;
+  const periods = document.getElementById("course-rule-select-period").value;
+  const ruleType = document.getElementById("course-rule-select-type").value;
+  const section = document.getElementById("course-rule-select-section").value;
+
+  const dayMap = {};
+  GRID_DAYS.forEach((d, idx) => { dayMap[d.toLowerCase()] = idx; });
+  const pMap = {};
+  GRID_PERIODS.forEach((p, idx) => { pMap[p.name.toLowerCase()] = idx; });
+
+  let days = [];
+  if (day === "daily" || day === "all") {
+    days = [0, 1, 2, 3, 4];
+  } else if (dayMap[day.toLowerCase()] !== undefined) {
+    days = [dayMap[day.toLowerCase()]];
+  }
+
+  let pers = [];
+  if (periods === "all") {
+    pers = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+  } else {
+    periods.split(",").forEach((tok) => {
+      tok = tok.trim().toLowerCase();
+      if (pMap[tok] !== undefined) pers.push(pMap[tok]);
+    });
+  }
+
+  let targetSet, otherSet;
+  if (section === "ALL") {
+    targetSet = ruleType === "allowed" ? courseAvailState.allowedSlots : courseAvailState.blockedSlots;
+    otherSet = ruleType === "allowed" ? courseAvailState.blockedSlots : courseAvailState.allowedSlots;
+  } else {
+    if (!courseAvailState.sectionAllowed[section]) courseAvailState.sectionAllowed[section] = new Set();
+    if (!courseAvailState.sectionBlocked[section]) courseAvailState.sectionBlocked[section] = new Set();
+    targetSet = ruleType === "allowed" ? courseAvailState.sectionAllowed[section] : courseAvailState.sectionBlocked[section];
+    otherSet = ruleType === "allowed" ? courseAvailState.sectionBlocked[section] : courseAvailState.sectionAllowed[section];
+  }
+
+  days.forEach((d) => {
+    pers.forEach((p) => {
+      const s = d * 9 + p;
+      otherSet.delete(s);
+      targetSet.add(s);
+    });
+  });
+
+  synthesizeCourseRules();
+  renderCourseAvailabilityGrid();
+  renderCourseAvailabilityRulesList();
+  updateCourseAvailabilityStats();
+  showToast(`Added rule: ${ruleType.toUpperCase()} ${section !== 'ALL' ? `Sec ${section}: ` : ''}${day} (${periods})`);
+}
+
+function handleDeleteCourseAvailabilityRule(index) {
+  const r = courseAvailState.rules[index];
+  if (!r) return;
+
+  const dayMap = {};
+  GRID_DAYS.forEach((d, idx) => { dayMap[d.toLowerCase()] = idx; });
+  const pMap = {};
+  GRID_PERIODS.forEach((p, idx) => { pMap[p.name.toLowerCase()] = idx; });
+
+  let days = [];
+  if (r.day.toLowerCase() === "daily" || r.day.toLowerCase() === "all") {
+    days = [0, 1, 2, 3, 4];
+  } else if (dayMap[r.day.toLowerCase()] !== undefined) {
+    days = [dayMap[r.day.toLowerCase()]];
+  }
+
+  let pers = [];
+  if (r.periods.toLowerCase() === "all") {
+    pers = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+  } else {
+    r.periods.split(",").forEach((tok) => {
+      tok = tok.trim().toLowerCase();
+      if (pMap[tok] !== undefined) pers.push(pMap[tok]);
+    });
+  }
+
+  const sec = r.section || "ALL";
+  const ruleType = r.rule_type || "allowed";
+  let targetSet;
+  if (sec === "ALL") {
+    targetSet = ruleType === "allowed" ? courseAvailState.allowedSlots : courseAvailState.blockedSlots;
+  } else {
+    targetSet = ruleType === "allowed" ? (courseAvailState.sectionAllowed[sec] || new Set()) : (courseAvailState.sectionBlocked[sec] || new Set());
+  }
+
+  days.forEach((d) => {
+    pers.forEach((p) => {
+      targetSet.delete(d * 9 + p);
+    });
+  });
+
+  courseAvailState.rules.splice(index, 1);
+  synthesizeCourseRules();
+  renderCourseAvailabilityGrid();
+  renderCourseAvailabilityRulesList();
+  updateCourseAvailabilityStats();
+}
+
+function renderCourseAvailabilityRulesList() {
+  const container = document.getElementById("modal-course-avail-rules-list");
+  const countEl = document.getElementById("modal-course-avail-rules-count");
+  if (!container) return;
+
+  if (countEl) countEl.textContent = courseAvailState.rules.length;
+
+  if (courseAvailState.rules.length === 0) {
+    container.innerHTML = `
+      <div style="font-size: 0.82rem; color: #16A34A; background: #F0FDF4; padding: 0.45rem 0.75rem; border-radius: 6px; border: 1px solid #BBF7D0; width: 100%;">
+        ✓ No slot restrictions configured. Course can be placed in any feasible slot.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = courseAvailState.rules
+    .map((r, idx) => {
+      const desc = r.description || formatCourseRuleDesc(r);
+      const isAllowed = (r.rule_type || "allowed").toLowerCase() === "allowed";
+      const chipClass = isAllowed ? "avail-rule-chip chip-allowed" : "avail-rule-chip";
+      const icon = isAllowed ? "📌" : "🚫";
+      return `
+      <div class="${chipClass}">
+        <span>${icon} ${escapeHtml(desc)}</span>
+        <button type="button" onclick="handleDeleteCourseAvailabilityRule(${idx})" title="Remove this rule">&times;</button>
+      </div>
+    `;
+    })
+    .join("");
+}
+
+async function saveCourseAvailability() {
+  if (!courseAvailState.courseId) return;
+
+  synthesizeCourseRules();
+
+  const payload = {
+    rules: courseAvailState.rules.map((r) => ({
+      day: r.day,
+      periods: r.periods,
+      rule_type: r.rule_type,
+      section: r.section === "ALL" ? null : r.section,
+      note: r.note || null,
+    })),
+  };
+
+  try {
+    const res = await fetch(`/api/courses/${courseAvailState.courseId}/availability`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || "Failed to save course slot availability");
+    }
+
+    await res.json();
+    showToast(`✓ Slot rules saved for ${courseAvailState.courseId}`);
+    closeCourseAvailabilityModal();
+
+    // Refresh courses list in state
+    await loadCourses();
+    renderCourses();
   } catch (err) {
     showToast(`Error: ${err.message}`, true);
   }
@@ -462,22 +1513,22 @@ function renderCourses() {
     // Build table rows (with optional category grouping for 4-2)
     let tbodyHtml = "";
     if (list.length === 0) {
-      tbodyHtml = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No courses in this batch.</td></tr>`;
+      tbodyHtml = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No courses in this batch.</td></tr>`;
     } else if (b.id === "4-2" && !categoryFilter) {
       const coreCourses = list.filter((c) => c.category === "core" || !c.category);
       const opt2Courses = list.filter((c) => c.category === "optional_ii");
       const opt3Courses = list.filter((c) => c.category === "optional_iii");
 
       if (coreCourses.length > 0) {
-        tbodyHtml += `<tr><td colspan="7" class="category-subheader"><span>📌 Core Compulsory Courses (${coreCourses.length})</span></td></tr>`;
+        tbodyHtml += `<tr><td colspan="8" class="category-subheader"><span>📌 Core Compulsory Courses (${coreCourses.length})</span></td></tr>`;
         tbodyHtml += coreCourses.map((c) => renderCourseRow(b, c)).join("");
       }
       if (opt2Courses.length > 0) {
-        tbodyHtml += `<tr><td colspan="7" class="category-subheader" style="color: #6B21A8; background: #FAF5FF;"><span>💡 Optional-II Elective Courses (${opt2Courses.length} Theory Courses)</span></td></tr>`;
+        tbodyHtml += `<tr><td colspan="8" class="category-subheader" style="color: #6B21A8; background: #FAF5FF;"><span>💡 Optional-II Elective Courses (${opt2Courses.length} Theory Courses)</span></td></tr>`;
         tbodyHtml += opt2Courses.map((c) => renderCourseRow(b, c)).join("");
       }
       if (opt3Courses.length > 0) {
-        tbodyHtml += `<tr><td colspan="7" class="category-subheader" style="color: #0F766E; background: #F0FDFA;"><span>🔬 Optional-III Elective Courses (${opt3Courses.length} Theory + Lab Courses)</span></td></tr>`;
+        tbodyHtml += `<tr><td colspan="8" class="category-subheader" style="color: #0F766E; background: #F0FDFA;"><span>🔬 Optional-III Elective Courses (${opt3Courses.length} Theory + Lab Courses)</span></td></tr>`;
         tbodyHtml += opt3Courses.map((c) => renderCourseRow(b, c)).join("");
       }
     } else {
@@ -498,12 +1549,13 @@ function renderCourses() {
           <table class="data-table">
             <thead>
               <tr>
-                <th style="width: 130px;">Code</th>
+                <th style="width: 120px;">Code</th>
                 <th>Course Title</th>
-                <th style="width: 140px;">Type / Credit</th>
-                <th style="width: 200px;">Assigned Teachers</th>
-                <th style="width: 150px;">Room Kind</th>
-                <th style="width: 140px;">Weekly Load</th>
+                <th style="width: 130px;">Type / Credit</th>
+                <th style="width: 170px;">Assigned Teachers</th>
+                <th style="width: 170px;">Slot Availability</th>
+                <th style="width: 130px;">Room Kind</th>
+                <th style="width: 120px;">Weekly Load</th>
                 <th style="text-align: right; width: 130px;">Actions</th>
               </tr>
             </thead>
@@ -565,6 +1617,15 @@ function renderCourseRow(batch, course) {
     }
   }
 
+  // Slot Availability Button (Constraint 3)
+  let availBtn = "";
+  const hasRules = (course.slot_rule_count || 0) > 0;
+  if (hasRules) {
+    availBtn = `<button type="button" class="badge-avail-fixed" onclick="openCourseAvailabilityModal('${course.id}')" title="Configured: ${escapeHtml(course.slot_rule_summary || '')}"><span>📌</span> <span>${escapeHtml(course.slot_rule_summary || 'Fixed Slots')}</span></button>`;
+  } else {
+    availBtn = `<button type="button" class="btn btn-outline btn-sm" onclick="openCourseAvailabilityModal('${course.id}')" title="Click to fix or restrict slots for this course" style="font-size: 0.76rem; padding: 0.2rem 0.5rem; color: var(--navy);">⚡ Any Slot</button>`;
+  }
+
   const loadStr = isProject
     ? `${course.blocks_per_week || 1} weekly slot(s) [Section-wide]`
     : (isTheory
@@ -585,6 +1646,7 @@ function renderCourseRow(batch, course) {
       </td>
       <td>${kindBadge}</td>
       <td>${teachersStr}</td>
+      <td>${availBtn}</td>
       <td><span class="badge" style="background: #F1F5F9; color: var(--text-main);">${escapeHtml(course.room_kind)}</span></td>
       <td style="color: var(--text-muted); font-size: 0.85rem;">${loadStr}</td>
       <td style="text-align: right;">
@@ -970,8 +2032,16 @@ function renderCourseAssignmentCard(batch, course, assignMap) {
     `;
   }
 
+  const pw = course.periods_per_week || 3;
+  const theoryHint =
+    pw === 2
+      ? `<b>Co-teaching Model (Both Section A & B):</b> Teachers are assigned to the whole course, not per-section. Both sections receive 2 periods/week: 1 personal class by Teacher 1 and 1 personal class by Teacher 2 (if assigned) for each section.`
+      : pw === 1
+        ? `<b>Co-teaching Model (Both Section A & B):</b> Both sections receive 1 period/week taught by Teacher 1.`
+        : `<b>Co-teaching Model (Both Section A & B):</b> Teachers are assigned to the whole course, not per-section. Both sections receive ${pw} periods/week: 1 personal class by Teacher 1, 1 personal class by Teacher 2, and ${pw - 2} shared class(es) (T1/T2) for each section.`;
+
   const ruleHint = isTheory
-    ? `<b>Co-teaching Model (Both Section A & B):</b> Teachers are assigned to the whole course, not per-section. Both sections receive 3 periods/week: 1 personal class by Teacher 1, 1 personal class by Teacher 2, and 1 shared class (T1/T2) for each section.`
+    ? theoryHint
     : (is075
         ? `<b>0.75 Credit Bi-weekly Lab:</b> Co-taught by Teacher 1 + Teacher 2. Students attend 1 session every 2 weeks${course.paired_course_id ? ` (alternating with ${escapeHtml(course.paired_course_id)})` : ''}.`
         : `<b>Co-teaching Model:</b> Both teachers co-teach laboratory sessions across all sections and groups.`);
@@ -1028,8 +2098,15 @@ function renderCourseAssignmentCard(batch, course, assignMap) {
 
 async function handleCourseTeachersChange(courseId) {
   const safeCid = courseId.replace(/[^a-zA-Z0-9]/g, "_");
-  const t1 = document.getElementById(`sel1_${safeCid}`)?.value || "";
-  const t2 = document.getElementById(`sel2_${safeCid}`)?.value || "";
+  const sel1 = document.getElementById(`sel1_${safeCid}`);
+  const sel2 = document.getElementById(`sel2_${safeCid}`);
+  const t1 = sel1?.value || "";
+  let t2 = sel2?.value || "";
+  if (t1 && t2 && t1 === t2) {
+    t2 = "";
+    if (sel2) sel2.value = "";
+    showToast("Teacher 1 and Teacher 2 cannot be the same person; cleared Teacher 2.", true);
+  }
 
   try {
     const res = await fetch(`/api/courses/${courseId}/assign-teachers`, {
@@ -1039,12 +2116,13 @@ async function handleCourseTeachersChange(courseId) {
     });
 
     if (!res.ok) throw new Error("Failed to save teachers");
+    const saved = await res.json();
 
     // Update in local state
     const c = state.courses.find((item) => item.id === courseId);
     if (c) {
-      c.teacher1_id = t1 || null;
-      c.teacher2_id = t2 || null;
+      c.teacher1_id = saved.teacher1_id || null;
+      c.teacher2_id = saved.teacher2_id || null;
     }
 
     flashSaveIndicator();
@@ -1317,7 +2395,25 @@ function renderGenerateResult(data) {
   penalty.textContent = data.objective !== null && data.objective !== undefined ? data.objective : "—";
   time.textContent = data.solve_time_seconds ? `${data.solve_time_seconds}s` : "—";
 
-  const faults = data.faults || [];
+  const consecCount = document.getElementById("result-consec-count");
+  if (consecCount) {
+    consecCount.textContent = data.same_course_consecutive_count !== undefined && data.same_course_consecutive_count !== null
+      ? `${data.same_course_consecutive_count} pairs`
+      : "—";
+  }
+
+  const maxLabsEl = document.getElementById("result-max-labs-day");
+  if (maxLabsEl) {
+    if (data.max_teacher_labs_day !== undefined && data.max_teacher_labs_day !== null) {
+      const doubleDays = data.double_lab_teacher_days ?? data.extra_lab_days ?? 0;
+      maxLabsEl.textContent = `≤ ${data.max_teacher_labs_day}/day (${doubleDays}×2-lab days)`;
+    } else {
+      maxLabsEl.textContent = "—";
+    }
+  }
+
+  const errors = data.errors || [];
+  const faults = [...errors, ...(data.faults || [])];
   faultsCount.textContent = faults.length;
   if (faults.length > 0) {
     faultsBox.style.display = "block";
@@ -1326,16 +2422,11 @@ function renderGenerateResult(data) {
     faultsBox.style.display = "none";
   }
 
-  // Errors / Warnings
-  const errors = data.errors || [];
+  // Warnings
   const warnings = data.warnings || [];
-  if (errors.length > 0 || warnings.length > 0) {
+  if (warnings.length > 0) {
     warningsBox.style.display = "block";
-    const combined = [
-      ...errors.map((e) => `<li style="color: var(--danger-text); font-weight: 700;">Error: ${escapeHtml(e)}</li>`),
-      ...warnings.map((w) => `<li>Warning: ${escapeHtml(w)}</li>`),
-    ];
-    warningsUl.innerHTML = combined.join("");
+    warningsUl.innerHTML = warnings.map((w) => `<li>Warning: ${escapeHtml(w)}</li>`).join("");
   } else {
     warningsBox.style.display = "none";
   }

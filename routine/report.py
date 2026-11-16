@@ -242,6 +242,7 @@ def _section_grid(problem: Problem, solution: Solution, batch_id: str, section: 
                 "group": grp_label,
                 "room": problem.rooms[a.room_id].name,
                 "teachers": t_str,
+                "is_fixed_slot": bool(ev.allowed_slots or ev.course.allowed_slots or ev.course.section_allowed_slots),
             }
         )
 
@@ -269,6 +270,7 @@ def _section_grid(problem: Problem, solution: Solution, batch_id: str, section: 
 def _teacher_grid(problem: Problem, solution: Solution, teacher_id: str):
     grid = problem.grid
     cells: list[list] = [[None] * grid.n_periods for _ in range(grid.n_days)]
+    teacher = problem.teachers.get(teacher_id)
     for a in solution.assignments:
         if teacher_id not in a.event.teacher_ids:
             continue
@@ -288,13 +290,34 @@ def _teacher_grid(problem: Problem, solution: Solution, teacher_id: str):
                 {
                     "code": ev.course.code,
                     "group": grp_tag,
-                    "room": problem.rooms[a.room_id].name,
+                    "room": problem.rooms[a.room_id].name if a.room_id in problem.rooms else a.room_id,
                     "teachers": "",
                 }
             ],
         }
         for k in range(1, ev.length):
             cells[d][p + k] = "skip"
+
+    # Mark unavailable slots on individual teacher routine card
+    if teacher and teacher.unavailable:
+        for d in range(grid.n_days):
+            for p in range(grid.n_periods):
+                if cells[d][p] is None and grid.slot(d, p) in teacher.unavailable:
+                    cells[d][p] = {
+                        "day": d,
+                        "period": p,
+                        "span": 1,
+                        "lab": False,
+                        "is_unavailable": True,
+                        "entries": [
+                            {
+                                "code": "UNAVAILABLE",
+                                "group": "",
+                                "room": "",
+                                "teachers": "",
+                            }
+                        ],
+                    }
     return cells
 
 
@@ -329,24 +352,59 @@ def _render_table(problem: Problem, cells) -> str:
                     row.append("<td class='free'></td>")
                 else:
                     span = cell["span"]
-                    klass = "lab" if cell["lab"] else "theory"
-                    inner = []
-                    for e in cell["entries"]:
-                        tag = f"<b>{html.escape(e['code'])}</b>"
-                        if e.get("is_project"):
-                            inner.append(f"<div class='ent'>{tag}</div>")
-                            continue
-                        if e["group"]:
-                            grp_str = f"({e['group']})" if not e["group"].startswith("(") else e["group"]
-                            tag += f" <span class='grp'>{html.escape(grp_str)}</span>"
-                        meta = " · ".join(x for x in (e["room"], e["teachers"]) if x)
-                        inner.append(
-                            f"<div class='ent'>{tag}<span class='meta'>"
-                            f"{html.escape(meta)}</span></div>"
+                    if cell.get("is_unavailable"):
+                        klass = "cell-unavailable"
+                        row.append(
+                            f"<td class='{klass}' colspan='{span}'>"
+                            f"<div class='ent'><span class='unavail-badge'>Unavailable</span>"
+                            f"<span class='meta' style='color:#64748B;'>Off Slot</span></div>"
+                            f"</td>"
                         )
-                    row.append(
-                        f"<td class='{klass}' colspan='{span}'>{''.join(inner)}</td>"
-                    )
+                    else:
+                        klass = "lab" if cell["lab"] else "theory"
+                        inner = []
+                        clean_curr_code = ""
+                        for e in cell["entries"]:
+                            tag = f"<b>{html.escape(e['code'])}</b>"
+                            if e.get("is_fixed_slot"):
+                                tag += " <span class='badge-fixed' title='Pre-assigned / Fixed Slot (Constraint 3)' style='font-size:0.65rem; background:#EFF6FF; color:#1D4ED8; border:1px solid #BFDBFE; border-radius:3px; padding:1px 3px; font-weight:700;'>📌 Fixed</span>"
+                            clean_curr_code = e["code"].replace(" ", "").upper()
+                            if e.get("is_project"):
+                                inner.append(f"<div class='ent'>{tag}</div>")
+                                continue
+                            if e["group"]:
+                                grp_str = f"({e['group']})" if not e["group"].startswith("(") else e["group"]
+                                tag += f" <span class='grp'>{html.escape(grp_str)}</span>"
+                            meta = " · ".join(x for x in (e["room"], e["teachers"]) if x)
+                            inner.append(
+                                f"<div class='ent'>{tag}<span class='meta'>"
+                                f"{html.escape(meta)}</span></div>"
+                            )
+
+                        is_consec = False
+                        include_lunch = bool(problem.options.get("teacher_consecutive_include_lunch", False))
+                        if clean_curr_code and clean_curr_code not in ("CSE3200", "CSE4000", "UNAVAILABLE"):
+                            if p > 0 and (include_lunch or p != 6):
+                                prev_idx = p - 1
+                                while prev_idx >= 0 and cells[d][prev_idx] == "skip":
+                                    prev_idx -= 1
+                                prev_cell = cells[d][prev_idx] if prev_idx >= 0 else None
+                                if isinstance(prev_cell, dict) and prev_cell.get("entries"):
+                                    prev_code = prev_cell["entries"][0]["code"].replace(" ", "").upper()
+                                    if prev_code == clean_curr_code:
+                                        is_consec = True
+                            next_p = p + span
+                            if next_p < grid.n_periods and (include_lunch or next_p != 6):
+                                next_cell = cells[d][next_p]
+                                if isinstance(next_cell, dict) and next_cell.get("entries"):
+                                    next_code = next_cell["entries"][0]["code"].replace(" ", "").upper()
+                                    if next_code == clean_curr_code:
+                                        is_consec = True
+
+                        consec_html = "<div class='consec-badge' title='Consecutive Same-Course Class (Constraint 2)'>⚡ Same Course Back-to-Back</div>" if is_consec else ""
+                        row.append(
+                            f"<td class='{klass}' colspan='{span}'>{''.join(inner)}{consec_html}</td>"
+                        )
             if p in break_after:
                 row.append("<td class='brk'></td>")
         row.append("</tr>")
@@ -485,7 +543,15 @@ def _render_master_teachers_table(problem: Problem, solution: Solution, teachers
                     continue
                 elif cell is None:
                     border_cls = " brk-sep" if p in (2, 5) else ""
-                    row.append(f"<td class='m-free{border_cls}'></td>")
+                    slot_idx = grid.slot(d, p)
+                    if slot_idx in t.unavailable:
+                        row.append(
+                            f"<td class='m-unavailable{border_cls}' title='Unavailable: Off slot'>"
+                            f"<div class='m-unavail-badge'>Off</div>"
+                            f"</td>"
+                        )
+                    else:
+                        row.append(f"<td class='m-free{border_cls}'></td>")
                     p += 1
                 else:
                     span = cell["span"]
@@ -498,10 +564,30 @@ def _render_master_teachers_table(problem: Problem, solution: Solution, teachers
                     else:
                         tag_meta = f"{cell['batch']} {cell['section']}"
 
+                    clean_curr_code = cell["code"].replace(" ", "").upper()
+                    is_consec = False
+                    include_lunch = bool(problem.options.get("teacher_consecutive_include_lunch", False))
+                    if clean_curr_code and clean_curr_code not in ("CSE3200", "CSE4000", "UNAVAILABLE"):
+                        if p > 0 and (include_lunch or p != 6):
+                            prev_idx = p - 1
+                            while prev_idx >= 0 and t_grids[t.id][d][prev_idx] == "skip":
+                                prev_idx -= 1
+                            prev_cell = t_grids[t.id][d][prev_idx] if prev_idx >= 0 else None
+                            if isinstance(prev_cell, dict) and prev_cell.get("code", "").replace(" ", "").upper() == clean_curr_code:
+                                is_consec = True
+                        next_p = p + span
+                        if next_p < grid.n_periods and (include_lunch or next_p != 6):
+                            next_cell = t_grids[t.id][d][next_p]
+                            if isinstance(next_cell, dict) and next_cell.get("code", "").replace(" ", "").upper() == clean_curr_code:
+                                is_consec = True
+
+                    consec_html = "<div class='m-consec-badge' title='Consecutive Same-Course Class (Constraint 2)'>⚡ Same Course</div>" if is_consec else ""
+
                     row.append(
                         f"<td class='{klass}{border_cls}' colspan='{span}'>"
                         f"<div class='m-code'>{html.escape(cell['code'])}</div>"
                         f"<div class='m-meta'>{html.escape(tag_meta)}</div>"
+                        f"{consec_html}"
                         f"</td>"
                     )
                     p += span
@@ -1299,6 +1385,72 @@ td.m-td-teacher {{
 
 td.m-free {{
   background: #FFFFFF;
+}}
+
+td.m-unavailable {{
+  background: repeating-linear-gradient(45deg, #F8FAFC, #F8FAFC 8px, #F1F5F9 8px, #F1F5F9 16px) !important;
+  color: #64748B;
+  text-align: center;
+  vertical-align: middle;
+}}
+
+.m-unavail-badge {{
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+  background: #FEE2E2;
+  color: #DC2626;
+  border: 1px solid #FECACA;
+}}
+
+.m-consec-badge {{
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: #ECFDF5;
+  color: #047857;
+  border: 1px solid #A7F3D0;
+  margin-top: 0.2rem;
+  white-space: nowrap;
+}}
+
+.consec-badge {{
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  background: #ECFDF5;
+  color: #047857;
+  border: 1px solid #A7F3D0;
+  margin-top: 0.3rem;
+  white-space: nowrap;
+}}
+
+td.cell-unavailable {{
+  background: repeating-linear-gradient(45deg, #FEF2F2, #FEF2F2 8px, #FFF1F2 8px, #FFF1F2 16px) !important;
+  color: #991B1B;
+  text-align: center;
+  vertical-align: middle;
+  border: 1px dashed #F87171 !important;
+}}
+
+.unavail-badge {{
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  background: #FEE2E2;
+  color: #DC2626;
+  border: 1px solid #FECACA;
 }}
 
 td.m-cell-theory {{
@@ -2765,6 +2917,20 @@ def write_html(
     for t in sorted_busy_teachers:
         load = sum(a.event.length for a in solution.assignments if t.id in a.event.teacher_ids)
         events_count = sum(1 for a in solution.assignments if t.id in a.event.teacher_ids)
+        lab_day_counts: dict[int, int] = defaultdict(int)
+        for a in solution.assignments:
+            if t.id in a.event.teacher_ids and a.event.is_lab:
+                clean_c = a.event.course.code.replace(" ", "").upper()
+                if clean_c not in ("CSE3200", "CSE4000") and not clean_c.startswith("CSE4000"):
+                    d = problem.grid.day_of(a.start)
+                    lab_day_counts[d] += 1
+        lab_total = sum(lab_day_counts.values())
+        max_lab_day = max(lab_day_counts.values(), default=0)
+        lab_info = (
+            f" · {lab_total} lab{'s' if lab_total != 1 else ''} (max {max_lab_day}/day)"
+            if lab_total > 0
+            else ""
+        )
         cells = _teacher_grid(problem, solution, t.id)
         dept_cls = f"badge-{t.department.lower()}"
 
@@ -2777,7 +2943,7 @@ def write_html(
               <span class='badge {dept_cls}'>{html.escape(t.department)}</span>
             </div>
             <div class='teacher-card-load'>
-              Weekly Load: <b>{load}</b> periods/week · {events_count} meetings
+              Weekly Load: <b>{load}</b> periods/week · {events_count} meetings{lab_info}
             </div>
           </div>
           <div class='scroll'>{_render_table(problem, cells)}</div>

@@ -72,6 +72,7 @@ class Course(Base):
 
     batch = relationship("Batch", back_populates="courses")
     assignments = relationship("Assignment", back_populates="course", cascade="all, delete-orphan")
+    slot_rules = relationship("CourseSlotRule", back_populates="course", cascade="all, delete-orphan")
     teacher1 = relationship("Teacher", foreign_keys=[teacher1_id])
     teacher2 = relationship("Teacher", foreign_keys=[teacher2_id])
 
@@ -97,6 +98,20 @@ class TeacherUnavailable(Base):
     day = Column(String, nullable=False)
     periods = Column(String, nullable=False)  # comma-separated period names, or "all"
     teacher = relationship("Teacher", back_populates="unavailable")
+
+
+class CourseSlotRule(Base):
+    __tablename__ = "course_slot_rules"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    course_id = Column(String, ForeignKey("courses.id"), nullable=False, index=True)
+    day = Column(String, nullable=False)  # "Sunday", "Monday", ..., or "daily" / "all"
+    periods = Column(String, nullable=False)  # comma-separated e.g. "P1,P2,P3" or "all"
+    rule_type = Column(String, nullable=False, default="allowed")  # "allowed" (fixed/only available) or "blocked"
+    section = Column(String, nullable=True, default=None)  # None / "" (All sections), "A", "B"
+    note = Column(String, nullable=True, default=None)  # description / reason
+
+    course = relationship("Course", back_populates="slot_rules")
 
 
 class ScheduledAssignment(Base):
@@ -522,4 +537,109 @@ def get_saved_placements_map(db: Session, batch_ids: list[str]) -> dict[tuple, t
         (r.batch_id, r.course_code, r.section, r.group, r.meeting_index): (r.room_id, r.start_slot)
         for r in rows
     }
+
+
+def get_teacher_unavailability_records(db: Session, teacher_id: str) -> list[TeacherUnavailable]:
+    """Retrieve all unavailability rules configured for a teacher."""
+    return (
+        db.query(TeacherUnavailable)
+        .filter(TeacherUnavailable.teacher_id == teacher_id)
+        .order_by(TeacherUnavailable.id.asc())
+        .all()
+    )
+
+
+def set_teacher_unavailability_rules(db: Session, teacher_id: str, rules: list[dict]) -> list[TeacherUnavailable]:
+    """Atomically replace all unavailability rules for a teacher."""
+    db.query(TeacherUnavailable).filter(TeacherUnavailable.teacher_id == teacher_id).delete()
+    created = []
+    for r in rules:
+        day = (r.get("day") or "").strip()
+        periods = (r.get("periods") or "").strip()
+        if not day or not periods:
+            continue
+        rec = TeacherUnavailable(
+            teacher_id=teacher_id,
+            day=day,
+            periods=periods,
+        )
+        db.add(rec)
+        created.append(rec)
+    db.commit()
+    return created
+
+
+def clear_teacher_unavailability(db: Session, teacher_id: str) -> int:
+    """Clear all unavailability rules for a teacher."""
+    deleted = db.query(TeacherUnavailable).filter(TeacherUnavailable.teacher_id == teacher_id).delete()
+    db.commit()
+    return deleted
+
+
+def delete_teacher_unavailability_rule(db: Session, rule_id: int) -> bool:
+    """Delete a single unavailability rule by id."""
+    rule = db.query(TeacherUnavailable).filter(TeacherUnavailable.id == rule_id).first()
+    if not rule:
+        return False
+    db.delete(rule)
+    db.commit()
+    return True
+
+
+# -----------------------------------------------------------------------------
+# Course Slot Availability & Fixed Slot Helpers (Constraint 3)
+# -----------------------------------------------------------------------------
+
+def get_course_slot_rules(db: Session, course_id: str) -> list[CourseSlotRule]:
+    """Retrieve all slot availability / fixed slot rules configured for a course."""
+    return (
+        db.query(CourseSlotRule)
+        .filter(CourseSlotRule.course_id == course_id)
+        .order_by(CourseSlotRule.id.asc())
+        .all()
+    )
+
+
+def set_course_slot_rules(db: Session, course_id: str, rules: list[dict]) -> list[CourseSlotRule]:
+    """Atomically replace all slot rules for a course."""
+    db.query(CourseSlotRule).filter(CourseSlotRule.course_id == course_id).delete()
+    created = []
+    for r in rules:
+        day = (r.get("day") or "").strip()
+        periods = (r.get("periods") or "").strip()
+        rule_type = (r.get("rule_type") or "allowed").strip().lower()
+        section = (r.get("section") or "").strip() or None
+        note = (r.get("note") or "").strip() or None
+        if not day or not periods:
+            continue
+        rec = CourseSlotRule(
+            course_id=course_id,
+            day=day,
+            periods=periods,
+            rule_type=rule_type,
+            section=section,
+            note=note,
+        )
+        db.add(rec)
+        created.append(rec)
+    db.commit()
+    return created
+
+
+def clear_course_slot_rules(db: Session, course_id: str) -> int:
+    """Clear all slot rules for a course."""
+    deleted = db.query(CourseSlotRule).filter(CourseSlotRule.course_id == course_id).delete()
+    db.commit()
+    return deleted
+
+
+def delete_course_slot_rule(db: Session, rule_id: int) -> bool:
+    """Delete a single course slot rule by id."""
+    rule = db.query(CourseSlotRule).filter(CourseSlotRule.id == rule_id).first()
+    if not rule:
+        return False
+    db.delete(rule)
+    db.commit()
+    return True
+
 

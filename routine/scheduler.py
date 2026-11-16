@@ -18,6 +18,7 @@ break-free block.
 
 from __future__ import annotations
 
+from collections import defaultdict
 import time
 from dataclasses import dataclass, field
 
@@ -73,6 +74,7 @@ class RoutineScheduler:
         self.unsynced_courses: list[str] = []
         self.slot_var: dict[int, cp_model.IntVar] = {}
         self.penalty_terms: dict[str, list] = {}
+        self.bonus_terms: dict[str, list] = {}
 
     # ------------------------------------------------------------------ build
 
@@ -88,6 +90,8 @@ class RoutineScheduler:
         self._c_theory_spread_and_symmetry()
         self._c_sync_group_labs()
         self._c_sync_paired_labs()
+        self._c_teacher_diff_course_consecutive()
+        self._c_teacher_max_labs_per_day()
         if freeze:
             self._c_freeze(freeze)
         self._objective()
@@ -210,12 +214,18 @@ class RoutineScheduler:
         self.teacher_busy: dict[str, list[cp_model.IntVar]] = {}
         for tid, evs in buckets.items():
             busy = []
+            unavail = self.p.teachers[tid].unavailable if tid in self.p.teachers else set()
             for t in range(self.grid.n_slots):
                 lits: list = []
                 for ev in evs:
                     lits.extend(self._occupies(ev, t))
                 b = self.model.NewBoolVar(f"tbusy_{tid}_{t}")
-                self.model.Add(b == sum(lits) if lits else b == 0)
+                if t in unavail:
+                    for lit in lits:
+                        self.model.Add(lit == 0)
+                    self.model.Add(b == 0)
+                else:
+                    self.model.Add(b == sum(lits) if lits else b == 0)
                 busy.append(b)
             self.teacher_busy[tid] = busy
 
@@ -344,6 +354,142 @@ class RoutineScheduler:
                         f"longer legal under the current data."
                     )
             self.model.Add(cells[key] == 1)
+
+    def _c_teacher_diff_course_consecutive(self) -> None:
+        """H10 (Constraint 2): For any teacher, forbid two consecutive classes for different courses.
+
+        A teacher must not have two consecutive classes for different courses on the same day.
+        Adjacent period pairs considered within continuous school hours:
+        - Within Block 1: (P1, P2), (P2, P3)
+        - Across Break 1: (P3, P4) (10-minute break between morning blocks)
+        - Within Block 2: (P4, P5), (P5, P6)
+        - Within Block 3: (P7, P8), (P8, P9)
+        Optionally across lunch (P6, P7) if teacher_consecutive_include_lunch option is set.
+        """
+        teacher_events: dict[str, list[Event]] = defaultdict(list)
+        for ev in self.p.events:
+            clean_c = ev.course.code.replace(" ", "").upper()
+            if clean_c in ("CSE3200", "CSE4000") or clean_c.startswith("CSE4000"):
+                continue
+            for tid in ev.teacher_ids:
+                teacher_events[tid].append(ev)
+
+        self.teacher_course_lits: dict[tuple[str, str], dict[int, list]] = defaultdict(lambda: defaultdict(list))
+        self.teacher_course_sec_lits: dict[tuple[str, str, str], dict[int, list]] = defaultdict(lambda: defaultdict(list))
+        th_lits_by_t_slot: dict[str, dict[int, list]] = defaultdict(lambda: defaultdict(list))
+        lab_lits_by_t_start: dict[str, dict[int, list]] = defaultdict(lambda: defaultdict(list))
+
+        for tid, evs in teacher_events.items():
+            for ev in evs:
+                clean_c = ev.course.code.replace(" ", "").upper()
+                sec = ev.section
+                for (rid, s), var in self.x[ev.eid].items():
+                    if not ev.is_lab and ev.length == 1:
+                        th_lits_by_t_slot[tid][s].append(var)
+                    elif ev.is_lab and ev.length == self.grid.lab_periods:
+                        lab_lits_by_t_start[tid][s].append(var)
+                    for t in range(s, s + ev.length):
+                        self.teacher_course_lits[(tid, clean_c)][t].append(var)
+                        self.teacher_course_sec_lits[(tid, clean_c, sec)][t].append(var)
+
+        adjacent_pairs = [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (6, 7), (7, 8)]
+        if self.opt.get("teacher_consecutive_include_lunch", False):
+            adjacent_pairs.append((5, 6))
+
+        for tid, evs in teacher_events.items():
+            courses = sorted({ev.course.code.replace(" ", "").upper() for ev in evs})
+            if len(courses) > 1:
+                for d in range(self.grid.n_days):
+                    for (p1, p2) in adjacent_pairs:
+                        t1 = d * self.grid.n_periods + p1
+                        t2 = d * self.grid.n_periods + p2
+
+                        # Positive-literal cliques eliminate +b2/-u2 cancellation so CP-SAT
+                        # propagates H10 conflicts and clique structure directly.
+                        for c in courses:
+                            l1 = self.teacher_course_lits[(tid, c)][t1]
+                            if not l1:
+                                continue
+                            other_l2 = [
+                                lit
+                                for c2 in courses
+                                if c2 != c
+                                for lit in self.teacher_course_lits[(tid, c2)][t2]
+                            ]
+                            if other_l2:
+                                self.model.AddAtMostOne(l1 + other_l2)
+
+            # Sound implied block-capacity cut (H2 + H4 + H10):
+            # Inside a 3-period academic block, if no single course has >= 3 distinct
+            # non-lab (batch, section, group) meetings capable of landing in that block,
+            # at most 2 theory periods can sit in the block (and 0 if a 3-period lab runs there).
+            th_evs = [ev for ev in evs if not ev.is_lab]
+            lab_evs = [ev for ev in evs if ev.is_lab]
+            if (
+                th_evs
+                and all(ev.length == 1 for ev in th_evs)
+                and all(ev.length == self.grid.lab_periods for ev in lab_evs)
+            ):
+                th_by_c: dict[str, list[Event]] = defaultdict(list)
+                for ev in th_evs:
+                    th_by_c[ev.course.code.replace(" ", "").upper()].append(ev)
+
+                for blk in self.grid.blocks:
+                    if len(blk) < 3:
+                        continue
+                    for d in range(self.grid.n_days):
+                        base = d * self.grid.n_periods
+                        blk_slots = [base + per for per in blk]
+                        max_cohorts = 0
+                        for cevs in th_by_c.values():
+                            cohs = set()
+                            for ev in cevs:
+                                if any(s in self.cover[ev.eid] for s in blk_slots):
+                                    cohs.add((ev.batch_id, ev.section, ev.group))
+                            max_cohorts = max(max_cohorts, len(cohs))
+                        if max_cohorts < len(blk):
+                            tb = [var for s in blk_slots for var in th_lits_by_t_slot[tid][s]]
+                            lb = list(lab_lits_by_t_start[tid][blk_slots[0]])
+                            if tb or lb:
+                                self.model.Add(sum(tb) + (len(blk) - 1) * sum(lb) <= len(blk) - 1)
+
+    def _c_teacher_max_labs_per_day(self) -> None:
+        """H12: Assign at most `max_teacher_labs_per_day` (default 2) lab sessions per day per teacher.
+
+        Applies strictly to teachers to limit daily teaching lab workload, NOT student cohorts.
+        """
+        max_labs = self.opt.get("max_teacher_labs_per_day", 2)
+        if max_labs is None or max_labs < 0:
+            return
+
+        teacher_lab_evs: dict[str, list[Event]] = defaultdict(list)
+        for ev in self.p.events:
+            if not ev.is_lab:
+                continue
+            clean_c = ev.course.code.replace(" ", "").upper()
+            if clean_c in ("CSE3200", "CSE4000") or clean_c.startswith("CSE4000"):
+                continue
+            for tid in dict.fromkeys(ev.teacher_ids):
+                if tid:
+                    teacher_lab_evs[tid].append(ev)
+
+        for tid, evs in teacher_lab_evs.items():
+            if len(evs) <= max_labs:
+                continue
+            for d in range(self.grid.n_days):
+                lo = d * self.grid.n_periods
+                hi = lo + self.grid.n_periods
+                day_lits: list = []
+                ev_count = 0
+                for ev in evs:
+                    ev_day_lits = [
+                        var for (_, s), var in self.x[ev.eid].items() if lo <= s < hi
+                    ]
+                    if ev_day_lits:
+                        ev_count += 1
+                        day_lits.extend(ev_day_lits)
+                if ev_count > max_labs:
+                    self.model.Add(sum(day_lits) <= max_labs)
 
     # -- soft constraints ----------------------------------------------------
 
@@ -530,10 +676,108 @@ class RoutineScheduler:
                                 pass
         self.penalty_terms["lab_room_priority"] = lab_room_terms
 
+        # S10 (Constraint 2): Prioritize consecutive two classes for the exact same course
+        same_consec_vars = []
+        if self._wants("same_course_consecutive"):
+            adjacent_pairs = [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (6, 7), (7, 8)]
+            if self.opt.get("teacher_consecutive_include_lunch", False):
+                adjacent_pairs.append((5, 6))
+
+            teacher_events = defaultdict(list)
+            for ev in self.p.events:
+                for tid in ev.teacher_ids:
+                    teacher_events[tid].append(ev)
+
+            for tid, evs in teacher_events.items():
+                courses_map = defaultdict(lambda: defaultdict(list))
+                for ev in evs:
+                    clean_c = ev.course.code.replace(" ", "").upper()
+                    if clean_c in ("CSE3200", "CSE4000") or clean_c.startswith("CSE4000"):
+                        continue
+                    courses_map[clean_c][ev.section].append(ev)
+
+                for c, sec_dict in courses_map.items():
+                    sections = list(sec_dict.keys())
+                    if len(sections) < 2:
+                        continue
+
+                    for i in range(len(sections)):
+                        for j in range(i + 1, len(sections)):
+                            sA, sB = sections[i], sections[j]
+                            for d in range(self.grid.n_days):
+                                for (p1, p2) in adjacent_pairs:
+                                    t1 = d * self.grid.n_periods + p1
+                                    t2 = d * self.grid.n_periods + p2
+
+                                    lits_A1 = self.teacher_course_sec_lits[(tid, c, sA)][t1]
+                                    lits_B2 = self.teacher_course_sec_lits[(tid, c, sB)][t2]
+                                    lits_B1 = self.teacher_course_sec_lits[(tid, c, sB)][t1]
+                                    lits_A2 = self.teacher_course_sec_lits[(tid, c, sA)][t2]
+
+                                    if lits_A1 and lits_B2:
+                                        sc_ab = self.model.NewBoolVar(f"sc_{tid}_{c}_{sA}_{sB}_{d}_{p1}_{p2}_ab")
+                                        u_A1 = sum(lits_A1)
+                                        u_B2 = sum(lits_B2)
+                                        self.model.Add(sc_ab <= u_A1)
+                                        self.model.Add(sc_ab <= u_B2)
+                                        self.model.Add(sc_ab >= u_A1 + u_B2 - 1)
+                                        same_consec_vars.append(sc_ab)
+
+                                    if lits_B1 and lits_A2:
+                                        sc_ba = self.model.NewBoolVar(f"sc_{tid}_{c}_{sB}_{sA}_{d}_{p1}_{p2}_ba")
+                                        u_B1 = sum(lits_B1)
+                                        u_A2 = sum(lits_A2)
+                                        self.model.Add(sc_ba <= u_B1)
+                                        self.model.Add(sc_ba <= u_A2)
+                                        self.model.Add(sc_ba >= u_B1 + u_A2 - 1)
+                                        same_consec_vars.append(sc_ba)
+
+        self.bonus_terms["same_course_consecutive"] = same_consec_vars
+
+        # S11: Prefer assigning at most 1 lab session per day per teacher (penalize >= 2 labs/day)
+        extra_lab_days = []
+        if self._wants("teacher_extra_lab_day"):
+            teacher_lab_evs: dict[str, list[Event]] = defaultdict(list)
+            for ev in self.p.events:
+                if not ev.is_lab:
+                    continue
+                clean_c = ev.course.code.replace(" ", "").upper()
+                if clean_c in ("CSE3200", "CSE4000") or clean_c.startswith("CSE4000"):
+                    continue
+                for tid in dict.fromkeys(ev.teacher_ids):
+                    if tid:
+                        teacher_lab_evs[tid].append(ev)
+
+            for tid, evs in teacher_lab_evs.items():
+                if len(evs) <= 1:
+                    continue
+                for d in range(self.grid.n_days):
+                    lo = d * self.grid.n_periods
+                    hi = lo + self.grid.n_periods
+                    day_lits: list = []
+                    ev_count = 0
+                    for ev in evs:
+                        ev_day_lits = [
+                            var for (_, s), var in self.x[ev.eid].items() if lo <= s < hi
+                        ]
+                        if ev_day_lits:
+                            ev_count += 1
+                            day_lits.extend(ev_day_lits)
+                    if ev_count > 1:
+                        ex = self.model.NewIntVar(0, ev_count, f"exlab_{tid}_{d}")
+                        self.model.Add(ex >= sum(day_lits) - 1)
+                        extra_lab_days.append(ex)
+        self.penalty_terms["teacher_extra_lab_day"] = extra_lab_days
+
         for name, vars_ in self.penalty_terms.items():
             weight = self.w.get(name, 0)
             if weight and vars_:
                 terms.append(weight * sum(vars_))
+
+        for name, vars_ in self.bonus_terms.items():
+            weight = self.w.get(name, 0)
+            if weight and vars_:
+                terms.append(-weight * sum(vars_))
 
         if terms:
             self.model.Minimize(sum(terms))
@@ -569,6 +813,9 @@ class RoutineScheduler:
             for name_, vars_ in self.penalty_terms.items()
             if vars_
         }
+        for name_, vars_ in self.bonus_terms.items():
+            if vars_:
+                sol.penalties[name_] = int(sum(solver.Value(v) for v in vars_))
         sol.unsynced_courses = self.unsynced_courses
         return sol
 
@@ -582,12 +829,14 @@ def solve_routine(
     two_phase: bool = True,
     on_phase=None,
 ) -> Solution:
-    """Solve in two phases: find a legal routine, then improve it.
+    """Solve in staged phases: feasibility -> lab-spread/room pre-polish -> full optimisation.
 
     Phase 1 drops every soft constraint and asks only for feasibility, which is
-    fast. Phase 2 restores the full objective and warm-starts from phase 1, so
-    you always end up with a usable routine even if the time budget runs out
-    mid-optimisation.
+    fast. Phase 1b (when lab-spread/room weights are active and time remains)
+    pre-optimises `teacher_extra_lab_day` and `lab_room_priority` in a quick
+    linear pass so Phase 2 starts from a single-lab-per-day layout rather than
+    a dense arbitrary hint. Phase 2 restores the full objective and warm-starts
+    from the best prior hint.
     """
     if not two_phase:
         sched = RoutineScheduler(problem)
@@ -606,7 +855,8 @@ def solve_routine(
         phase1.build(freeze=freeze)
         first = phase1.solve()
     finally:
-        problem.options["weights"].update(saved)
+        weights.clear()
+        weights.update(saved)
         problem.options["solver"]["max_seconds"] = budget
 
     if on_phase:
@@ -615,16 +865,49 @@ def solve_routine(
         first.unsynced_courses = phase1.unsynced_courses
         return first
 
-    problem.options["solver"]["max_seconds"] = max(10.0, budget - first.wall_seconds)
-    sched = RoutineScheduler(problem)
-    sched.build(freeze=freeze, hint=first.freeze_map())
-    best = sched.solve()
-    problem.options["solver"]["max_seconds"] = budget
+    warm_sol = first
+    warm_sched = phase1
+    used_time = first.wall_seconds
+
+    has_lab_spread = bool(saved.get("teacher_extra_lab_day", 0))
+    has_room_prio = bool(saved.get("lab_room_priority", 0))
+    remaining_after_p1 = budget - used_time
+
+    if (has_lab_spread or has_room_prio) and remaining_after_p1 > 15.0:
+        try:
+            for k in weights:
+                weights[k] = 0
+            if has_lab_spread:
+                weights["teacher_extra_lab_day"] = 100
+            if has_room_prio:
+                weights["lab_room_priority"] = max(1, int(saved.get("lab_room_priority", 2)))
+            problem.options["solver"]["max_seconds"] = min(12.0, remaining_after_p1 * 0.25)
+            phase1b = RoutineScheduler(problem)
+            phase1b.build(freeze=freeze, hint=first.freeze_map())
+            polish = phase1b.solve()
+            used_time += polish.wall_seconds
+            if polish.ok:
+                warm_sol = polish
+                warm_sched = phase1b
+        finally:
+            weights.clear()
+            weights.update(saved)
+            problem.options["solver"]["max_seconds"] = budget
+
+    try:
+        problem.options["solver"]["max_seconds"] = max(10.0, budget - used_time)
+        sched = RoutineScheduler(problem)
+        sched.build(freeze=freeze, hint=warm_sol.freeze_map())
+        best = sched.solve()
+    finally:
+        weights.clear()
+        weights.update(saved)
+        problem.options["solver"]["max_seconds"] = budget
 
     if on_phase:
         on_phase(2, best)
-    winner = best if best.ok else first
-    winner.unsynced_courses = sched.unsynced_courses if best.ok else phase1.unsynced_courses
+    winner = best if best.ok else warm_sol
+    winner.unsynced_courses = sched.unsynced_courses if best.ok else warm_sched.unsynced_courses
     return winner
 
 
@@ -642,3 +925,199 @@ def reschedule_batch(problem: Problem, existing: Solution, batch_id: str) -> Sol
         if index[eid].batch_id != batch_id
     }
     return solve_routine(problem, freeze=freeze)
+
+
+def _quick_phase1_ok(
+    problem: Problem,
+    freeze: dict[int, tuple[str, int]] | None = None,
+    *,
+    skip_h10: bool = False,
+    skip_h12: bool = False,
+    seconds: float = 3.5,
+) -> bool:
+    """Fast feasibility-only probe used only after a solve failure to locate conflicts."""
+    saved_w = dict(problem.options["weights"])
+    saved_sec = problem.options["solver"].get("max_seconds", 120)
+    try:
+        for k in problem.options["weights"]:
+            problem.options["weights"][k] = 0
+        problem.options["solver"]["max_seconds"] = seconds
+        sched = RoutineScheduler(problem)
+        sched._create_variables()
+        sched._c_cohort_conflicts()
+        sched._c_teacher_conflicts()
+        sched._c_room_conflicts()
+        sched._c_theory_spread_and_symmetry()
+        sched._c_sync_group_labs()
+        sched._c_sync_paired_labs()
+        if not skip_h10:
+            sched._c_teacher_diff_course_consecutive()
+        if not skip_h12:
+            sched._c_teacher_max_labs_per_day()
+        if freeze:
+            sched._c_freeze(freeze)
+        sol = sched.solve()
+        return sol.ok
+    except Exception:
+        return False
+    finally:
+        problem.options["weights"].update(saved_w)
+        problem.options["solver"]["max_seconds"] = saved_sec
+
+
+def diagnose_infeasibility(
+    problem: Problem,
+    freeze: dict[int, tuple[str, int]] | None = None,
+) -> list[str]:
+    """Run a fast ablation probe after solver failure to identify conflicting constraints/teachers."""
+    findings: list[str] = []
+
+    # 1. Check frozen batch pin conflict
+    if freeze:
+        if _quick_phase1_ok(problem, freeze=None, seconds=8.0):
+            findings.append(
+                "Frozen running terms conflict with newly modified courses or constraints. "
+                "Try switching to 'Full Generation Mode' or unfreezing conflicting terms."
+            )
+            return findings
+
+    # 2. Isolate individual overloaded/restricted teachers directly (super fast, ~0.2s per teacher)
+    t_evs: dict[str, list[Event]] = defaultdict(list)
+    for ev in problem.events:
+        for tid in ev.teacher_ids:
+            t_evs[tid].append(ev)
+
+    h10_culprits: list[str] = []
+    h12_culprits: list[str] = []
+    combined_culprits: list[str] = []
+    max_labs_day = problem.options.get("max_teacher_labs_per_day", 2)
+
+    for tid, evs in sorted(t_evs.items(), key=lambda x: -sum(e.length for e in x[1])):
+        load = sum(e.length for e in evs)
+        n_labs = sum(1 for e in evs if e.is_lab)
+        has_unavail = tid in problem.teachers and bool(problem.teachers[tid].unavailable)
+        if load < 20 and n_labs <= (max_labs_day or 2) and not has_unavail:
+            continue
+        sub_p = Problem(
+            grid=problem.grid,
+            teachers={k: v for k, v in problem.teachers.items()},
+            rooms=problem.rooms,
+            batches=problem.batches,
+            courses=problem.courses,
+            events=evs,
+            options={
+                **problem.options,
+                "sync_group_labs": False,
+                "weights": {k: 0 for k in problem.options["weights"]},
+                "solver": {"max_seconds": 2.0, "workers": 4, "log": False},
+            },
+        )
+        if not _quick_phase1_ok(sub_p, freeze=None, skip_h10=False, skip_h12=False, seconds=2.0):
+            t = problem.teachers.get(tid)
+            tlabel = f"{t.name} ({t.short}) [{load} periods, {n_labs} labs]" if t else tid
+            ok_no_h12 = _quick_phase1_ok(sub_p, freeze=None, skip_h10=False, skip_h12=True, seconds=2.0)
+            ok_no_h10 = _quick_phase1_ok(sub_p, freeze=None, skip_h10=True, skip_h12=False, seconds=2.0)
+            if ok_no_h12 and not ok_no_h10:
+                h12_culprits.append(tlabel)
+            elif ok_no_h10 and not ok_no_h12:
+                h10_culprits.append(tlabel)
+            else:
+                combined_culprits.append(tlabel)
+
+    if h12_culprits:
+        findings.append(
+            f"Hard Constraint H12 (at most {max_labs_day} lab sessions per day per teacher) cannot be satisfied "
+            f"with the current lab assignments/availability for: {', '.join(h12_culprits)}."
+        )
+    if h10_culprits:
+        findings.append(
+            "Constraint 2 (H10: No consecutive different-course classes) cannot be satisfied "
+            f"with the current weekly workload/availability for: {', '.join(h10_culprits)}. "
+            "Reduce theory/lab overlap or adjust unavailable/course slots for these faculty members."
+        )
+    if combined_culprits:
+        findings.append(
+            f"Combined H10/H12 & slot rules leave no feasible weekly layout for: {', '.join(combined_culprits)}. "
+            "Reduce theory/lab overlap or relax slot restrictions for these faculty members."
+        )
+    if findings:
+        return findings
+
+    # 3. Check Constraint 2 (H10: no different-course consecutive classes) system-wide
+    if _quick_phase1_ok(problem, freeze=freeze, skip_h10=True, seconds=8.0):
+        findings.append(
+            "Hard Constraint H10 (no consecutive different-course classes for teachers) is "
+            "over-constrained in combination with room/slot/teacher interactions across active batches."
+        )
+
+    # 3b. Check H12 (max daily labs per teacher) system-wide
+    if max_labs_day is not None and _quick_phase1_ok(problem, freeze=freeze, skip_h12=True, seconds=8.0):
+        findings.append(
+            f"Hard Constraint H12 (at most {max_labs_day} lab sessions per day per teacher) is "
+            "over-constrained in combination with room/slot/teacher interactions across active batches."
+        )
+
+    # 4. Check Constraint 3 (Course fixed / allowed / blocked slots)
+    saved_slot_rules = {
+        ev.eid: (set(ev.allowed_slots), set(ev.blocked_slots)) for ev in problem.events
+    }
+    try:
+        if any(a or b for a, b in saved_slot_rules.values()):
+            for ev in problem.events:
+                ev.allowed_slots = set()
+                ev.blocked_slots = set()
+            if _quick_phase1_ok(problem, freeze=freeze, seconds=8.0):
+                constrained = sorted(
+                    {
+                        f"{ev.course.code} ({ev.batch_id})"
+                        for ev in problem.events
+                        if saved_slot_rules[ev.eid][0] or saved_slot_rules[ev.eid][1]
+                    }
+                )
+                findings.append(
+                    f"Constraint 3 course fixed/blocked slot rules ({', '.join(constrained)}) conflict "
+                    "with teacher availability, rooms, or H10 consecutive rules."
+                )
+    finally:
+        for ev in problem.events:
+            ev.allowed_slots, ev.blocked_slots = saved_slot_rules[ev.eid]
+
+    # 5. Check Constraint 1 (Teacher manual slot unavailability)
+    saved_unavail = {tid: set(t.unavailable) for tid, t in problem.teachers.items()}
+    try:
+        if any(saved_unavail.values()):
+            for t in problem.teachers.values():
+                t.unavailable = set()
+            if _quick_phase1_ok(problem, freeze=freeze, seconds=8.0):
+                restricted = sorted(
+                    f"{problem.teachers[tid].name} ({problem.teachers[tid].short})"
+                    for tid, slots in saved_unavail.items()
+                    if slots
+                )
+                findings.append(
+                    f"Constraint 1 teacher slot unavailability rules ({', '.join(restricted)}) leave "
+                    "no conflict-free placement under the current workload."
+                )
+    finally:
+        for tid, t in problem.teachers.items():
+            t.unavailable = saved_unavail[tid]
+
+    # 6. Check H9 synced group labs
+    if problem.options.get("sync_group_labs", True):
+        saved_sync = problem.options["sync_group_labs"]
+        try:
+            problem.options["sync_group_labs"] = False
+            if _quick_phase1_ok(problem, freeze=freeze, seconds=8.0):
+                findings.append(
+                    "Hard Constraint H9 (simultaneous lab group synchronization) conflicts with "
+                    "lab room availability or course/teacher slot restrictions."
+                )
+        finally:
+            problem.options["sync_group_labs"] = saved_sync
+
+    if not findings:
+        findings.append(
+            "No feasible solution could be found within the time budget with all active constraints combined. "
+            "Check heavy teacher loads, restricted course/teacher slots, or increase the solver time budget."
+        )
+    return findings

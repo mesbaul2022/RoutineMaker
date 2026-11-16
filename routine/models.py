@@ -57,6 +57,11 @@ class Course:
     # theory:    {section -> teacher_id}
     # sessional: {section -> {group -> [teacher_id, ...]}}
     teachers: dict = field(default_factory=dict)
+    # Constraint 3: Course slot availability & fixed slots
+    allowed_slots: set[int] = field(default_factory=set)
+    blocked_slots: set[int] = field(default_factory=set)
+    section_allowed_slots: dict[str, set[int]] = field(default_factory=dict)
+    section_blocked_slots: dict[str, set[int]] = field(default_factory=dict)
 
     @property
     def is_theory(self) -> bool:
@@ -96,6 +101,8 @@ class Event:
     display_teacher: str = ""
     is_shared: bool = False
     paired_event_id: int | None = None
+    allowed_slots: set[int] = field(default_factory=set)
+    blocked_slots: set[int] = field(default_factory=set)
 
     @property
     def is_lab(self) -> bool:
@@ -223,7 +230,7 @@ class Problem:
         ]
 
     def feasible_starts(self, event: Event) -> list[int]:
-        """Start slots allowed by the grid AND by every assigned teacher."""
+        """Start slots allowed by the grid, assigned teachers, and course slot constraints (Constraint 3)."""
         if event.is_lab:
             candidates = self.grid.lab_start_slots(event.length)
         else:
@@ -232,6 +239,14 @@ class Problem:
         allowed = []
         for s in candidates:
             covered = self.grid.covered_slots(s, event.length)
-            if all(self.teachers[t].is_free(covered) for t in event.teacher_ids):
-                allowed.append(s)
+            # 1. Teacher unavailability
+            if not all(self.teachers[t].is_free(covered) for t in event.teacher_ids):
+                continue
+            # 2. Course blocked slots (blacklist)
+            if any(slot in event.blocked_slots for slot in covered):
+                continue
+            # 3. Course allowed slots (whitelist / fixed slots)
+            if event.allowed_slots and not all(slot in event.allowed_slots for slot in covered):
+                continue
+            allowed.append(s)
         return allowed

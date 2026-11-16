@@ -82,6 +82,7 @@
                 <th>Department</th>
                 <th>Max Periods / Day</th>
                 <th>Status</th>
+                <th>Slot Availability</th>
                 <th style="text-align: right;">Actions</th>
               </tr>
             </thead>
@@ -279,6 +280,14 @@
                 <span class="stat-label">Hard Faults</span>
                 <span class="stat-val" id="result-faults-count">0</span>
               </div>
+              <div class="stat-pill" style="border-left: 3px solid #10B981;">
+                <span class="stat-label">Same-Course Back-to-Back</span>
+                <span class="stat-val" id="result-consec-count" style="color: #047857;">0</span>
+              </div>
+              <div class="stat-pill" style="border-left: 3px solid #3B82F6;">
+                <span class="stat-label">Teacher Max Labs / Day</span>
+                <span class="stat-val" id="result-max-labs-day" style="color: #1D4ED8;">—</span>
+              </div>
             </div>
             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
               <a id="btn-download-csv" href="/api/routine/download/csv" class="btn btn-outline" download>
@@ -474,6 +483,322 @@
           <button type="submit" class="btn btn-primary" id="btn-save-course">✓ Save Course (OK)</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Manage Teacher Availability Modal -->
+  <div id="modal-teacher-availability" class="modal-overlay">
+    <div class="modal-dialog modal-dialog-lg" style="max-width: 860px;">
+      <div class="modal-header">
+        <div>
+          <h3 id="modal-avail-title">Manage Teacher Availability</h3>
+          <div id="modal-avail-subtitle" style="font-size: 0.82rem; color: var(--text-dim); margin-top: 0.2rem;">
+            Configure manual slot flexibility (daily or weekly unavailable slots)
+          </div>
+        </div>
+        <button class="modal-close" onclick="closeTeacherAvailabilityModal()">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.25rem 1.5rem;">
+        <!-- Teacher Summary Card -->
+        <div class="avail-teacher-summary">
+          <div class="avail-teacher-info">
+            <span class="avail-teacher-avatar" id="modal-avail-avatar">👨‍🏫</span>
+            <div>
+              <div class="avail-teacher-name" id="modal-avail-teacher-name">Dr. M. M. A. Hashem</div>
+              <div class="avail-teacher-meta">
+                <span class="badge" id="modal-avail-dept-badge">CSE</span>
+                <span style="font-weight: 700; color: var(--navy);" id="modal-avail-shortcode">MMA</span>
+                <span style="color: var(--text-muted); font-family: monospace; font-size: 0.75rem;" id="modal-avail-id">mma_hashem</span>
+              </div>
+            </div>
+          </div>
+          <div class="avail-stats-box">
+            <div class="avail-stat-item">
+              <span class="avail-stat-label">Status</span>
+              <span class="avail-stat-val" id="modal-avail-status-text">Active</span>
+            </div>
+            <div class="avail-stat-item">
+              <span class="avail-stat-label">Blocked Slots</span>
+              <span class="avail-stat-val text-danger" id="modal-avail-blocked-count">0 / 45</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Presets -->
+        <div class="avail-section">
+          <div class="avail-section-title">⚡ Quick Presets (Daily & Standard Academic Blocks):</div>
+          <div class="avail-presets-grid">
+            <button type="button" class="btn-preset" onclick="applyAvailabilityPreset('daily_morning')">
+              🌅 Block Daily 8:00 – 10:30 AM <small>(Periods P1–P3)</small>
+            </button>
+            <button type="button" class="btn-preset" onclick="applyAvailabilityPreset('daily_afternoon')">
+              🌇 Block Daily 2:30 – 5:00 PM <small>(Periods P7–P9)</small>
+            </button>
+            <button type="button" class="btn-preset" onclick="applyAvailabilityPreset('daily_midday')">
+              ☀️ Block Daily 10:40 – 1:10 PM <small>(Periods P4–P6)</small>
+            </button>
+            <button type="button" class="btn-preset btn-preset-danger" onclick="applyAvailabilityPreset('clear_all')">
+              🔄 Clear All (Make 100% Available)
+            </button>
+          </div>
+        </div>
+
+        <!-- Interactive Weekly Grid -->
+        <div class="avail-section">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div class="avail-section-title" style="margin-bottom: 0;">📅 Weekly Time Slots Grid (Click any slot to toggle Available / Unavailable):</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); display: flex; gap: 0.8rem; align-items: center;">
+              <span style="display: inline-flex; align-items: center; gap: 0.3rem;"><span class="legend-swatch swatch-free"></span> Available</span>
+              <span style="display: inline-flex; align-items: center; gap: 0.3rem;"><span class="legend-swatch swatch-blocked"></span> Blocked (Off)</span>
+            </div>
+          </div>
+          <div class="avail-grid-scroll">
+            <table class="avail-interactive-table" id="avail-interactive-grid">
+              <thead>
+                <!-- Populated dynamically: Days & Periods -->
+              </thead>
+              <tbody>
+                <!-- 5 rows for days, 9 period cells each -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Rule Builder / Custom Weekly Rule -->
+        <div class="avail-section" style="background: #F8FAFC; padding: 0.85rem; border-radius: var(--radius); border: 1px solid #E2E8F0;">
+          <div class="avail-section-title">➕ Add Slot Restriction Rule:</div>
+          <div style="display: grid; grid-template-columns: 1fr 1.6fr auto; gap: 0.6rem; align-items: flex-end;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="rule-select-day" style="font-size: 0.78rem;">Day *</label>
+              <select id="rule-select-day" style="font-size: 0.85rem;">
+                <option value="daily">Daily (All Days)</option>
+                <option value="Sunday">Sunday</option>
+                <option value="Monday">Monday</option>
+                <option value="Tuesday">Tuesday</option>
+                <option value="Wednesday">Wednesday</option>
+                <option value="Thursday">Thursday</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="rule-select-period" style="font-size: 0.78rem;">Period / Academic Slot *</label>
+              <select id="rule-select-period" style="font-size: 0.85rem;">
+                <option value="P1,P2,P3">08:00 AM – 10:30 AM (Block 1: P1, P2, P3)</option>
+                <option value="P4,P5,P6">10:40 AM – 01:10 PM (Block 2: P4, P5, P6)</option>
+                <option value="P7,P8,P9">02:30 PM – 05:00 PM (Block 3: P7, P8, P9)</option>
+                <option value="all">Full Day (All Periods P1–P9)</option>
+                <option value="P1">Period 1 (08:00 – 08:50)</option>
+                <option value="P2">Period 2 (08:50 – 09:40)</option>
+                <option value="P3">Period 3 (09:40 – 10:30)</option>
+                <option value="P4">Period 4 (10:40 – 11:30)</option>
+                <option value="P5">Period 5 (11:30 – 12:20)</option>
+                <option value="P6">Period 6 (12:20 – 13:10)</option>
+                <option value="P7">Period 7 (14:30 – 15:20)</option>
+                <option value="P8">Period 8 (15:20 – 16:10)</option>
+                <option value="P9">Period 9 (16:10 – 17:00)</option>
+              </select>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="handleAddAvailabilityRule()" style="white-space: nowrap; height: 38px;">
+              + Add Rule
+            </button>
+          </div>
+        </div>
+
+        <!-- Current Rules List -->
+        <div class="avail-section" style="margin-top: 1rem;">
+          <div class="avail-section-title">📋 Configured Unavailability Rules (<span id="modal-avail-rules-count">0</span>):</div>
+          <div id="modal-avail-rules-list" class="avail-rules-container">
+            <!-- Populated dynamically with rule chips -->
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeTeacherAvailabilityModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btn-save-teacher-avail" onclick="saveTeacherAvailability()">
+          ✓ Save Availability (OK)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manage Course Slot Availability / Fixed Slots Modal (Constraint 3) -->
+  <div id="modal-course-availability" class="modal-overlay">
+    <div class="modal-dialog modal-dialog-lg" style="max-width: 880px;">
+      <div class="modal-header">
+        <div>
+          <h3 id="modal-course-avail-title">Manage Course Slot Availability & Fixed Slots</h3>
+          <div id="modal-course-avail-subtitle" style="font-size: 0.82rem; color: var(--text-dim); margin-top: 0.2rem;">
+            Assign and fix time slots for non-departmental (Chemistry, Physics, Math, EEE, ECE) or special courses
+          </div>
+        </div>
+        <button class="modal-close" onclick="closeCourseAvailabilityModal()">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.25rem 1.5rem;">
+        <!-- Course Summary & Scope Card -->
+        <div class="avail-teacher-summary">
+          <div class="avail-teacher-info">
+            <span class="avail-teacher-avatar" id="modal-course-avail-avatar">📚</span>
+            <div>
+              <div class="avail-teacher-name" id="modal-course-avail-name">CHEM 1208: Chemistry Sessional</div>
+              <div class="avail-teacher-meta">
+                <span class="badge" id="modal-course-avail-kind-badge">Sessional (0.75 cr)</span>
+                <span style="font-weight: 700; color: var(--navy);" id="modal-course-avail-batch">1-2</span>
+                <span style="color: var(--text-muted); font-family: monospace; font-size: 0.75rem;" id="modal-course-avail-id">CHEM1208</span>
+              </div>
+            </div>
+          </div>
+          <div class="avail-stats-box" style="gap: 1rem;">
+            <div class="avail-stat-item">
+              <span class="avail-stat-label">Section Scope</span>
+              <select id="course-avail-section-select" onchange="onCourseAvailSectionChange()" style="font-size: 0.82rem; padding: 0.25rem 0.5rem; height: auto;">
+                <option value="ALL">All Sections (Default)</option>
+                <option value="A">Section A only</option>
+                <option value="B">Section B only</option>
+              </select>
+            </div>
+            <div class="avail-stat-item">
+              <span class="avail-stat-label">Slot Status</span>
+              <span class="avail-stat-val" id="modal-course-avail-summary-badge" style="color: var(--navy);">Unrestricted</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mode Toggle & Guidance -->
+        <div style="background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: var(--radius); padding: 0.75rem 1rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+          <div>
+            <span style="font-weight: 700; color: #1E40AF; font-size: 0.88rem;">🎯 Constraint Mode:</span>
+            <div style="font-size: 0.78rem; color: #1E3A8A; margin-top: 0.15rem;">
+              Choose <b>"Fixed / Allowed Slots"</b> to constrain RoutineMaker so it ONLY places classes in your selected slots.
+            </div>
+          </div>
+          <div class="btn-group" style="display: flex; gap: 0.4rem;">
+            <button type="button" id="btn-mode-allowed" class="btn btn-sm btn-primary" onclick="setCourseAvailMode('allowed')">
+              📌 Allowed (Fixed Slots)
+            </button>
+            <button type="button" id="btn-mode-blocked" class="btn btn-sm btn-outline" onclick="setCourseAvailMode('blocked')">
+              🚫 Blocked Slots
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick Presets -->
+        <div class="avail-section">
+          <div class="avail-section-title">⚡ Quick Presets (One-Click Slot Assignment):</div>
+          <div class="avail-presets-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+            <button type="button" class="btn-preset" onclick="applyCourseAvailabilityPreset('sunday_morning')">
+              📅 Sunday 8:00 – 10:30 AM <small>(P1–P3)</small>
+            </button>
+            <button type="button" class="btn-preset" onclick="applyCourseAvailabilityPreset('tuesday_morning')">
+              📅 Tuesday 8:00 – 10:30 AM <small>(P1–P3)</small>
+            </button>
+            <button type="button" class="btn-preset" onclick="applyCourseAvailabilityPreset('thursday_morning')">
+              📅 Thursday 8:00 – 10:30 AM <small>(P1–P3)</small>
+            </button>
+            <button type="button" class="btn-preset" onclick="applyCourseAvailabilityPreset('morning_only')">
+              🌅 Morning Only <small>(Daily P1–P3)</small>
+            </button>
+            <button type="button" class="btn-preset" onclick="applyCourseAvailabilityPreset('afternoon_only')">
+              🌇 Afternoon Only <small>(Daily P7–P9)</small>
+            </button>
+            <button type="button" class="btn-preset btn-preset-danger" onclick="applyCourseAvailabilityPreset('clear_all')">
+              🔄 Clear All (Unrestricted)
+            </button>
+          </div>
+        </div>
+
+        <!-- Interactive Weekly Grid -->
+        <div class="avail-section">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div class="avail-section-title" style="margin-bottom: 0;">📅 Weekly Time Slots Grid (Click any slot to toggle):</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); display: flex; gap: 0.8rem; align-items: center;">
+              <span style="display: inline-flex; align-items: center; gap: 0.3rem;"><span class="legend-swatch swatch-free"></span> Free / Any</span>
+              <span style="display: inline-flex; align-items: center; gap: 0.3rem;"><span class="legend-swatch swatch-allowed"></span> 📌 Fixed / Allowed</span>
+              <span style="display: inline-flex; align-items: center; gap: 0.3rem;"><span class="legend-swatch swatch-blocked"></span> 🚫 Blocked</span>
+            </div>
+          </div>
+          <div class="avail-grid-scroll">
+            <table class="avail-interactive-table" id="course-avail-interactive-grid">
+              <thead>
+                <!-- Populated dynamically -->
+              </thead>
+              <tbody>
+                <!-- 5 rows for days, 9 period cells each -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Rule Builder / Custom Rule -->
+        <div class="avail-section" style="background: #F8FAFC; padding: 0.85rem; border-radius: var(--radius); border: 1px solid #E2E8F0;">
+          <div class="avail-section-title">➕ Add Slot Assignment Rule:</div>
+          <div style="display: grid; grid-template-columns: 1fr 1.2fr 1.2fr 1fr auto; gap: 0.6rem; align-items: flex-end;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="course-rule-select-day" style="font-size: 0.78rem;">Day *</label>
+              <select id="course-rule-select-day" style="font-size: 0.85rem;">
+                <option value="Sunday">Sunday</option>
+                <option value="Monday">Monday</option>
+                <option value="Tuesday">Tuesday</option>
+                <option value="Wednesday">Wednesday</option>
+                <option value="Thursday">Thursday</option>
+                <option value="daily">Daily (All Days)</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="course-rule-select-period" style="font-size: 0.78rem;">Period / Academic Slot *</label>
+              <select id="course-rule-select-period" style="font-size: 0.85rem;">
+                <option value="P1,P2,P3">08:00 – 10:30 AM (Block 1: P1, P2, P3)</option>
+                <option value="P4,P5,P6">10:40 – 01:10 PM (Block 2: P4, P5, P6)</option>
+                <option value="P7,P8,P9">02:30 – 05:00 PM (Block 3: P7, P8, P9)</option>
+                <option value="all">Full Day (P1–P9)</option>
+                <option value="P1">Period 1 (08:00 – 08:50)</option>
+                <option value="P2">Period 2 (08:50 – 09:40)</option>
+                <option value="P3">Period 3 (09:40 – 10:30)</option>
+                <option value="P4">Period 4 (10:40 – 11:30)</option>
+                <option value="P5">Period 5 (11:30 – 12:20)</option>
+                <option value="P6">Period 6 (12:20 – 13:10)</option>
+                <option value="P7">Period 7 (14:30 – 15:20)</option>
+                <option value="P8">Period 8 (15:20 – 16:10)</option>
+                <option value="P9">Period 9 (16:10 – 17:00)</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="course-rule-select-type" style="font-size: 0.78rem;">Rule Type *</label>
+              <select id="course-rule-select-type" style="font-size: 0.85rem;">
+                <option value="allowed">📌 Allowed (Fixed Slot)</option>
+                <option value="blocked">🚫 Blocked Slot</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="course-rule-select-section" style="font-size: 0.78rem;">Section</label>
+              <select id="course-rule-select-section" style="font-size: 0.85rem;">
+                <option value="ALL">All Sections</option>
+                <option value="A">Section A</option>
+                <option value="B">Section B</option>
+              </select>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="handleAddCourseAvailabilityRule()" style="white-space: nowrap; height: 38px;">
+              + Add Rule
+            </button>
+          </div>
+        </div>
+
+        <!-- Current Rules List -->
+        <div class="avail-section" style="margin-top: 1rem;">
+          <div class="avail-section-title">📋 Configured Course Slot Rules (<span id="modal-course-avail-rules-count">0</span>):</div>
+          <div id="modal-course-avail-rules-list" class="avail-rules-container">
+            <!-- Populated dynamically with rule chips -->
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeCourseAvailabilityModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btn-save-course-avail" onclick="saveCourseAvailability()">
+          ✓ Save Course Slots (OK)
+        </button>
+      </div>
     </div>
   </div>
 

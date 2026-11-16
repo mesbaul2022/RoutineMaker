@@ -15,24 +15,33 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from routine.report import write_csv, write_html
-from routine.scheduler import solve_routine
+from routine.scheduler import diagnose_infeasibility, solve_routine
 from tools.verify import verify
 
 from .db import (
     Assignment as AssignmentModel,
     Batch as BatchModel,
     Course as CourseModel,
+    CourseSlotRule as CourseSlotRuleModel,
     Room as RoomModel,
     ScheduledAssignment as ScheduledAssignmentModel,
     Teacher as TeacherModel,
     TeacherUnavailable as TeacherUnavailableModel,
+    clear_course_slot_rules,
+    clear_teacher_unavailability,
+    delete_course_slot_rule,
+    delete_teacher_unavailability_rule,
+    get_course_slot_rules,
     get_db,
     get_saved_placements_map,
     get_scheduled_batches_summary,
+    get_teacher_unavailability_records,
     init_db,
     save_solution_assignments,
+    set_course_slot_rules,
+    set_teacher_unavailability_rules,
 )
-from .db_loader import load_problem_from_db, validate_db_problem
+from .db_loader import _load_config, load_problem_from_db, validate_db_problem
 
 BATCH_ORDER = ["1-1", "1-2", "2-1", "2-2", "3-1", "3-2", "4-1", "4-2"]
 
@@ -90,9 +99,39 @@ class TeacherStatusUpdate(BaseModel):
     status: str
 
 
+class TeacherAvailabilityRuleOut(BaseModel):
+    id: Optional[int] = None
+    day: str
+    periods: str
+    description: Optional[str] = None
+
+
+class TeacherAvailabilityRuleIn(BaseModel):
+    id: Optional[int] = None
+    day: str
+    periods: str
+
+
+class TeacherAvailabilitySaveRequest(BaseModel):
+    rules: List[TeacherAvailabilityRuleIn] = []
+
+
+class TeacherAvailabilityOut(BaseModel):
+    teacher_id: str
+    teacher_name: str
+    short_code: str
+    department: str
+    status: str
+    rules: List[TeacherAvailabilityRuleOut] = []
+    blocked_slots: List[int] = []
+    total_blocked_periods: int = 0
+
+
 class TeacherOut(TeacherBase):
     model_config = ConfigDict(from_attributes=True)
     id: str
+    unavailable_count: int = 0
+    unavailable_summary: str = "Full Week"
 
 
 class BatchOut(BaseModel):
@@ -151,6 +190,48 @@ class CourseOut(CourseBase):
     teacher1_short: Optional[str] = None
     teacher2_name: Optional[str] = None
     teacher2_short: Optional[str] = None
+    slot_rule_count: int = 0
+    slot_rule_summary: str = "Unrestricted"
+
+
+class CourseSlotRuleIn(BaseModel):
+    id: Optional[int] = None
+    day: str
+    periods: str
+    rule_type: str = "allowed"  # "allowed" or "blocked"
+    section: Optional[str] = None  # None/empty for all sections, or "A", "B"
+    note: Optional[str] = None
+
+
+class CourseSlotRuleOut(BaseModel):
+    id: int
+    course_id: str
+    day: str
+    periods: str
+    rule_type: str  # "allowed" or "blocked"
+    section: Optional[str] = None
+    note: Optional[str] = None
+    description: Optional[str] = None
+
+
+class CourseAvailabilitySaveRequest(BaseModel):
+    rules: List[CourseSlotRuleIn] = []
+
+
+class CourseAvailabilityOut(BaseModel):
+    course_id: str
+    course_title: str
+    batch_id: str
+    kind: str
+    credit: float
+    sections: List[str] = []
+    rules: List[CourseSlotRuleOut] = []
+    allowed_slots: List[int] = []
+    blocked_slots: List[int] = []
+    section_allowed_slots: dict[str, List[int]] = {}
+    section_blocked_slots: dict[str, List[int]] = {}
+    summary: str = "Unrestricted"
+    rule_count: int = 0
 
 
 class CourseTeachersSave(BaseModel):
@@ -201,6 +282,117 @@ def slugify(name: str) -> str:
     return cleaned or "teacher"
 
 
+def describe_availability_rule(day: str, periods: str) -> str:
+    d = (day or "").strip()
+    p = (periods or "").strip()
+    d_lower = d.lower()
+    p_lower = p.lower()
+    day_label = "Daily" if d_lower in ("daily", "all", "*") else d.capitalize()
+
+    if p_lower in ("all", "*"):
+        per_label = "All Periods (Full Day)"
+    elif p_lower in ("p1,p2,p3", "p1, p2, p3"):
+        per_label = "08:00 AM – 10:30 AM (P1–P3)"
+    elif p_lower in ("p4,p5,p6", "p4, p5, p6"):
+        per_label = "10:40 AM – 01:10 PM (P4–P6)"
+    elif p_lower in ("p7,p8,p9", "p7, p8, p9"):
+        per_label = "02:30 PM – 05:00 PM (P7–P9)"
+    else:
+        per_label = p.upper()
+
+    return f"{day_label}: {per_label}"
+
+
+def compute_teacher_unavailable_info(
+    teacher: TeacherModel, db: Session, grid=None
+) -> tuple[int, str, list[TeacherAvailabilityRuleOut], list[int]]:
+    rules_raw = (
+        db.query(TeacherUnavailableModel)
+        .filter(TeacherUnavailableModel.teacher_id == teacher.id)
+        .order_by(TeacherUnavailableModel.id.asc())
+        .all()
+    )
+    if grid is None:
+        grid, _ = _load_config()
+
+    day_name_map = {d.lower(): i for i, d in enumerate(grid.days)}
+    period_name_map = {p.name.lower(): i for i, p in enumerate(grid.periods)}
+
+    blocked_slots: set[int] = set()
+    if teacher.status == "on_leave":
+        blocked_slots.update(range(grid.n_slots))
+
+    rule_outs: list[TeacherAvailabilityRuleOut] = []
+    for r in rules_raw:
+        desc = describe_availability_rule(r.day, r.periods)
+        rule_outs.append(TeacherAvailabilityRuleOut(id=r.id, day=r.day, periods=r.periods, description=desc))
+
+        day_str = (r.day or "").strip().lower()
+        if day_str in ("all", "daily", "*"):
+            day_indices = list(range(grid.n_days))
+        elif day_str in day_name_map:
+            day_indices = [day_name_map[day_str]]
+        else:
+            match = None
+            for d_idx, d_name in enumerate(grid.days):
+                if d_name.lower() == day_str:
+                    match = d_idx
+                    break
+            day_indices = [match] if match is not None else []
+            if not day_indices:
+                try:
+                    day_indices = [grid.day_index(r.day.strip())]
+                except Exception:
+                    pass
+
+        periods_str = (r.periods or "").strip().lower()
+        if periods_str in ("all", "*"):
+            period_indices = list(range(grid.n_periods))
+        else:
+            period_indices = []
+            for token in periods_str.split(","):
+                token = token.strip().lower()
+                if not token:
+                    continue
+                if token in period_name_map:
+                    period_indices.append(period_name_map[token])
+                else:
+                    try:
+                        period_indices.append(grid.period_index(token.upper()))
+                    except Exception:
+                        pass
+
+        for day_i in day_indices:
+            for p_i in period_indices:
+                blocked_slots.add(grid.slot(day_i, p_i))
+
+    total_blocked = len(blocked_slots)
+    if teacher.status == "on_leave":
+        summary = "On Leave (All slots blocked)"
+    elif total_blocked == 0:
+        summary = "Full Week (Available)"
+    elif len(rule_outs) == 1:
+        summary = rule_outs[0].description or f"Restricted ({total_blocked} slots)"
+    else:
+        summary = f"{len(rule_outs)} rules ({total_blocked} slots blocked)"
+
+    return total_blocked, summary, rule_outs, sorted(list(blocked_slots))
+
+
+def _teacher_to_out(teacher: TeacherModel, db: Session, grid=None) -> TeacherOut:
+    total_blocked, summary, _, _ = compute_teacher_unavailable_info(teacher, db, grid)
+    return TeacherOut(
+        id=teacher.id,
+        full_name=teacher.full_name,
+        short_code=teacher.short_code,
+        department=teacher.department,
+        status=teacher.status,
+        max_periods_per_day=teacher.max_periods_per_day,
+        unavailable_count=total_blocked,
+        unavailable_summary=summary,
+    )
+
+
 # -----------------------------------------------------------------------------
 # Teachers API
 # -----------------------------------------------------------------------------
@@ -225,7 +417,9 @@ def list_teachers(
             | (TeacherModel.short_code.ilike(term))
             | (TeacherModel.id.ilike(term))
         )
-    return query.order_by(TeacherModel.department, TeacherModel.full_name).all()
+    teachers = query.order_by(TeacherModel.department, TeacherModel.full_name).all()
+    grid, _ = _load_config()
+    return [_teacher_to_out(t, db, grid) for t in teachers]
 
 
 @app.post("/api/teachers", response_model=TeacherOut, status_code=status.HTTP_201_CREATED)
@@ -256,7 +450,7 @@ def create_teacher(payload: TeacherCreate, db: Session = Depends(get_db)):
     db.add(teacher)
     db.commit()
     db.refresh(teacher)
-    return teacher
+    return _teacher_to_out(teacher, db)
 
 
 @app.get("/api/teachers/{teacher_id}", response_model=TeacherOut)
@@ -264,7 +458,7 @@ def get_teacher(teacher_id: str, db: Session = Depends(get_db)):
     teacher = db.query(TeacherModel).filter_by(id=teacher_id).first()
     if not teacher:
         raise HTTPException(status_code=404, detail="Teacher not found")
-    return teacher
+    return _teacher_to_out(teacher, db)
 
 
 @app.put("/api/teachers/{teacher_id}", response_model=TeacherOut)
@@ -288,7 +482,7 @@ def update_teacher(teacher_id: str, payload: TeacherUpdate, db: Session = Depend
 
     db.commit()
     db.refresh(teacher)
-    return teacher
+    return _teacher_to_out(teacher, db)
 
 
 @app.patch("/api/teachers/{teacher_id}/status", response_model=TeacherOut)
@@ -303,7 +497,7 @@ def set_teacher_status(teacher_id: str, payload: TeacherStatusUpdate, db: Sessio
     teacher.status = payload.status
     db.commit()
     db.refresh(teacher)
-    return teacher
+    return _teacher_to_out(teacher, db)
 
 
 @app.delete("/api/teachers/{teacher_id}")
@@ -318,8 +512,244 @@ def delete_teacher(teacher_id: str, db: Session = Depends(get_db)):
 
 
 # -----------------------------------------------------------------------------
+# Teacher Availability & Unavailability API
+# -----------------------------------------------------------------------------
+
+
+@app.get("/api/teachers/{teacher_id}/availability", response_model=TeacherAvailabilityOut)
+def get_teacher_availability(teacher_id: str, db: Session = Depends(get_db)):
+    teacher = db.query(TeacherModel).filter_by(id=teacher_id).first()
+    if not teacher:
+        raise HTTPException(status_code=404, detail="Teacher not found")
+
+    grid, _ = _load_config()
+    total_blocked, _, rule_outs, blocked_slots = compute_teacher_unavailable_info(teacher, db, grid)
+    return TeacherAvailabilityOut(
+        teacher_id=teacher.id,
+        teacher_name=teacher.full_name,
+        short_code=teacher.short_code,
+        department=teacher.department,
+        status=teacher.status,
+        rules=rule_outs,
+        blocked_slots=blocked_slots,
+        total_blocked_periods=total_blocked,
+    )
+
+
+@app.put("/api/teachers/{teacher_id}/availability", response_model=TeacherAvailabilityOut)
+def update_teacher_availability(
+    teacher_id: str, payload: TeacherAvailabilitySaveRequest, db: Session = Depends(get_db)
+):
+    teacher = db.query(TeacherModel).filter_by(id=teacher_id).first()
+    if not teacher:
+        raise HTTPException(status_code=404, detail="Teacher not found")
+
+    raw_rules = [{"day": r.day, "periods": r.periods} for r in payload.rules]
+    set_teacher_unavailability_rules(db, teacher_id, raw_rules)
+
+    grid, _ = _load_config()
+    total_blocked, _, rule_outs, blocked_slots = compute_teacher_unavailable_info(teacher, db, grid)
+    return TeacherAvailabilityOut(
+        teacher_id=teacher.id,
+        teacher_name=teacher.full_name,
+        short_code=teacher.short_code,
+        department=teacher.department,
+        status=teacher.status,
+        rules=rule_outs,
+        blocked_slots=blocked_slots,
+        total_blocked_periods=total_blocked,
+    )
+
+
+@app.post("/api/teachers/{teacher_id}/availability/rule", response_model=TeacherAvailabilityOut)
+def add_teacher_availability_rule(
+    teacher_id: str, payload: TeacherAvailabilityRuleIn, db: Session = Depends(get_db)
+):
+    teacher = db.query(TeacherModel).filter_by(id=teacher_id).first()
+    if not teacher:
+        raise HTTPException(status_code=404, detail="Teacher not found")
+
+    day = (payload.day or "").strip()
+    periods = (payload.periods or "").strip()
+    if not day or not periods:
+        raise HTTPException(status_code=400, detail="Day and periods are required")
+
+    rec = TeacherUnavailableModel(teacher_id=teacher_id, day=day, periods=periods)
+    db.add(rec)
+    db.commit()
+
+    grid, _ = _load_config()
+    total_blocked, _, rule_outs, blocked_slots = compute_teacher_unavailable_info(teacher, db, grid)
+    return TeacherAvailabilityOut(
+        teacher_id=teacher.id,
+        teacher_name=teacher.full_name,
+        short_code=teacher.short_code,
+        department=teacher.department,
+        status=teacher.status,
+        rules=rule_outs,
+        blocked_slots=blocked_slots,
+        total_blocked_periods=total_blocked,
+    )
+
+
+@app.delete("/api/teachers/{teacher_id}/availability/rule/{rule_id}", response_model=TeacherAvailabilityOut)
+def delete_single_teacher_rule(teacher_id: str, rule_id: int, db: Session = Depends(get_db)):
+    teacher = db.query(TeacherModel).filter_by(id=teacher_id).first()
+    if not teacher:
+        raise HTTPException(status_code=404, detail="Teacher not found")
+
+    delete_teacher_unavailability_rule(db, rule_id)
+    grid, _ = _load_config()
+    total_blocked, _, rule_outs, blocked_slots = compute_teacher_unavailable_info(teacher, db, grid)
+    return TeacherAvailabilityOut(
+        teacher_id=teacher.id,
+        teacher_name=teacher.full_name,
+        short_code=teacher.short_code,
+        department=teacher.department,
+        status=teacher.status,
+        rules=rule_outs,
+        blocked_slots=blocked_slots,
+        total_blocked_periods=total_blocked,
+    )
+
+
+@app.delete("/api/teachers/{teacher_id}/availability", response_model=TeacherAvailabilityOut)
+def clear_all_teacher_rules(teacher_id: str, db: Session = Depends(get_db)):
+    teacher = db.query(TeacherModel).filter_by(id=teacher_id).first()
+    if not teacher:
+        raise HTTPException(status_code=404, detail="Teacher not found")
+
+    clear_teacher_unavailability(db, teacher_id)
+    grid, _ = _load_config()
+    total_blocked, _, rule_outs, blocked_slots = compute_teacher_unavailable_info(teacher, db, grid)
+    return TeacherAvailabilityOut(
+        teacher_id=teacher.id,
+        teacher_name=teacher.full_name,
+        short_code=teacher.short_code,
+        department=teacher.department,
+        status=teacher.status,
+        rules=rule_outs,
+        blocked_slots=blocked_slots,
+        total_blocked_periods=total_blocked,
+    )
+
+
+# -----------------------------------------------------------------------------
 # Courses API
 # -----------------------------------------------------------------------------
+
+
+def compute_course_slot_rules_info(course: CourseModel, db: Session, grid=None):
+    if grid is None:
+        grid, _ = _load_config()
+
+    rules = get_course_slot_rules(db, course.id)
+    day_name_map = {d.lower(): i for i, d in enumerate(grid.days)}
+    period_name_map = {p.name.lower(): i for i, p in enumerate(grid.periods)}
+
+    rule_outs: List[CourseSlotRuleOut] = []
+    c_allowed: set[int] = set()
+    c_blocked: set[int] = set()
+    c_sec_allowed: dict[str, set[int]] = {}
+    c_sec_blocked: dict[str, set[int]] = {}
+
+    for r in rules:
+        day_str = (r.day or "").strip().lower()
+        if day_str in ("all", "daily", "*"):
+            day_indices = list(range(grid.n_days))
+            day_label = "Daily"
+        elif day_str in day_name_map:
+            day_indices = [day_name_map[day_str]]
+            day_label = grid.days[day_indices[0]]
+        else:
+            match = None
+            for d_idx, d_name in enumerate(grid.days):
+                if d_name.lower() == day_str:
+                    match = d_idx
+                    break
+            day_indices = [match] if match is not None else [grid.day_index(r.day.strip())]
+            day_label = grid.days[day_indices[0]] if day_indices else r.day
+
+        periods_str = (r.periods or "").strip().lower()
+        if periods_str in ("all", "*"):
+            period_indices = list(range(grid.n_periods))
+            period_label = "All Periods"
+        else:
+            period_indices = []
+            for token in periods_str.split(","):
+                token = token.strip().lower()
+                if not token:
+                    continue
+                if token in period_name_map:
+                    period_indices.append(period_name_map[token])
+                else:
+                    try:
+                        period_indices.append(grid.period_index(token.upper()))
+                    except Exception:
+                        pass
+            period_label = ",".join(grid.periods[p].name for p in period_indices)
+
+        slots = set()
+        for day_i in day_indices:
+            for p_i in period_indices:
+                slots.add(grid.slot(day_i, p_i))
+
+        rtype = (r.rule_type or "allowed").strip().lower()
+        sec = (r.section or "").strip()
+        sec_prefix = f"Sec {sec}: " if sec and sec.upper() != "ALL" else ""
+        type_prefix = "Allowed" if rtype == "allowed" else "Blocked"
+        desc = f"[{type_prefix}] {sec_prefix}{day_label} ({period_label})"
+
+        rule_outs.append(
+            CourseSlotRuleOut(
+                id=r.id,
+                course_id=r.course_id,
+                day=r.day,
+                periods=r.periods,
+                rule_type=rtype,
+                section=sec or None,
+                note=r.note,
+                description=desc,
+            )
+        )
+
+        if not sec or sec.upper() == "ALL":
+            if rtype == "allowed":
+                c_allowed.update(slots)
+            else:
+                c_blocked.update(slots)
+        else:
+            if rtype == "allowed":
+                c_sec_allowed.setdefault(sec, set()).update(slots)
+            else:
+                c_sec_blocked.setdefault(sec, set()).update(slots)
+
+    rule_count = len(rules)
+    if rule_count == 0:
+        summary = "Unrestricted"
+    elif all((r.rule_type or "allowed").lower() == "allowed" for r in rules):
+        short_descs = []
+        for r in rules:
+            sec_p = f"{r.section} " if r.section and r.section.upper() != "ALL" else ""
+            short_descs.append(f"{sec_p}{r.day} {r.periods}")
+        summary = "Fixed: " + ", ".join(short_descs)
+    elif all((r.rule_type or "allowed").lower() == "blocked" for r in rules):
+        summary = f"Blocked ({len(rules)} rules)"
+    else:
+        summary = f"{len(rules)} rules configured"
+
+    sec_allowed_dict = {k: sorted(list(v)) for k, v in c_sec_allowed.items()}
+    sec_blocked_dict = {k: sorted(list(v)) for k, v in c_sec_blocked.items()}
+
+    return (
+        rule_count,
+        summary,
+        rule_outs,
+        sorted(list(c_allowed)),
+        sorted(list(c_blocked)),
+        sec_allowed_dict,
+        sec_blocked_dict,
+    )
 
 
 def _course_to_out(c: CourseModel, db: Session) -> CourseOut:
@@ -332,6 +762,8 @@ def _course_to_out(c: CourseModel, db: Session) -> CourseOut:
         disp = "CSE 4000"
     else:
         disp = c.id
+
+    rule_count, summary, _, _, _, _, _ = compute_course_slot_rules_info(c, db)
 
     return CourseOut(
         id=c.id,
@@ -351,6 +783,8 @@ def _course_to_out(c: CourseModel, db: Session) -> CourseOut:
         teacher1_short=t1.short_code if t1 else None,
         teacher2_name=t2.full_name if t2 else None,
         teacher2_short=t2.short_code if t2 else None,
+        slot_rule_count=rule_count,
+        slot_rule_summary=summary,
     )
 
 
@@ -405,6 +839,11 @@ def create_course(payload: CourseCreate, db: Session = Depends(get_db)):
     if payload.batch_id == "1-1" and kind == "theory" and room_kind == "theory":
         room_kind = "year1_theory"
 
+    t1_val = payload.teacher1_id.strip() if payload.teacher1_id else None
+    t2_val = payload.teacher2_id.strip() if payload.teacher2_id else None
+    if t1_val and t2_val == t1_val:
+        t2_val = None
+
     course = CourseModel(
         id=cid,
         title=payload.title.strip(),
@@ -416,8 +855,8 @@ def create_course(payload: CourseCreate, db: Session = Depends(get_db)):
         credit=payload.credit or (3.0 if kind == "theory" else 1.5),
         category=payload.category,
         paired_course_id=payload.paired_course_id,
-        teacher1_id=payload.teacher1_id,
-        teacher2_id=payload.teacher2_id,
+        teacher1_id=t1_val,
+        teacher2_id=t2_val,
     )
     db.add(course)
 
@@ -478,6 +917,8 @@ def update_course(course_id: str, payload: CourseUpdate, db: Session = Depends(g
         course.teacher1_id = payload.teacher1_id or None
     if payload.teacher2_id is not None:
         course.teacher2_id = payload.teacher2_id or None
+    if course.teacher1_id and course.teacher2_id == course.teacher1_id:
+        course.teacher2_id = None
 
     _sync_course_assignments(course, db)
     db.commit()
@@ -493,6 +934,8 @@ def assign_course_teachers(course_id: str, payload: CourseTeachersSave, db: Sess
 
     course.teacher1_id = payload.teacher1_id.strip() if payload.teacher1_id else None
     course.teacher2_id = payload.teacher2_id.strip() if payload.teacher2_id else None
+    if course.teacher1_id and course.teacher2_id == course.teacher1_id:
+        course.teacher2_id = None
 
     _sync_course_assignments(course, db)
     db.commit()
@@ -513,6 +956,240 @@ def delete_course(course_id: str, db: Session = Depends(get_db)):
     db.delete(course)
     db.commit()
     return {"ok": True, "message": f"Course '{course_id}' deleted."}
+
+
+# -----------------------------------------------------------------------------
+# Course Slot Availability & Fixed Slots API (Constraint 3)
+# -----------------------------------------------------------------------------
+
+
+@app.get("/api/courses/{course_id}/availability", response_model=CourseAvailabilityOut)
+def get_course_availability(course_id: str, db: Session = Depends(get_db)):
+    course = db.query(CourseModel).filter_by(id=course_id).first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    batch = db.query(BatchModel).filter_by(id=course.batch_id).first()
+    sections = [s.strip() for s in batch.sections.split(",") if s.strip()] if batch else ["A", "B"]
+
+    grid, _ = _load_config()
+    (
+        rule_count,
+        summary,
+        rule_outs,
+        allowed_slots,
+        blocked_slots,
+        sec_allowed,
+        sec_blocked,
+    ) = compute_course_slot_rules_info(course, db, grid)
+
+    return CourseAvailabilityOut(
+        course_id=course.id,
+        course_title=course.title,
+        batch_id=course.batch_id,
+        kind=course.kind,
+        credit=course.credit or 3.0,
+        sections=sections,
+        rules=rule_outs,
+        allowed_slots=allowed_slots,
+        blocked_slots=blocked_slots,
+        section_allowed_slots=sec_allowed,
+        section_blocked_slots=sec_blocked,
+        summary=summary,
+        rule_count=rule_count,
+    )
+
+
+@app.put("/api/courses/{course_id}/availability", response_model=CourseAvailabilityOut)
+def update_course_availability(
+    course_id: str, payload: CourseAvailabilitySaveRequest, db: Session = Depends(get_db)
+):
+    course = db.query(CourseModel).filter_by(id=course_id).first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    raw_rules = [
+        {
+            "day": r.day,
+            "periods": r.periods,
+            "rule_type": r.rule_type,
+            "section": r.section,
+            "note": r.note,
+        }
+        for r in payload.rules
+    ]
+    set_course_slot_rules(db, course_id, raw_rules)
+
+    batch = db.query(BatchModel).filter_by(id=course.batch_id).first()
+    sections = [s.strip() for s in batch.sections.split(",") if s.strip()] if batch else ["A", "B"]
+
+    grid, _ = _load_config()
+    (
+        rule_count,
+        summary,
+        rule_outs,
+        allowed_slots,
+        blocked_slots,
+        sec_allowed,
+        sec_blocked,
+    ) = compute_course_slot_rules_info(course, db, grid)
+
+    return CourseAvailabilityOut(
+        course_id=course.id,
+        course_title=course.title,
+        batch_id=course.batch_id,
+        kind=course.kind,
+        credit=course.credit or 3.0,
+        sections=sections,
+        rules=rule_outs,
+        allowed_slots=allowed_slots,
+        blocked_slots=blocked_slots,
+        section_allowed_slots=sec_allowed,
+        section_blocked_slots=sec_blocked,
+        summary=summary,
+        rule_count=rule_count,
+    )
+
+
+@app.post("/api/courses/{course_id}/availability/rule", response_model=CourseAvailabilityOut)
+def add_course_availability_rule(
+    course_id: str, payload: CourseSlotRuleIn, db: Session = Depends(get_db)
+):
+    course = db.query(CourseModel).filter_by(id=course_id).first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    current_rules = get_course_slot_rules(db, course_id)
+    raw_rules = [
+        {
+            "day": r.day,
+            "periods": r.periods,
+            "rule_type": r.rule_type,
+            "section": r.section,
+            "note": r.note,
+        }
+        for r in current_rules
+    ]
+    raw_rules.append(
+        {
+            "day": payload.day,
+            "periods": payload.periods,
+            "rule_type": payload.rule_type,
+            "section": payload.section,
+            "note": payload.note,
+        }
+    )
+    set_course_slot_rules(db, course_id, raw_rules)
+
+    batch = db.query(BatchModel).filter_by(id=course.batch_id).first()
+    sections = [s.strip() for s in batch.sections.split(",") if s.strip()] if batch else ["A", "B"]
+
+    grid, _ = _load_config()
+    (
+        rule_count,
+        summary,
+        rule_outs,
+        allowed_slots,
+        blocked_slots,
+        sec_allowed,
+        sec_blocked,
+    ) = compute_course_slot_rules_info(course, db, grid)
+
+    return CourseAvailabilityOut(
+        course_id=course.id,
+        course_title=course.title,
+        batch_id=course.batch_id,
+        kind=course.kind,
+        credit=course.credit or 3.0,
+        sections=sections,
+        rules=rule_outs,
+        allowed_slots=allowed_slots,
+        blocked_slots=blocked_slots,
+        section_allowed_slots=sec_allowed,
+        section_blocked_slots=sec_blocked,
+        summary=summary,
+        rule_count=rule_count,
+    )
+
+
+@app.delete("/api/courses/{course_id}/availability/rule/{rule_id}", response_model=CourseAvailabilityOut)
+def remove_course_availability_rule(
+    course_id: str, rule_id: int, db: Session = Depends(get_db)
+):
+    course = db.query(CourseModel).filter_by(id=course_id).first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    delete_course_slot_rule(db, rule_id)
+
+    batch = db.query(BatchModel).filter_by(id=course.batch_id).first()
+    sections = [s.strip() for s in batch.sections.split(",") if s.strip()] if batch else ["A", "B"]
+
+    grid, _ = _load_config()
+    (
+        rule_count,
+        summary,
+        rule_outs,
+        allowed_slots,
+        blocked_slots,
+        sec_allowed,
+        sec_blocked,
+    ) = compute_course_slot_rules_info(course, db, grid)
+
+    return CourseAvailabilityOut(
+        course_id=course.id,
+        course_title=course.title,
+        batch_id=course.batch_id,
+        kind=course.kind,
+        credit=course.credit or 3.0,
+        sections=sections,
+        rules=rule_outs,
+        allowed_slots=allowed_slots,
+        blocked_slots=blocked_slots,
+        section_allowed_slots=sec_allowed,
+        section_blocked_slots=sec_blocked,
+        summary=summary,
+        rule_count=rule_count,
+    )
+
+
+@app.delete("/api/courses/{course_id}/availability", response_model=CourseAvailabilityOut)
+def clear_all_course_rules(course_id: str, db: Session = Depends(get_db)):
+    course = db.query(CourseModel).filter_by(id=course_id).first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    clear_course_slot_rules(db, course_id)
+
+    batch = db.query(BatchModel).filter_by(id=course.batch_id).first()
+    sections = [s.strip() for s in batch.sections.split(",") if s.strip()] if batch else ["A", "B"]
+
+    grid, _ = _load_config()
+    (
+        rule_count,
+        summary,
+        rule_outs,
+        allowed_slots,
+        blocked_slots,
+        sec_allowed,
+        sec_blocked,
+    ) = compute_course_slot_rules_info(course, db, grid)
+
+    return CourseAvailabilityOut(
+        course_id=course.id,
+        course_title=course.title,
+        batch_id=course.batch_id,
+        kind=course.kind,
+        credit=course.credit or 3.0,
+        sections=sections,
+        rules=rule_outs,
+        allowed_slots=allowed_slots,
+        blocked_slots=blocked_slots,
+        section_allowed_slots=sec_allowed,
+        section_blocked_slots=sec_blocked,
+        summary=summary,
+        rule_count=rule_count,
+    )
 
 
 # -----------------------------------------------------------------------------
@@ -705,10 +1382,8 @@ def save_assignment_slot(payload: AssignmentSlotSave, db: Session = Depends(get_
     if course.kind == "theory":
         assigns = db.query(AssignmentModel).filter_by(course_id=course.id).all()
         tids = list(dict.fromkeys(a.teacher_id for a in assigns if a.teacher_id))
-        if len(tids) > 0:
-            course.teacher1_id = tids[0]
-        if len(tids) > 1:
-            course.teacher2_id = tids[1]
+        course.teacher1_id = tids[0] if len(tids) > 0 else None
+        course.teacher2_id = tids[1] if len(tids) > 1 else None
         _sync_course_assignments(course, db)
 
     db.commit()
@@ -793,9 +1468,31 @@ def generate_routine(payload: Optional[GenerateRequest] = None, db: Session = De
                 )
 
     # 4. Solve routine using CP-SAT routine scheduler
-    solution = solve_routine(problem, freeze=freeze_map if freeze_map else None)
+    active_freeze = freeze_map if freeze_map else None
+    try:
+        solution = solve_routine(problem, freeze=active_freeze)
+    except ValueError as exc:
+        result = {
+            "ok": False,
+            "status": "FREEZE_CONFLICT",
+            "mode": mode,
+            "frozen_batches": actual_frozen_batches,
+            "scheduled_batches": [b for b in active_batch_ids if b not in actual_frozen_batches],
+            "objective": None,
+            "faults": [
+                str(exc),
+                "Tip: Switch to 'Full Generation Mode' or unfreeze terms whose teacher/course rules changed.",
+            ],
+            "warnings": warnings,
+            "csv_url": None,
+            "html_url": None,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        }
+        latest_generation_result = result
+        return result
 
     if not solution.ok:
+        diagnostics = diagnose_infeasibility(problem, freeze=active_freeze)
         result = {
             "ok": False,
             "status": solution.status,
@@ -803,7 +1500,7 @@ def generate_routine(payload: Optional[GenerateRequest] = None, db: Session = De
             "frozen_batches": actual_frozen_batches,
             "scheduled_batches": [b for b in active_batch_ids if b not in actual_frozen_batches],
             "objective": None,
-            "faults": ["No feasible solution could be found with the current constraints."],
+            "faults": diagnostics,
             "warnings": warnings,
             "csv_url": None,
             "html_url": None,
@@ -834,6 +1531,24 @@ def generate_routine(payload: Optional[GenerateRequest] = None, db: Session = De
 
     scheduled_new = [b for b in active_batch_ids if b not in actual_frozen_batches]
 
+    same_consec_count = solution.penalties.get("same_course_consecutive", 0)
+    extra_lab_days = solution.penalties.get("teacher_extra_lab_day", 0)
+
+    teacher_day_lab_counts: dict[tuple[str, int], int] = {}
+    for a in solution.assignments:
+        ev = a.event
+        if not ev.is_lab:
+            continue
+        clean_c = ev.course.code.replace(" ", "").upper()
+        if clean_c in ("CSE3200", "CSE4000") or clean_c.startswith("CSE4000"):
+            continue
+        d = problem.grid.day_of(a.start)
+        for tid in dict.fromkeys(ev.teacher_ids):
+            if tid:
+                teacher_day_lab_counts[(tid, d)] = teacher_day_lab_counts.get((tid, d), 0) + 1
+    max_teacher_labs_day = max(teacher_day_lab_counts.values(), default=0)
+    double_lab_teacher_days = sum(1 for c in teacher_day_lab_counts.values() if c >= 2)
+
     result = {
         "ok": True,
         "status": solution.status,
@@ -842,6 +1557,10 @@ def generate_routine(payload: Optional[GenerateRequest] = None, db: Session = De
         "scheduled_batches": scheduled_new,
         "objective": solution.objective,
         "solve_time_seconds": round(solution.wall_seconds, 1),
+        "same_course_consecutive_count": same_consec_count,
+        "max_teacher_labs_day": max_teacher_labs_day,
+        "extra_lab_days": extra_lab_days,
+        "double_lab_teacher_days": double_lab_teacher_days,
         "faults": faults,
         "warnings": warnings,
         "csv_url": "/api/routine/download/csv",

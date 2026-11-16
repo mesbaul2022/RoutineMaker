@@ -197,6 +197,83 @@ def verify(problem: Problem, solution: Solution) -> list[str]:
             if expected_syncable and len(s) > 1:
                 faults.append(f"H9 {key} groups are not synchronised: starts {sorted(s)}")
 
+    # H10 (Constraint 2): One teacher must not have two consecutive classes for different courses
+    adjacent_pairs = [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (6, 7), (7, 8)]
+    if problem.options.get("teacher_consecutive_include_lunch", False):
+        adjacent_pairs.append((5, 6))
+
+    teacher_day_slots = defaultdict(lambda: defaultdict(dict))
+    for a in solution.assignments:
+        ev = a.event
+        clean_code = ev.course.code.replace(" ", "").upper()
+        if clean_code in ("CSE3200", "CSE4000") or clean_code.startswith("CSE4000"):
+            continue
+        for s in a.slots:
+            d = grid.day_of(s)
+            p = grid.period_of(s)
+            for tid in ev.teacher_ids:
+                teacher_day_slots[tid][d][p] = (clean_code, ev.eid, ev.label)
+
+    for tid, days in teacher_day_slots.items():
+        tname = problem.teachers[tid].name if tid in problem.teachers else tid
+        for d, pmap in days.items():
+            day_name = grid.days[d]
+            for (p1, p2) in adjacent_pairs:
+                if p1 in pmap and p2 in pmap:
+                    c1, eid1, label1 = pmap[p1]
+                    c2, eid2, label2 = pmap[p2]
+                    if eid1 == eid2:
+                        continue  # same multi-period meeting
+                    if c1 != c2:
+                        faults.append(
+                            f"H10 {tname} has consecutive classes for different courses on {day_name}: "
+                            f"{label1} at {grid.periods[p1].name} and {label2} at {grid.periods[p2].name}"
+                        )
+
+    # H11 (Constraint 3): Course slot availability & fixed slots
+    for a in solution.assignments:
+        ev = a.event
+        clean_code = ev.course.code.replace(" ", "").upper()
+        if clean_code in ("CSE3200", "CSE4000") or clean_code.startswith("CSE4000"):
+            continue
+
+        for s in a.slots:
+            if s in ev.blocked_slots:
+                faults.append(
+                    f"H11 {ev.label} scheduled at blocked slot {grid.describe(s)}"
+                )
+
+        if ev.allowed_slots:
+            for s in a.slots:
+                if s not in ev.allowed_slots:
+                    faults.append(
+                        f"H11 {ev.label} scheduled at non-allowed slot {grid.describe(s)} "
+                        f"(allowed slots: {[grid.describe(x) for x in sorted(ev.allowed_slots)]})"
+                    )
+
+    # H12: At most `max_teacher_labs_per_day` (default 2) lab sessions per day per teacher (not students)
+    max_labs_per_day = problem.options.get("max_teacher_labs_per_day", 2)
+    if max_labs_per_day is not None and max_labs_per_day >= 0:
+        teacher_day_labs: dict[tuple[str, int], list[str]] = defaultdict(list)
+        for a in solution.assignments:
+            ev = a.event
+            if not ev.is_lab:
+                continue
+            clean_code = ev.course.code.replace(" ", "").upper()
+            if clean_code in ("CSE3200", "CSE4000") or clean_code.startswith("CSE4000"):
+                continue
+            d = grid.day_of(a.start)
+            for tid in dict.fromkeys(ev.teacher_ids):
+                if tid:
+                    teacher_day_labs[(tid, d)].append(ev.label)
+        for (tid, d), labels in sorted(teacher_day_labs.items()):
+            if len(labels) > max_labs_per_day:
+                tname = problem.teachers[tid].name if tid in problem.teachers else tid
+                faults.append(
+                    f"H12 {tname} has {len(labels)} lab sessions on {grid.days[d]} "
+                    f"(max allowed {max_labs_per_day}): {labels}"
+                )
+
     return faults
 
 

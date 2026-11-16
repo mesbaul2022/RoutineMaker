@@ -411,28 +411,38 @@
           </div>
           <div class="form-group">
             <label for="course-kind">Course Type *</label>
-            <select id="course-kind" required onchange="toggleCourseKindFields()">
+            <select id="course-kind" required onchange="toggleCourseKindFields(true)">
               <option value="theory">Theory</option>
               <option value="sessional">Sessional (Lab)</option>
             </select>
           </div>
           <div class="form-group">
             <label for="course-room-kind">Required Room Kind *</label>
-            <select id="course-room-kind">
-              <option value="theory">theory (Standard Lecture Hall)</option>
-              <option value="cse_lab">cse_lab (CSE Computer Lab)</option>
-              <option value="hardware_lab_107">hardware_lab_107 (CSE Lab 107 - Hardware/IoT)</option>
-              <option value="hardware_lab_108">hardware_lab_108 (CSE Lab 108 - Digital Logic)</option>
-              <option value="ai_lab">ai_lab (AI & Graphics Lab)</option>
-              <option value="network_lab">network_lab (Network Lab)</option>
-              <option value="ece_lab">ece_lab (ECE Lab)</option>
-              <option value="eee_lab">eee_lab (EEE Lab)</option>
-              <option value="mecha_lab">mecha_lab (Mecha Lab)</option>
-              <option value="chem_lab">chem_lab (Chemistry Lab)</option>
-              <option value="phy_lab">phy_lab (Physics Lab)</option>
-              <option value="hum_lab">hum_lab (English Language Lab)</option>
-              <option value="seminar">seminar (Seminar Room)</option>
+            <select id="course-room-kind" required onchange="updateRoomKindHint()">
+              <optgroup label="Theory Classrooms (Theory Class)">
+                <option value="theory">Theory Classrooms (Section Homeroom: CSE Room 101, 102, 105, 306, 401, 402, 501, 502)</option>
+                <option value="seminar_501">CSE Room 501 (Technical Writing &amp; Seminar)</option>
+              </optgroup>
+              <optgroup label="Departmental Labs — Software Lab">
+                <option value="cse_lab">Departmental Software Lab (CSE Lab 103, 104, 201, 202, 305)</option>
+              </optgroup>
+              <optgroup label="Departmental Labs — Hardware Lab">
+                <option value="hardware_lab_107">CSE Lab 107 (Hardware / Embedded Systems &amp; IoT Lab)</option>
+                <option value="hardware_lab_108">CSE Lab 108 (Digital Logic Design Lab)</option>
+              </optgroup>
+              <optgroup label="Non-Departmental Labs (Non-Dept Lab)">
+                <option value="chem_lab">Chemistry Lab (CHEM-LAB)</option>
+                <option value="hum_lab">English Language Lab (HUM-LAB)</option>
+                <option value="phy_lab">Physics Lab (PHY-LAB)</option>
+                <option value="ece_lab">ECE Lab (ECE-104)</option>
+                <option value="eee_lab">EEE Lab (EEE-LAB)</option>
+                <option value="mecha_lab">Mecha Lab (MECHA-LAB)</option>
+              </optgroup>
+              <optgroup label="Project &amp; Thesis (No Physical Room Needed)">
+                <option value="no_room">No Physical Room Needed (Individual Faculty Supervision — CSE 3200 / CSE 4000)</option>
+              </optgroup>
             </select>
+            <div id="course-room-hint" class="form-hint" style="margin-top: 5px; font-size: 0.8rem; line-height: 1.4;"></div>
           </div>
           <div class="form-group" id="group-periods">
             <label for="course-periods">Periods per Week (Theory) *</label>

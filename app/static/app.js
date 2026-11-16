@@ -1465,6 +1465,174 @@ async function loadCourses() {
   }
 }
 
+const ROOM_KIND_META = {
+  theory: {
+    category: "Theory Classrooms",
+    type: "Theory Class",
+    label: "Theory Classrooms (Section Homeroom)",
+    shortLabel: "Theory (Homeroom)",
+    rooms: "CSE Room 101, 102, 105, 306, 401, 402, 501, 502",
+    hint: "Automatically allocated to the section's designated homeroom lecture hall.",
+    badgeBg: "#EFF6FF",
+    badgeColor: "#1E40AF",
+    badgeBorder: "#DBEAFE",
+  },
+  seminar_501: {
+    category: "Theory Classrooms",
+    type: "Theory Class",
+    label: "CSE Room 501 (Technical Writing & Seminar)",
+    shortLabel: "CSE Room 501",
+    rooms: "CSE Room 501",
+    hint: "Dedicated room allocation for Technical Writing & Seminar in CSE Room 501.",
+    badgeBg: "#EFF6FF",
+    badgeColor: "#1E40AF",
+    badgeBorder: "#DBEAFE",
+  },
+  cse_lab: {
+    category: "Departmental Labs",
+    type: "Software Lab",
+    label: "Departmental Software Lab (CSE Lab 103, 104, 201, 202, 305)",
+    shortLabel: "Software Lab",
+    rooms: "CSE Lab 103, 104, 201, 202, 305",
+    hint: "Automatically allocated across Departmental Software Labs (CSE Lab 103, 104, 201, 202, 305).",
+    badgeBg: "#FEF3C7",
+    badgeColor: "#92400E",
+    badgeBorder: "#FDE68A",
+  },
+  hardware_lab_107: {
+    category: "Departmental Labs",
+    type: "Hardware Lab",
+    label: "CSE Lab 107 (Hardware / Embedded Systems & IoT Lab)",
+    shortLabel: "CSE Lab 107",
+    rooms: "CSE Lab 107",
+    hint: "Dedicated Departmental Hardware Lab: Embedded Systems, Interfacing & IoT (CSE Lab 107).",
+    badgeBg: "#FEF3C7",
+    badgeColor: "#92400E",
+    badgeBorder: "#FDE68A",
+  },
+  hardware_lab_108: {
+    category: "Departmental Labs",
+    type: "Hardware Lab",
+    label: "CSE Lab 108 (Digital Logic Design Lab)",
+    shortLabel: "CSE Lab 108",
+    rooms: "CSE Lab 108",
+    hint: "Dedicated Departmental Hardware Lab: Digital Logic Design (CSE Lab 108).",
+    badgeBg: "#FEF3C7",
+    badgeColor: "#92400E",
+    badgeBorder: "#FDE68A",
+  },
+  chem_lab: {
+    category: "Non-Departmental Labs",
+    type: "Non-Dept Lab",
+    label: "Chemistry Lab (CHEM-LAB)",
+    shortLabel: "Chemistry Lab",
+    rooms: "Chemistry Lab (CHEM-LAB)",
+    hint: "Non-Departmental laboratory facility: Chemistry Lab.",
+    badgeBg: "#F0FDF4",
+    badgeColor: "#166534",
+    badgeBorder: "#BBF7D0",
+  },
+  hum_lab: {
+    category: "Non-Departmental Labs",
+    type: "Non-Dept Lab",
+    label: "English Language Lab (HUM-LAB)",
+    shortLabel: "English Lang Lab",
+    rooms: "English Language Lab (HUM-LAB)",
+    hint: "Non-Departmental laboratory facility: English Language Lab (HUM-LAB).",
+    badgeBg: "#F0FDF4",
+    badgeColor: "#166534",
+    badgeBorder: "#BBF7D0",
+  },
+  phy_lab: {
+    category: "Non-Departmental Labs",
+    type: "Non-Dept Lab",
+    label: "Physics Lab (PHY-LAB)",
+    shortLabel: "Physics Lab",
+    rooms: "Physics Lab (PHY-LAB)",
+    hint: "Non-Departmental laboratory facility: Physics Lab (PHY-LAB).",
+    badgeBg: "#F0FDF4",
+    badgeColor: "#166534",
+    badgeBorder: "#BBF7D0",
+  },
+  ece_lab: {
+    category: "Non-Departmental Labs",
+    type: "Non-Dept Lab",
+    label: "ECE Lab (ECE-104)",
+    shortLabel: "ECE Lab",
+    rooms: "ECE Lab (ECE-104)",
+    hint: "Non-Departmental laboratory facility: ECE Lab (ECE-104).",
+    badgeBg: "#F0FDF4",
+    badgeColor: "#166534",
+    badgeBorder: "#BBF7D0",
+  },
+  eee_lab: {
+    category: "Non-Departmental Labs",
+    type: "Non-Dept Lab",
+    label: "EEE Lab (EEE-LAB)",
+    shortLabel: "EEE Lab",
+    rooms: "EEE Lab (EEE-LAB)",
+    hint: "Non-Departmental laboratory facility: EEE Lab (EEE-LAB).",
+    badgeBg: "#F0FDF4",
+    badgeColor: "#166534",
+    badgeBorder: "#BBF7D0",
+  },
+  mecha_lab: {
+    category: "Non-Departmental Labs",
+    type: "Non-Dept Lab",
+    label: "Mecha Lab (MECHA-LAB)",
+    shortLabel: "Mecha Lab",
+    rooms: "Mecha Lab (MECHA-LAB)",
+    hint: "Non-Departmental laboratory facility: Mecha Lab (MECHA-LAB).",
+    badgeBg: "#F0FDF4",
+    badgeColor: "#166534",
+    badgeBorder: "#BBF7D0",
+  },
+  no_room: {
+    category: "Project & Thesis",
+    type: "Individual Supervision",
+    label: "No Physical Room Needed (Individual Faculty Supervision)",
+    shortLabel: "No Room Needed",
+    rooms: "Individual Faculty Supervision (CSE 3200 / CSE 4000)",
+    hint: "No physical classroom or lab required. Supervised individually by faculty members.",
+    badgeBg: "#F1F5F9",
+    badgeColor: "#475569",
+    badgeBorder: "#CBD5E1",
+  },
+};
+
+function getRoomKindMeta(kind) {
+  let k = (kind || "theory").toLowerCase();
+  if (k === "seminar") k = "seminar_501";
+  if (k === "year1_theory") k = "theory";
+  if (k === "year1_cse_lab" || k === "ai_lab" || k === "network_lab") k = "cse_lab";
+  if (k === "none" || k === "") k = "no_room";
+  return (
+    ROOM_KIND_META[k] || {
+      category: "Other Facility",
+      type: "Classroom / Lab",
+      label: kind,
+      shortLabel: kind,
+      rooms: kind,
+      hint: `Allocated to ${kind}`,
+      badgeBg: "#F1F5F9",
+      badgeColor: "#334155",
+      badgeBorder: "#E2E8F0",
+    }
+  );
+}
+
+function updateRoomKindHint() {
+  const select = document.getElementById("course-room-kind");
+  const hintEl = document.getElementById("course-room-hint");
+  if (!select || !hintEl) return;
+  const meta = getRoomKindMeta(select.value);
+  hintEl.innerHTML = `
+    <span style="font-weight: 600; color: var(--navy-deep);">Category:</span> <b>${escapeHtml(meta.category)}</b> &bull;
+    <span style="font-weight: 600; color: var(--navy-deep);">Type:</span> <b>${escapeHtml(meta.type)}</b><br>
+    <span style="color: var(--text-muted);">${escapeHtml(meta.hint)}</span>
+  `;
+}
+
 function renderCourses() {
   const container = document.getElementById("courses-container");
   if (!container) return;
@@ -1554,7 +1722,7 @@ function renderCourses() {
                 <th style="width: 130px;">Type / Credit</th>
                 <th style="width: 170px;">Assigned Teachers</th>
                 <th style="width: 170px;">Slot Availability</th>
-                <th style="width: 130px;">Room Kind</th>
+                <th style="width: 170px;">Room / Facility</th>
                 <th style="width: 120px;">Weekly Load</th>
                 <th style="text-align: right; width: 130px;">Actions</th>
               </tr>
@@ -1633,6 +1801,7 @@ function renderCourseRow(batch, course) {
         : (is075 ? `1 block / 2 wks` : `${course.blocks_per_week || 1} block / wk`));
 
   const displayCode = course.display_code || course.id;
+  const meta = getRoomKindMeta(course.room_kind);
 
   return `
     <tr>
@@ -1647,7 +1816,12 @@ function renderCourseRow(batch, course) {
       <td>${kindBadge}</td>
       <td>${teachersStr}</td>
       <td>${availBtn}</td>
-      <td><span class="badge" style="background: #F1F5F9; color: var(--text-main);">${escapeHtml(course.room_kind)}</span></td>
+      <td>
+        <span class="badge" style="background: ${meta.badgeBg}; color: ${meta.badgeColor}; border: 1px solid ${meta.badgeBorder}; font-weight: 600;" title="${escapeHtml(meta.category)} • ${escapeHtml(meta.type)} (${escapeHtml(meta.rooms)})">
+          ${escapeHtml(meta.shortLabel)}
+        </span>
+        <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 3px; font-weight: 500;">${escapeHtml(meta.category)}</div>
+      </td>
       <td style="color: var(--text-muted); font-size: 0.85rem;">${loadStr}</td>
       <td style="text-align: right;">
         <button class="btn btn-outline btn-sm" onclick="openCourseModal('${course.id}')">Edit</button>
@@ -1657,28 +1831,32 @@ function renderCourseRow(batch, course) {
   `;
 }
 
-function toggleCourseKindFields() {
+function toggleCourseKindFields(isUserSwitch = false) {
   const kind = document.getElementById("course-kind").value;
   const pGroup = document.getElementById("group-periods");
   const lGroup = document.getElementById("group-lab-credit");
   const roomKindSelect = document.getElementById("course-room-kind");
-  const batchId = document.getElementById("course-batch")?.value || "";
 
   if (kind === "theory") {
     pGroup.style.display = "block";
     if (lGroup) lGroup.style.display = "none";
     document.getElementById("group-paired-course").style.display = "none";
-    if (roomKindSelect.value.includes("lab")) {
-      roomKindSelect.value = batchId === "1-1" ? "year1_theory" : "theory";
+    if (isUserSwitch) {
+      if (roomKindSelect.value !== "theory" && roomKindSelect.value !== "seminar_501" && roomKindSelect.value !== "no_room") {
+        roomKindSelect.value = "theory";
+      }
     }
   } else {
     pGroup.style.display = "none";
     if (lGroup) lGroup.style.display = "block";
     toggleLabCreditFields();
-    if (roomKindSelect.value === "theory" || roomKindSelect.value === "year1_theory") {
-      roomKindSelect.value = batchId === "1-1" ? "year1_cse_lab" : "cse_lab";
+    if (isUserSwitch) {
+      if (roomKindSelect.value === "theory") {
+        roomKindSelect.value = "cse_lab";
+      }
     }
   }
+  updateRoomKindHint();
 }
 
 function toggleLabCreditFields() {
@@ -1757,13 +1935,19 @@ function openCourseModal(courseId = null) {
         document.getElementById("course-category").value = course.category || "core";
       }
       document.getElementById("course-kind").value = course.kind;
-      document.getElementById("course-room-kind").value = course.room_kind;
+      let rk = course.room_kind || "theory";
+      if (rk === "seminar") rk = "seminar_501";
+      if (rk === "year1_theory") rk = "theory";
+      if (rk === "year1_cse_lab" || rk === "ai_lab" || rk === "network_lab") rk = "cse_lab";
+      if (rk === "none" || rk === "") rk = "no_room";
+      document.getElementById("course-room-kind").value = rk;
       document.getElementById("course-periods").value = course.periods_per_week || 3;
       if (document.getElementById("course-credit")) {
         document.getElementById("course-credit").value = String(course.credit || (course.blocks_per_week === 2 ? 3.0 : 1.5));
       }
 
       toggleCourseKindFields();
+      updateRoomKindHint();
       populatePairedCourseOptions(course.paired_course_id);
       handleModalBatchChange();
 
@@ -1780,8 +1964,11 @@ function openCourseModal(courseId = null) {
     if (document.getElementById("course-category")) {
       document.getElementById("course-category").value = "core";
     }
+    document.getElementById("course-kind").value = "theory";
+    document.getElementById("course-room-kind").value = "theory";
 
     toggleCourseKindFields();
+    updateRoomKindHint();
     populatePairedCourseOptions("");
     handleModalBatchChange();
 
@@ -1804,7 +1991,11 @@ async function handleCourseSubmit(e) {
   const batch_id = document.getElementById("course-batch").value;
   const category = document.getElementById("course-category")?.value || "core";
   const kind = document.getElementById("course-kind").value;
-  const room_kind = document.getElementById("course-room-kind").value;
+  let room_kind = document.getElementById("course-room-kind").value;
+  if (room_kind === "seminar") room_kind = "seminar_501";
+  if (room_kind === "year1_theory") room_kind = "theory";
+  if (room_kind === "year1_cse_lab" || room_kind === "ai_lab" || room_kind === "network_lab") room_kind = "cse_lab";
+  if (room_kind === "none" || !room_kind) room_kind = "no_room";
   const periods_per_week = kind === "theory" ? parseInt(document.getElementById("course-periods").value, 10) : null;
 
   let credit = 3.0;
@@ -2046,6 +2237,8 @@ function renderCourseAssignmentCard(batch, course, assignMap) {
         ? `<b>0.75 Credit Bi-weekly Lab:</b> Co-taught by Teacher 1 + Teacher 2. Students attend 1 session every 2 weeks${course.paired_course_id ? ` (alternating with ${escapeHtml(course.paired_course_id)})` : ''}.`
         : `<b>Co-teaching Model:</b> Both teachers co-teach laboratory sessions across all sections and groups.`);
 
+  const roomMeta = getRoomKindMeta(course.room_kind);
+
   return `
     <div class="course-card" id="assign-card-${safeCid}">
       <div class="course-card-header">
@@ -2055,7 +2248,7 @@ function renderCourseAssignmentCard(batch, course, assignMap) {
           ${catBadge}
           ${kindBadge}
           ${pairedBadge}
-          <span class="badge" style="background: #F8FAFC; color: var(--text-muted); border: 1px solid #E2E8F0;">Room: ${escapeHtml(course.room_kind)}</span>
+          <span class="badge" style="background: ${roomMeta.badgeBg}; color: ${roomMeta.badgeColor}; border: 1px solid ${roomMeta.badgeBorder}; font-weight: 600;" title="${escapeHtml(roomMeta.category)} • ${escapeHtml(roomMeta.type)} (${escapeHtml(roomMeta.rooms)})">🏛️ ${escapeHtml(roomMeta.label)}</span>
         </div>
       </div>
 

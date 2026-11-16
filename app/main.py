@@ -820,6 +820,17 @@ def list_courses(batch_id: Optional[str] = None, db: Session = Depends(get_db)):
     return [_course_to_out(c, db) for c in courses]
 
 
+ROOM_KIND_NORMALIZATION = {
+    "year1_theory": "theory",
+    "seminar": "seminar_501",
+    "ai_lab": "cse_lab",
+    "network_lab": "cse_lab",
+    "year1_cse_lab": "cse_lab",
+    "none": "no_room",
+    "": "no_room",
+}
+
+
 @app.post("/api/courses", response_model=CourseOut, status_code=status.HTTP_201_CREATED)
 def create_course(payload: CourseCreate, db: Session = Depends(get_db)):
     cid = payload.id.strip().upper()
@@ -834,10 +845,8 @@ def create_course(payload: CourseCreate, db: Session = Depends(get_db)):
     if kind not in ("theory", "sessional"):
         raise HTTPException(status_code=400, detail="Kind must be 'theory' or 'sessional'.")
 
-    # If 1-1 theory course, default room kind to year1_theory
-    room_kind = payload.room_kind.strip().lower()
-    if payload.batch_id == "1-1" and kind == "theory" and room_kind == "theory":
-        room_kind = "year1_theory"
+    raw_rk = (payload.room_kind or ("theory" if kind == "theory" else "cse_lab")).strip().lower()
+    room_kind = ROOM_KIND_NORMALIZATION.get(raw_rk, raw_rk)
 
     t1_val = payload.teacher1_id.strip() if payload.teacher1_id else None
     t2_val = payload.teacher2_id.strip() if payload.teacher2_id else None
@@ -898,7 +907,8 @@ def update_course(course_id: str, payload: CourseUpdate, db: Session = Depends(g
             raise HTTPException(status_code=400, detail="Kind must be 'theory' or 'sessional'")
         course.kind = kind
     if payload.room_kind is not None:
-        course.room_kind = payload.room_kind.strip().lower()
+        rk = payload.room_kind.strip().lower()
+        course.room_kind = ROOM_KIND_NORMALIZATION.get(rk, rk)
     if payload.periods_per_week is not None:
         course.periods_per_week = payload.periods_per_week
     if payload.blocks_per_week is not None:

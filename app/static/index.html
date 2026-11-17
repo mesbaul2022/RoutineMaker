@@ -7,21 +7,24 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=3.3">
+  <link rel="stylesheet" href="/static/style.css?v=3.4">
 </head>
 <body>
   <!-- Navigation Header -->
   <header class="app-header">
     <div class="header-inner">
-      <div class="brand">
+      <div class="brand" onclick="switchTab('home')" style="cursor: pointer;" title="Return to Home Overview">
         <div class="brand-icon">RM</div>
         <div>
           <h1>Department Routine Maker</h1>
-          <p>KUET Computer Science & Engineering</p>
+          <p>KUET Computer Science &amp; Engineering</p>
         </div>
       </div>
       <nav class="nav-tabs" role="tablist">
-        <button id="nav-teachers" class="nav-tab active" data-tab="teachers" role="tab">
+        <button id="nav-home" class="nav-tab active" data-tab="home" role="tab">
+          <span>🏠</span> Home
+        </button>
+        <button id="nav-teachers" class="nav-tab" data-tab="teachers" role="tab">
           <span>👨‍🏫</span> Teachers
         </button>
         <button id="nav-courses" class="nav-tab" data-tab="courses" role="tab">
@@ -43,9 +46,9 @@
           <span>⚡</span> Generate
         </button>
       </nav>
-      <div class="header-actions" style="display: flex; align-items: center; gap: 0.6rem;">
+      <div class="header-actions" style="display: flex; align-items: center; gap: 0.5rem;">
         <button type="button" class="btn btn-outline btn-sm btn-header-hub" onclick="openBulkImportModal('all')" title="Open Department Bulk Data Import & Export Hub">
-          <span>📦</span> Bulk Import / Export
+          <span>📦</span> Bulk I/O
         </button>
       </div>
     </div>
@@ -53,9 +56,303 @@
 
   <main class="container">
     <!-- ===================================================================== -->
+    <!-- 0. Home / Welcome & Fresh User Guide Tab -->
+    <!-- ===================================================================== -->
+    <section id="tab-home" class="tab-content active" role="tabpanel">
+      
+      <!-- Hero Banner -->
+      <div class="home-hero">
+        <div class="home-hero-main">
+          <div class="home-hero-badge">
+            <span>🎓</span> Automated Academic Timetabling &bull; Powered by Google OR-Tools CP-SAT
+          </div>
+          <h2 class="home-hero-title">
+            Build Conflict-Free Departmental Routines in Minutes
+          </h2>
+          <p class="home-hero-subtitle">
+            <strong>Department Routine Maker</strong> is an intelligent university timetabling platform built for scheduling undergraduate theory lectures and laboratory sessions across all 8 terms (<code>1-1</code> through <code>4-2</code>), Sections <code>A</code>/<code>B</code>, and Lab Groups <code>G1</code>/<code>G2</code>. Configure faculty availability, room facilities, and department time slots—then let the exact optimization engine generate a verified, clash-free Master Routine automatically.
+          </p>
+          <div class="home-hero-actions">
+            <button type="button" class="btn btn-primary btn-lg" onclick="switchTab('generate')">
+              <span>⚡</span> Generate Routine
+            </button>
+            <button type="button" class="btn btn-outline btn-lg" onclick="openBulkImportModal('all')">
+              <span>📦</span> Bulk Import / Export (Excel &amp; CSV)
+            </button>
+            <button type="button" class="btn btn-outline btn-lg" onclick="switchTab('master')">
+              <span>📊</span> View Master Routine
+            </button>
+          </div>
+        </div>
+
+        <div class="home-hero-status-card">
+          <div class="home-status-header">
+            <span>📡</span> Live System Snapshot
+          </div>
+          <div class="home-status-row">
+            <span class="home-status-label">Active Running Terms (ON)</span>
+            <div class="home-term-pills" id="home-active-terms">
+              <span class="term-pill">Loading...</span>
+            </div>
+          </div>
+          <div class="home-status-row">
+            <span class="home-status-label">Department Daily Schedule</span>
+            <div class="home-status-val" id="home-schedule-window">08:00 AM – 05:00 PM</div>
+            <div class="home-status-sub" id="home-schedule-meta">9 periods/day &bull; 50 min/class &bull; Sun–Thu</div>
+          </div>
+          <div class="home-status-row" style="border-bottom: none; padding-bottom: 0; margin-bottom: 0;">
+            <span class="home-status-label">Optimization Engine</span>
+            <div class="home-status-val" style="color: #065F46; display: flex; align-items: center; gap: 0.35rem;">
+              <span class="status-dot-green"></span> CP-SAT Exact Solver Ready
+            </div>
+            <div class="home-status-sub">Pre-solve mathematical proof &amp; zero-trust verifier active</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Department Metrics Strip -->
+      <div class="home-stats-grid">
+        <div class="home-stat-card" onclick="switchTab('teachers')" role="button" tabindex="0">
+          <div class="home-stat-icon stat-icon-blue">👨‍🏫</div>
+          <div class="home-stat-body">
+            <div class="home-stat-label">Faculty &amp; Service Teachers</div>
+            <div class="home-stat-value" id="home-stat-teachers">—</div>
+            <div class="home-stat-sub" id="home-stat-teachers-sub">Active roster &amp; slot rules</div>
+          </div>
+          <div class="home-stat-arrow">→</div>
+        </div>
+
+        <div class="home-stat-card" onclick="switchTab('courses')" role="button" tabindex="0">
+          <div class="home-stat-icon stat-icon-indigo">📚</div>
+          <div class="home-stat-body">
+            <div class="home-stat-label">Curriculum Courses</div>
+            <div class="home-stat-value" id="home-stat-courses">—</div>
+            <div class="home-stat-sub" id="home-stat-courses-sub">Across all 8 terms (1-1 to 4-2)</div>
+          </div>
+          <div class="home-stat-arrow">→</div>
+        </div>
+
+        <div class="home-stat-card" onclick="switchTab('rooms')" role="button" tabindex="0">
+          <div class="home-stat-icon stat-icon-emerald">🏫</div>
+          <div class="home-stat-body">
+            <div class="home-stat-label">Classrooms &amp; Labs</div>
+            <div class="home-stat-value" id="home-stat-rooms">—</div>
+            <div class="home-stat-sub" id="home-stat-rooms-sub">Theory rooms &amp; specialized labs</div>
+          </div>
+          <div class="home-stat-arrow">→</div>
+        </div>
+
+        <div class="home-stat-card" onclick="switchTab('timeslots')" role="button" tabindex="0">
+          <div class="home-stat-icon stat-icon-amber">⏰</div>
+          <div class="home-stat-body">
+            <div class="home-stat-label">Department Time Grid</div>
+            <div class="home-stat-value" id="home-stat-slots">—</div>
+            <div class="home-stat-sub" id="home-stat-slots-sub">Customizable slots &amp; breaks</div>
+          </div>
+          <div class="home-stat-arrow">→</div>
+        </div>
+      </div>
+
+      <!-- Step-by-Step Fresh User Guide -->
+      <div class="home-section">
+        <div class="home-section-header">
+          <div>
+            <h3>🧭 How to Use Department Routine Maker — Fresh User Guide</h3>
+            <p>Follow these 5 straightforward steps to configure your department and generate a verified routine from scratch or update an existing schedule.</p>
+          </div>
+        </div>
+
+        <div class="home-steps-grid">
+          <!-- Step 1 -->
+          <div class="home-step-card">
+            <div class="step-card-top">
+              <span class="step-badge">Step 1</span>
+              <span class="step-emoji">⏰</span>
+            </div>
+            <h4>Customize Department Time Slots</h4>
+            <p>
+              Review or customize your department's daily schedule: start time, class duration (default 50 min), classes per day, breaks (tea/lunch), lab block length, and working days. Default timings are pre-loaded so you can skip straight ahead if they already match.
+            </p>
+            <div class="step-card-actions">
+              <button type="button" class="step-link-btn" onclick="switchTab('timeslots')">Configure Time Slots →</button>
+            </div>
+          </div>
+
+          <!-- Step 2 -->
+          <div class="home-step-card">
+            <div class="step-card-top">
+              <span class="step-badge">Step 2</span>
+              <span class="step-emoji">📦</span>
+            </div>
+            <h4>Add Teachers, Courses &amp; Rooms</h4>
+            <p>
+              Add faculty, courses, and rooms manually one-by-one from their tabs—or save time with the <strong>Bulk Import / Export Hub</strong>. Download pre-formatted Excel (<code>.xlsx</code>) or CSV (<code>.csv</code>) templates, fill them in Excel/Sheets, and upload everything at once.
+            </p>
+            <div class="step-card-actions">
+              <button type="button" class="step-link-btn" onclick="openBulkImportModal('all')">Open Bulk Hub →</button>
+              <button type="button" class="step-link-btn secondary" onclick="switchTab('teachers')">Manual Entry →</button>
+            </div>
+          </div>
+
+          <!-- Step 3 -->
+          <div class="home-step-card">
+            <div class="step-card-top">
+              <span class="step-badge">Step 3</span>
+              <span class="step-emoji">📋</span>
+            </div>
+            <h4>Activate Terms &amp; Assign Teachers</h4>
+            <p>
+              Open <strong>Assignments</strong> to toggle which batches (<code>1-1</code> through <code>4-2</code>) are currently running (<strong>ON</strong> vs <strong>OFF</strong>). Assign primary and co-teachers (<code>Teacher 1</code> &amp; <code>Teacher 2</code>) for each course. Optional electives automatically activate when teachers are assigned.
+            </p>
+            <div class="step-card-actions">
+              <button type="button" class="step-link-btn" onclick="switchTab('assignments')">Manage Assignments →</button>
+            </div>
+          </div>
+
+          <!-- Step 4 -->
+          <div class="home-step-card">
+            <div class="step-card-top">
+              <span class="step-badge">Step 4</span>
+              <span class="step-emoji">🎯</span>
+            </div>
+            <h4>Set Availability &amp; Fixed Slots <span class="step-optional-tag">Optional</span></h4>
+            <p>
+              Need slot flexibility? Click <strong>Slots</strong> next to any teacher to block unavailable days/periods or mark them <em>On Leave</em>. On the <strong>Courses</strong> tab, pin fixed time slots for non-departmental courses (Chemistry, Physics, Math, EEE, ECE).
+            </p>
+            <div class="step-card-actions">
+              <button type="button" class="step-link-btn" onclick="switchTab('teachers')">Teacher Slots →</button>
+              <button type="button" class="step-link-btn secondary" onclick="switchTab('courses')">Course Fixed Slots →</button>
+            </div>
+          </div>
+
+          <!-- Step 5 -->
+          <div class="home-step-card step-card-highlight">
+            <div class="step-card-top">
+              <span class="step-badge step-badge-primary">Step 5</span>
+              <span class="step-emoji">⚡</span>
+            </div>
+            <h4>Generate, Verify &amp; Export Routine</h4>
+            <p>
+              Head to <strong>Generate</strong> to run the CP-SAT solver. Choose <strong>Fresh Generation</strong> for a complete schedule or <strong>Freeze Mode</strong> to add a new term without disturbing running routines. Inspect Teachers, Labs &amp; Rooms, and Batch grids in <strong>Master Routine</strong>.
+            </p>
+            <div class="step-card-actions">
+              <button type="button" class="step-link-btn primary" onclick="switchTab('generate')">Go to Generator →</button>
+              <button type="button" class="step-link-btn secondary" onclick="switchTab('master')">View Master Routine →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Core Capabilities & Built-In Guarantees -->
+      <div class="home-section">
+        <div class="home-section-header">
+          <div>
+            <h3>🛡️ Built-In Scheduling Intelligence &amp; Guarantees</h3>
+            <p>Every generated timetable is mathematically validated before solving and independently audited afterward against institutional academic rules.</p>
+          </div>
+        </div>
+
+        <div class="home-features-grid">
+          <div class="home-feature-card">
+            <div class="feature-icon">✅</div>
+            <div>
+              <h4>Zero Clashes Guaranteed</h4>
+              <p>Hard constraints strictly prevent teacher double-booking, room overlaps, and student cohort conflicts across all Sections (<code>A</code>/<code>B</code>) and Lab Groups (<code>G1</code>/<code>G2</code>).</p>
+            </div>
+          </div>
+
+          <div class="home-feature-card">
+            <div class="feature-icon">⚖️</div>
+            <div>
+              <h4>Teacher Workload Protection</h4>
+              <p>Enforces daily period ceilings, caps teachers at <strong>at most 2 lab sessions/day</strong> (preferring 1/day), and prohibits consecutive back-to-back lectures of different courses.</p>
+            </div>
+          </div>
+
+          <div class="home-feature-card">
+            <div class="feature-icon">🧪</div>
+            <div>
+              <h4>Smart Room &amp; Lab Allocation</h4>
+              <p>Automatically matches Theory Homerooms, Software Labs, Hardware Labs (<code>107</code>/<code>108</code>), Seminar Room (<code>501</code>), Non-Dept Labs, and roomless Project/Thesis courses (<code>CSE 3200</code>/<code>4000</code>).</p>
+            </div>
+          </div>
+
+          <div class="home-feature-card">
+            <div class="feature-icon">❄️</div>
+            <div>
+              <h4>Incremental Freeze Mode</h4>
+              <p>Already have published routines for running terms? Lock those batches in Freeze Mode so newly activated terms are scheduled around them with zero disruption.</p>
+            </div>
+          </div>
+
+          <div class="home-feature-card">
+            <div class="feature-icon">📊</div>
+            <div>
+              <h4>Multi-Perspective Master Views</h4>
+              <p>Inspect the generated routine from three synchronized angles—<strong>Teachers Master Routine</strong>, <strong>Labs &amp; Rooms Master Routine</strong>, and <strong>Batches &amp; Sections</strong>—plus printable HTML &amp; CSV exports.</p>
+            </div>
+          </div>
+
+          <div class="home-feature-card">
+            <div class="feature-icon">📥</div>
+            <div>
+              <h4>Flexible Bulk Excel / CSV I/O</h4>
+              <p>Export live teachers, courses, and rooms anytime, or edit a single 3-sheet <strong>Master Excel Workbook</strong> and upload to synchronize your whole department instantly.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fresh User Quick Reference & Glossary -->
+      <div class="home-tips-grid">
+        <div class="home-tip-card">
+          <div class="home-tip-header">
+            <span>💡</span> Quick Tips for First-Time Users
+          </div>
+          <ul class="home-tip-list">
+            <li>
+              <strong>Pre-loaded Sample Data Ready:</strong> The application comes pre-populated with a realistic department catalog (teachers, courses, rooms, and default time grid) so you can click <strong>Master Routine</strong> or <strong>Generate</strong> right away to explore how it works.
+            </li>
+            <li>
+              <strong>Use Excel/CSV for Fast Setup:</strong> If you are onboarding a fresh department or new semester, open <strong>📦 Bulk I/O</strong> in the header, download the <strong>Master Excel Template</strong>, fill in the <code>Rooms</code>, <code>Teachers</code>, and <code>Courses</code> sheets, and upload it in one step.
+            </li>
+            <li>
+              <strong>Diagnosing Impossible Rules:</strong> If your manual slot restrictions or teacher workloads are mathematically impossible to satisfy simultaneously, the pre-solve validator and ablation engine will pinpoint the exact conflicting teacher, course, or rule.
+            </li>
+          </ul>
+        </div>
+
+        <div class="home-tip-card">
+          <div class="home-tip-header">
+            <span>📖</span> Key Concepts at a Glance
+          </div>
+          <div class="home-glossary">
+            <div class="glossary-item">
+              <span class="glossary-term">Term ON / OFF</span>
+              <span class="glossary-desc">Only batches marked <strong>ON</strong> are included in routine generation. Inactive terms stay safely stored in the database for future semesters.</span>
+            </div>
+            <div class="glossary-item">
+              <span class="glossary-term">Course Credits</span>
+              <span class="glossary-desc"><code>3.0 cr</code> = 3 weekly theory periods; <code>1.5 cr</code> = 1 weekly 3-period lab block; <code>0.75 cr</code> = bi-weekly alternating lab paired with another 0.75 cr lab.</span>
+            </div>
+            <div class="glossary-item">
+              <span class="glossary-term">Short Codes</span>
+              <span class="glossary-desc">Unique 2–4 letter faculty abbreviations (e.g. <code>SS</code>, <code>KSA</code>, <code>IH</code>) displayed on timetables and used to map teachers during Excel/CSV imports.</span>
+            </div>
+            <div class="glossary-item">
+              <span class="glossary-term">Freeze Mode</span>
+              <span class="glossary-desc">Pins previously saved slots for selected running batches so the solver schedules newly added batches around existing commitments without moving them.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ===================================================================== -->
     <!-- 1. Teachers Tab -->
     <!-- ===================================================================== -->
-    <section id="tab-teachers" class="tab-content active" role="tabpanel">
+    <section id="tab-teachers" class="tab-content" role="tabpanel">
       <div class="toolbar">
         <div class="toolbar-filters">
           <input type="text" id="teacher-search-input" placeholder="🔍 Search teacher..." />
@@ -1789,6 +2086,6 @@
     <span id="toast-message">Notification</span>
   </div>
 
-  <script src="/static/app.js?v=3.3"></script>
+  <script src="/static/app.js?v=3.4"></script>
 </body>
 </html>

@@ -5,7 +5,7 @@
 
 // Application State
 const state = {
-  activeTab: "teachers",
+  activeTab: "home",
   teachers: [],
   courses: [],
   batches: [],
@@ -56,7 +56,9 @@ function switchTab(tabId) {
     panel.classList.toggle("active", panel.id === `tab-${tabId}`);
   });
 
-  if (tabId === "teachers") {
+  if (tabId === "home") {
+    renderHomeDashboard();
+  } else if (tabId === "teachers") {
     loadTeachers();
   } else if (tabId === "courses") {
     loadCourses();
@@ -105,6 +107,80 @@ function setupEventListeners() {
 
 async function loadAllData() {
   await Promise.all([loadBatches(), loadTeachers(), loadCourses(), loadRooms(), loadAssignments(), loadTimeGrid()]);
+  renderHomeDashboard();
+}
+
+// -----------------------------------------------------------------------------
+// Home Dashboard Live Snapshot Renderer
+// -----------------------------------------------------------------------------
+
+function renderHomeDashboard() {
+  // 1. Teachers KPI
+  const totalTeachers = state.teachers.length;
+  const activeTeachers = state.teachers.filter((t) => t.status === "active").length;
+  const onLeaveTeachers = totalTeachers - activeTeachers;
+  const tVal = document.getElementById("home-stat-teachers");
+  const tSub = document.getElementById("home-stat-teachers-sub");
+  if (tVal) tVal.textContent = `${totalTeachers}`;
+  if (tSub) {
+    tSub.textContent = onLeaveTeachers > 0
+      ? `${activeTeachers} Active • ${onLeaveTeachers} On Leave`
+      : `${activeTeachers} Active faculty members`;
+  }
+
+  // 2. Courses & Active Batches KPI
+  const totalCourses = state.courses.length;
+  const sortedBatches = [...state.batches].sort((a, b) => curriculumSortKey(a.id) - curriculumSortKey(b.id));
+  const activeBatches = sortedBatches.filter((b) => b.status === "on");
+  const cVal = document.getElementById("home-stat-courses");
+  const cSub = document.getElementById("home-stat-courses-sub");
+  if (cVal) cVal.textContent = `${totalCourses}`;
+  if (cSub) {
+    cSub.textContent = `${activeBatches.length} of ${sortedBatches.length || 8} terms currently ON`;
+  }
+
+  // Active terms pills in Hero Snapshot card
+  const termsContainer = document.getElementById("home-active-terms");
+  if (termsContainer) {
+    if (activeBatches.length > 0) {
+      termsContainer.innerHTML = activeBatches
+        .map((b) => `<span class="term-pill">● ${escapeHtml(b.id)}</span>`)
+        .join("");
+    } else if (sortedBatches.length > 0) {
+      termsContainer.innerHTML = `<span class="term-pill term-pill-off">No terms active (all OFF)</span>`;
+    }
+  }
+
+  // 3. Rooms & Labs KPI
+  const totalRooms = state.rooms.length;
+  const theoryRooms = state.rooms.filter((r) => r.kind === "theory" || r.kind === "seminar_501").length;
+  const labRooms = totalRooms - theoryRooms;
+  const rVal = document.getElementById("home-stat-rooms");
+  const rSub = document.getElementById("home-stat-rooms-sub");
+  if (rVal) rVal.textContent = `${totalRooms}`;
+  if (rSub) rSub.textContent = `${theoryRooms} Theory • ${labRooms} Laboratories`;
+
+  // 4. Department Time Grid KPI & Hero Status
+  const comp = state.timeGridComputed;
+  const sVal = document.getElementById("home-stat-slots");
+  const sSub = document.getElementById("home-stat-slots-sub");
+  const winEl = document.getElementById("home-schedule-window");
+  const metaEl = document.getElementById("home-schedule-meta");
+
+  if (comp) {
+    const ppd = comp.periods_per_day || 9;
+    const dur = comp.period_duration_minutes || 50;
+    const daysArr = comp.days || ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"];
+    const shortDays = daysArr.length >= 2
+      ? `${daysArr[0].slice(0, 3)}–${daysArr[daysArr.length - 1].slice(0, 3)}`
+      : daysArr.map((d) => d.slice(0, 3)).join(", ");
+    const breakCount = (comp.breaks || []).length;
+
+    if (sVal) sVal.textContent = `${ppd} / Day`;
+    if (sSub) sSub.textContent = `${dur} min/class • ${breakCount} break(s) • ${daysArr.length} days`;
+    if (winEl) winEl.textContent = comp.day_span_formatted || "08:00 AM – 05:00 PM";
+    if (metaEl) metaEl.textContent = `${ppd} periods/day • ${dur} min/class • ${shortDays}`;
+  }
 }
 
 // -----------------------------------------------------------------------------

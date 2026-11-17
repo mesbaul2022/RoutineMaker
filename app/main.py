@@ -474,7 +474,7 @@ def reset_time_grid(db: Session = Depends(get_db)):
         "config": reset_cfg,
         "computed": computed,
         "is_default": True,
-        "message": "Time slots successfully reset to KUET CSE defaults.",
+        "message": "Time slots successfully reset to default schedule.",
     }
 
 

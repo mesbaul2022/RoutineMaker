@@ -56,6 +56,21 @@ async def main():
             await page.click("#modal-course-availability .modal-close")
             await page.wait_for_timeout(400)
 
+        # 5. Go back to Time Slots tab to test Reset to Default button
+        await page.click('button[data-tab="timeslots"]')
+        await page.wait_for_timeout(600)
+
+        # Handle browser confirm dialog automatically
+        page.on("dialog", lambda dialog: dialog.accept())
+
+        # Click Reset to Default
+        reset_btn = page.locator("button:has-text('Reset to Default')")
+        await reset_btn.click()
+        await page.wait_for_timeout(800)
+
+        await page.screenshot(path=str(out_dir / "timeslots_after_reset_default.png"), full_page=True)
+        print("Captured timeslots_after_reset_default.png")
+
         await browser.close()
 
 if __name__ == "__main__":

@@ -2772,7 +2772,8 @@ function updateActiveScheduleSummary(computed) {
   if (!el || !computed) return;
   const breakCount = (computed.breaks || []).length;
   const daysCount = (computed.days || []).length;
-  el.innerHTML = `Active Schedule: <b>${escapeHtml(computed.day_span_formatted)}</b> • ${computed.periods_per_day} classes/day (${computed.period_duration_minutes}m each) • ${breakCount} break(s) • ${daysCount} working days (Sun–Thu)`;
+  const breakMins = computed.total_break_minutes || 0;
+  el.innerHTML = `Active Schedule: <strong>${escapeHtml(computed.day_span_formatted)}</strong> • ${computed.periods_per_day} classes/day (${computed.period_duration_minutes}m each) • ${breakCount} break(s) (${breakMins}m) • ${daysCount} working days`;
 }
 
 function renderBreakRows(breaks, periodsCount) {
@@ -2780,7 +2781,7 @@ function renderBreakRows(breaks, periodsCount) {
   if (!container) return;
 
   if (breaks.length === 0) {
-    container.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 1rem; border: 1px dashed #CBD5E1; border-radius: var(--radius); font-size: 0.85rem;">No breaks configured. Classes run continuously. Click <b>+ Add Break</b> above to add one.</div>`;
+    container.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 1.25rem; border: 1px dashed #CBD5E1; border-radius: var(--radius); font-size: 0.85rem; background: #F8FAFC;">No breaks configured. Academic classes run continuously without pauses. Click <b>＋ Add Break</b> above to add one.</div>`;
     return;
   }
 
@@ -2799,21 +2800,24 @@ function renderBreakRows(breaks, periodsCount) {
     html += `
       <div class="break-row-card" data-break-index="${idx}">
         <div>
-          <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 2px;">Break Name</label>
-          <input type="text" class="break-name-input" value="${escapeHtml(name)}" placeholder="e.g. Snack break, Lunch" oninput="onTimeGridInputChange()" style="font-size: 0.85rem; width: 100%; padding: 0.4rem 0.5rem; border: 1px solid var(--card-border); border-radius: var(--radius);" />
+          <label class="break-field-label">Break Name</label>
+          <input type="text" class="break-name-input time-grid-input" value="${escapeHtml(name)}" placeholder="e.g. Snack break, Lunch" oninput="onTimeGridInputChange()" />
         </div>
         <div>
-          <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 2px;">After Period</label>
-          <select class="break-after-select" onchange="onTimeGridInputChange()" style="font-size: 0.85rem; width: 100%; padding: 0.4rem 0.5rem; border: 1px solid var(--card-border); border-radius: var(--radius);">
+          <label class="break-field-label">Scheduled Position</label>
+          <select class="break-after-select time-grid-input" onchange="onTimeGridInputChange()">
             ${opts}
           </select>
         </div>
         <div>
-          <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 2px;">Duration (min)</label>
-          <input type="number" class="break-duration-input" min="5" max="180" step="5" value="${duration}" oninput="onTimeGridInputChange()" style="font-size: 0.85rem; width: 100%; padding: 0.4rem 0.5rem; border: 1px solid var(--card-border); border-radius: var(--radius);" />
+          <label class="break-field-label">Duration (min)</label>
+          <div class="input-with-unit">
+            <input type="number" class="break-duration-input time-grid-input" min="5" max="180" step="5" value="${duration}" oninput="onTimeGridInputChange()" />
+            <span class="input-unit">min</span>
+          </div>
         </div>
-        <div style="padding-top: 16px;">
-          <button type="button" class="btn btn-danger-outline btn-sm" onclick="removeBreakRow(${idx})" title="Delete this break" style="padding: 0.35rem 0.6rem;">
+        <div style="padding-top: 18px;">
+          <button type="button" class="btn btn-danger-outline btn-sm" onclick="removeBreakRow(${idx})" title="Delete this break" style="padding: 0.45rem 0.65rem; border-radius: 6px;">
             🗑️
           </button>
         </div>
@@ -2956,18 +2960,20 @@ function renderTimeGridPreview(computed) {
   (computed.periods || []).forEach((p) => {
     const blk = periodToBlock[p.name];
     const labBadge = blk && blk.can_fit_lab
-      ? `<span class="badge" style="background: #ECFDF5; color: #047857; border: 1px solid #A7F3D0; font-size: 0.72rem; margin-left: 0.4rem;">🔬 Fits ${computed.lab_periods}-period Lab</span>`
+      ? `<span class="lab-fit-badge">🔬 Fits ${computed.lab_periods}-period Lab</span>`
       : "";
 
     rowsHtml += `
       <tr>
-        <td><strong style="color: var(--navy-deep); font-size: 0.95rem;">${escapeHtml(p.name)}</strong></td>
-        <td><span style="font-weight: 600; color: #1E293B;">${escapeHtml(p.start)} – ${escapeHtml(p.end)}</span></td>
-        <td style="color: var(--text-muted);">${p.duration_minutes} min</td>
+        <td><span class="period-badge">${escapeHtml(p.name)}</span></td>
+        <td><span class="time-window-chip"><span style="color:#2563EB;">🕒</span> ${escapeHtml(p.start)} – ${escapeHtml(p.end)}</span></td>
+        <td><span style="font-weight: 600; color: #475569;">${p.duration_minutes} min</span></td>
         <td>
-          <span style="font-weight: 600; color: #475569;">Block ${blk ? blk.block_index : 1}</span>
-          <span style="font-size: 0.78rem; color: var(--text-dim); margin-left: 0.3rem;">(${blk ? blk.period_names.join(', ') : p.name})</span>
-          ${labBadge}
+          <div class="block-tag">
+            <span style="font-weight: 700; color: #1E3A8A;">Block ${blk ? blk.block_index : 1}</span>
+            <span style="font-size: 0.76rem; color: #64748B;">(${blk ? blk.period_names.join(', ') : p.name})</span>
+            ${labBadge}
+          </div>
         </td>
       </tr>
     `;
@@ -2976,10 +2982,10 @@ function renderTimeGridPreview(computed) {
       const br = breakMap[p.name];
       rowsHtml += `
         <tr class="timeline-break-tr">
-          <td><span>☕ <b>${escapeHtml(br.name)}</b></span></td>
-          <td><b>${escapeHtml(br.start)} – ${escapeHtml(br.end)}</b></td>
-          <td><b>${br.duration_minutes} min</b></td>
-          <td><span style="font-size: 0.8rem; font-style: italic;">Academic Block Separation Boundary</span></td>
+          <td><span class="break-badge">☕ ${escapeHtml(br.name)}</span></td>
+          <td><span class="time-window-chip" style="background: #FEF3C7; border-color: #FDE68A; color: #92400E;">🕒 ${escapeHtml(br.start)} – ${escapeHtml(br.end)}</span></td>
+          <td><strong style="color: #B45309;">${br.duration_minutes} min</strong></td>
+          <td><span style="font-size: 0.8rem; font-weight: 600; color: #92400E; display: inline-flex; align-items: center; gap: 0.3rem;">✂️ Academic Block Divider · Sessional labs cannot cross</span></td>
         </tr>
       `;
     }
@@ -3008,14 +3014,14 @@ async function handleSaveTimeGrid() {
     renderTimeGridPreview(state.timeGridComputed);
     populateAllPeriodSelectDropdowns(state.timeGridComputed);
 
-    showToast("✓ Department time slots successfully saved! Department routine will now use these time slots.");
+    showToast("✓ Department time slots successfully saved and applied department-wide!");
   } catch (err) {
     showToast(`Error: ${err.message}`, true);
   }
 }
 
 async function handleResetTimeGrid() {
-  if (!confirm("Are you sure you want to reset department time slots back to standard KUET CSE defaults (08:00 AM – 05:00 PM, 9 periods, 50m each)?")) {
+  if (!confirm("Are you sure you want to reset department time slots back to standard default configuration (08:00 AM – 05:00 PM, 9 periods, 50m each)?")) {
     return;
   }
   try {
@@ -3029,7 +3035,7 @@ async function handleResetTimeGrid() {
     renderTimeGridPreview(state.timeGridComputed);
     populateAllPeriodSelectDropdowns(state.timeGridComputed);
 
-    showToast("✓ Time slots successfully reset to KUET CSE defaults (08:00 AM – 05:00 PM).");
+    showToast("✓ Time slots successfully reset to default schedule (08:00 AM – 05:00 PM).");
   } catch (err) {
     showToast(`Error: ${err.message}`, true);
   }

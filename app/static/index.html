@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=3.2">
+  <link rel="stylesheet" href="/static/style.css?v=3.3">
 </head>
 <body>
   <!-- Navigation Header -->
@@ -27,6 +27,9 @@
         <button id="nav-courses" class="nav-tab" data-tab="courses" role="tab">
           <span>📚</span> Courses
         </button>
+        <button id="nav-rooms" class="nav-tab" data-tab="rooms" role="tab">
+          <span>🏫</span> Rooms &amp; Labs
+        </button>
         <button id="nav-assignments" class="nav-tab" data-tab="assignments" role="tab">
           <span>📋</span> Assignments
         </button>
@@ -40,6 +43,11 @@
           <span>⚡</span> Generate
         </button>
       </nav>
+      <div class="header-actions" style="display: flex; align-items: center; gap: 0.6rem;">
+        <button type="button" class="btn btn-outline btn-sm btn-header-hub" onclick="openBulkImportModal('all')" title="Open Department Bulk Data Import & Export Hub">
+          <span>📦</span> Bulk Import / Export
+        </button>
+      </div>
     </div>
   </header>
 
@@ -67,9 +75,26 @@
             <option value="on_leave">On-leave only</option>
           </select>
         </div>
-        <button id="btn-add-teacher" class="btn btn-primary">
-          <span>+</span> Add Teacher
-        </button>
+        <div class="toolbar-actions" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+          <button type="button" class="btn btn-outline btn-sm" onclick="openBulkImportModal('teachers')" title="Import teachers from Excel (.xlsx) or CSV (.csv)">
+            <span>📥</span> Import Teachers
+          </button>
+          <div class="dropdown">
+            <button type="button" class="btn btn-outline btn-sm dropdown-toggle" onclick="toggleDropdown('teacher-export-menu')">
+              <span>📤</span> Export ▾
+            </button>
+            <div id="teacher-export-menu" class="dropdown-menu">
+              <a href="/api/export/teachers?format=xlsx" download><span>📊</span> Export to Excel (.xlsx)</a>
+              <a href="/api/export/teachers?format=csv" download><span>📄</span> Export to CSV (.csv)</a>
+              <div class="dropdown-divider"></div>
+              <a href="/api/templates/teachers?format=xlsx" download><span>📥</span> Sample Template (.xlsx)</a>
+              <a href="/api/templates/teachers?format=csv" download><span>📥</span> Sample Template (.csv)</a>
+            </div>
+          </div>
+          <button id="btn-add-teacher" class="btn btn-primary">
+            <span>+</span> Add Teacher
+          </button>
+        </div>
       </div>
 
       <div class="table-card">
@@ -119,9 +144,26 @@
             <option value="off">Inactive Terms (OFF only)</option>
           </select>
         </div>
-        <button id="btn-add-course" class="btn btn-primary">
-          <span>+</span> Add Course
-        </button>
+        <div class="toolbar-actions" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+          <button type="button" class="btn btn-outline btn-sm" onclick="openBulkImportModal('courses')" title="Import courses across all terms from Excel (.xlsx) or CSV (.csv)">
+            <span>📥</span> Import Courses
+          </button>
+          <div class="dropdown">
+            <button type="button" class="btn btn-outline btn-sm dropdown-toggle" onclick="toggleDropdown('course-export-menu')">
+              <span>📤</span> Export ▾
+            </button>
+            <div id="course-export-menu" class="dropdown-menu">
+              <a href="/api/export/courses?format=xlsx" download><span>📊</span> Export All Terms (.xlsx)</a>
+              <a href="/api/export/courses?format=csv" download><span>📄</span> Export All Terms (.csv)</a>
+              <div class="dropdown-divider"></div>
+              <a href="/api/templates/courses?format=xlsx" download><span>📥</span> Sample Template (.xlsx)</a>
+              <a href="/api/templates/courses?format=csv" download><span>📥</span> Sample Template (.csv)</a>
+            </div>
+          </div>
+          <button id="btn-add-course" class="btn btn-primary">
+            <span>+</span> Add Course
+          </button>
+        </div>
       </div>
 
       <div id="courses-container">
@@ -130,7 +172,81 @@
     </section>
 
     <!-- ===================================================================== -->
-    <!-- 3. Assignments Tab -->
+    <!-- 3. Rooms & Labs Tab -->
+    <!-- ===================================================================== -->
+    <section id="tab-rooms" class="tab-content" role="tabpanel">
+      <div class="toolbar">
+        <div class="toolbar-filters">
+          <input type="text" id="room-search-input" placeholder="🔍 Search room code or name..." oninput="filterRooms()" />
+          <select id="room-category-filter" onchange="filterRooms()">
+            <option value="">All Categories</option>
+            <option value="Theory Classrooms">Theory Classrooms</option>
+            <option value="Departmental Labs">Departmental Labs</option>
+            <option value="Non-Departmental Labs">Non-Departmental Labs</option>
+          </select>
+          <select id="room-kind-filter" onchange="filterRooms()">
+            <option value="">All Room Kinds</option>
+            <option value="theory">theory (Standard Lecture Hall)</option>
+            <option value="cse_lab">cse_lab (Software Lab)</option>
+            <option value="hardware_lab_107">hardware_lab_107 (Hardware Lab 107)</option>
+            <option value="hardware_lab_108">hardware_lab_108 (Digital Logic Lab 108)</option>
+            <option value="seminar_501">seminar_501 (Room 501 Seminar)</option>
+            <option value="chem_lab">chem_lab (Chemistry Lab)</option>
+            <option value="phy_lab">phy_lab (Physics Lab)</option>
+            <option value="hum_lab">hum_lab (English Language Lab)</option>
+            <option value="ece_lab">ece_lab (ECE Lab)</option>
+            <option value="eee_lab">eee_lab (EEE Lab)</option>
+            <option value="mecha_lab">mecha_lab (Mecha Lab)</option>
+          </select>
+        </div>
+        <div class="toolbar-actions" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+          <button type="button" class="btn btn-outline btn-sm" onclick="openBulkImportModal('rooms')" title="Import classrooms & labs from Excel (.xlsx) or CSV (.csv)">
+            <span>📥</span> Import Rooms
+          </button>
+          <div class="dropdown">
+            <button type="button" class="btn btn-outline btn-sm dropdown-toggle" onclick="toggleDropdown('room-export-menu')">
+              <span>📤</span> Export ▾
+            </button>
+            <div id="room-export-menu" class="dropdown-menu">
+              <a href="/api/export/rooms?format=xlsx" download><span>📊</span> Export to Excel (.xlsx)</a>
+              <a href="/api/export/rooms?format=csv" download><span>📄</span> Export to CSV (.csv)</a>
+              <div class="dropdown-divider"></div>
+              <a href="/api/templates/rooms?format=xlsx" download><span>📥</span> Sample Template (.xlsx)</a>
+              <a href="/api/templates/rooms?format=csv" download><span>📥</span> Sample Template (.csv)</a>
+            </div>
+          </div>
+          <button id="btn-add-room" class="btn btn-primary" onclick="openRoomModal()">
+            <span>+</span> Add Room
+          </button>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-header">
+          <h2>Classrooms &amp; Laboratories (<span id="rooms-count">0</span>)</h2>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table" id="rooms-table">
+            <thead>
+              <tr>
+                <th>Room Code</th>
+                <th>Room Name</th>
+                <th>Category</th>
+                <th>Room Kind</th>
+                <th>Seating Capacity</th>
+                <th style="text-align: right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="rooms-tbody">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- 4. Assignments Tab -->
     <!-- ===================================================================== -->
     <section id="tab-assignments" class="tab-content" role="tabpanel">
       <div class="toolbar">
@@ -709,6 +825,70 @@
     </div>
   </div>
 
+  <!-- Add/Edit Room Modal -->
+  <div id="modal-room" class="modal-overlay">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="modal-room-title">Add Classroom or Laboratory</h3>
+        <button class="modal-close" onclick="closeRoomModal()">&times;</button>
+      </div>
+      <form id="form-room" onsubmit="handleSaveRoom(event)">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="room-code">Room Code *</label>
+            <input type="text" id="room-code" required placeholder="e.g. CSE Room 101 or CSE Lab 103" />
+            <div class="form-hint">Unique room identifier used in routine grids, timetables, and assignments.</div>
+          </div>
+          <div class="form-group">
+            <label for="room-name">Display Name *</label>
+            <input type="text" id="room-name" required placeholder="e.g. CSE Theory Room 101 or CSE Software Lab 103" />
+            <div class="form-hint">Full descriptive title of this room or laboratory.</div>
+          </div>
+          <div class="form-group">
+            <label for="room-category">Category *</label>
+            <select id="room-category" required onchange="handleRoomCategoryChange()">
+              <option value="Theory Classrooms">Theory Classrooms</option>
+              <option value="Departmental Labs">Departmental Labs</option>
+              <option value="Non-Departmental Labs">Non-Departmental Labs</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="room-kind">Room Kind *</label>
+            <select id="room-kind" required>
+              <optgroup label="Theory Lecture Halls">
+                <option value="theory">theory (Standard Lecture Hall / Homeroom)</option>
+                <option value="seminar_501">seminar_501 (CSE Room 501 Seminar / Theory)</option>
+              </optgroup>
+              <optgroup label="Departmental Software & Hardware Labs">
+                <option value="cse_lab">cse_lab (Departmental Software Lab)</option>
+                <option value="hardware_lab_107">hardware_lab_107 (Hardware / IoT Lab 107)</option>
+                <option value="hardware_lab_108">hardware_lab_108 (Digital Logic Lab 108)</option>
+              </optgroup>
+              <optgroup label="Non-Departmental Labs">
+                <option value="chem_lab">chem_lab (Chemistry Lab)</option>
+                <option value="phy_lab">phy_lab (Physics Lab)</option>
+                <option value="hum_lab">hum_lab (English Language Lab)</option>
+                <option value="ece_lab">ece_lab (ECE Lab)</option>
+                <option value="eee_lab">eee_lab (EEE Lab)</option>
+                <option value="mecha_lab">mecha_lab (Mecha Lab)</option>
+              </optgroup>
+            </select>
+            <div class="form-hint">Must match course 'Required Room Kind' for automatic scheduler room matching.</div>
+          </div>
+          <div class="form-group">
+            <label for="room-capacity">Seating Capacity *</label>
+            <input type="number" id="room-capacity" min="1" max="500" value="70" required />
+            <div class="form-hint">Maximum students accommodated (typical: 70 for theory classrooms, 35 for laboratory rooms).</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeRoomModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-room">✓ Save Room (OK)</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Manage Teacher Availability Modal -->
   <div id="modal-teacher-availability" class="modal-overlay">
     <div class="modal-dialog modal-dialog-lg" style="max-width: 860px;">
@@ -1025,11 +1205,590 @@
     </div>
   </div>
 
+  <!-- ===================================================================== -->
+  <!-- Universal Bulk Import & Export Hub Modal -->
+  <!-- ===================================================================== -->
+  <div id="modal-bulk-import" class="modal-overlay">
+    <div class="modal-dialog modal-dialog-lg" style="max-width: 980px; max-height: 92vh; display: flex; flex-direction: column;">
+      <div class="modal-header">
+        <div>
+          <h3 style="display: flex; align-items: center; gap: 0.5rem; font-size: 1.25rem;">
+            <span>📦</span> Department Bulk Data Import &amp; Export Hub
+          </h3>
+          <div style="font-size: 0.83rem; color: var(--text-dim); margin-top: 0.25rem;">
+            Quickly import or export entire departments: Teachers, Courses (Terms 1-1 to 4-2), and Rooms via Excel (<code>.xlsx</code>) or CSV (<code>.csv</code>).
+          </div>
+        </div>
+        <button class="modal-close" onclick="closeBulkImportModal()">&times;</button>
+      </div>
+
+      <!-- Bulk Hub Nav Tabs -->
+      <div class="bulk-modal-nav">
+        <button type="button" class="bulk-nav-btn active" id="btn-bulk-tab-all" onclick="switchBulkTab('all')">
+          <span>📦</span> Master Workbook (All-in-One)
+        </button>
+        <button type="button" class="bulk-nav-btn" id="btn-bulk-tab-teachers" onclick="switchBulkTab('teachers')">
+          <span>👨‍🏫</span> Teachers
+        </button>
+        <button type="button" class="bulk-nav-btn" id="btn-bulk-tab-courses" onclick="switchBulkTab('courses')">
+          <span>📚</span> Courses (All Terms)
+        </button>
+        <button type="button" class="bulk-nav-btn" id="btn-bulk-tab-rooms" onclick="switchBulkTab('rooms')">
+          <span>🏫</span> Classrooms &amp; Labs
+        </button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.25rem 1.5rem; overflow-y: auto; flex: 1;">
+        
+        <!-- PANE 1: ALL-IN-ONE MASTER WORKBOOK -->
+        <div id="bulk-pane-all" class="bulk-tab-pane active">
+          <div class="bulk-guide-card">
+            <div class="bulk-guide-title">
+              <span>🌟</span> Complete Department Master Workbook (.xlsx)
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+              The Master Workbook contains all three department datasets in a single Excel file with 3 structured sheets: 
+              <b><code>Rooms</code></b>, <b><code>Teachers</code></b>, and <b><code>Courses</code></b>. Importing this workbook validates and loads your full academic catalog in sequence with full relationship preservation.
+            </p>
+            <div class="bulk-actions-row">
+              <a href="/api/templates/all?format=xlsx" download class="btn btn-primary btn-sm">
+                <span>📥</span> Download Master Excel Template (.xlsx)
+              </a>
+              <a href="/api/export/all?format=xlsx" download class="btn btn-outline btn-sm">
+                <span>📤</span> Export Live Master Workbook (.xlsx)
+              </a>
+            </div>
+          </div>
+
+          <!-- Dropzone -->
+          <div class="bulk-upload-section">
+            <div class="bulk-dropzone" id="dropzone-all" onclick="triggerFileInput('all')">
+              <input type="file" id="bulk-file-all" accept=".xlsx,.xls" style="display:none;" onchange="handleBulkFileChosen('all', this)" />
+              <div class="dropzone-icon">📁</div>
+              <div class="dropzone-text">
+                <b>Click to browse</b> or drag &amp; drop Master Excel file (<code>.xlsx</code>)
+              </div>
+              <div class="dropzone-sub">Uploads and synchronizes Rooms, Teachers, and Courses across all 8 terms simultaneously.</div>
+              <div id="dropzone-file-name-all" class="dropzone-filename" style="display:none;"></div>
+            </div>
+            <div style="display: flex; justify-content: flex-end; margin-top: 0.75rem;">
+              <button type="button" class="btn btn-primary" id="btn-upload-all" onclick="handleBulkUpload('all')" disabled>
+                <span>⚡</span> Upload &amp; Import Master Workbook
+              </button>
+            </div>
+            <div id="bulk-result-all" class="bulk-result-card" style="display:none;"></div>
+          </div>
+
+          <!-- Master Specs -->
+          <div class="bulk-specs-card">
+            <div class="bulk-specs-header">
+              <span>📋</span> Multi-Sheet Architecture Reference
+            </div>
+            <div style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+              The Excel workbook must contain the following 3 sheets (or you can use the downloadable template above):
+            </div>
+            <div class="bulk-table-wrap">
+              <table class="bulk-spec-table">
+                <thead>
+                  <tr>
+                    <th>Sheet Name</th>
+                    <th>Required Columns</th>
+                    <th>Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><b>Rooms</b></td>
+                    <td><code>room_code</code>, <code>name</code>, <code>category</code>, <code>kind</code>, <code>capacity</code></td>
+                    <td>Defines all theory lecture halls, software labs, hardware labs, and service labs.</td>
+                  </tr>
+                  <tr>
+                    <td><b>Teachers</b></td>
+                    <td><code>full_name</code>, <code>short_code</code>, <code>department</code>, <code>status</code>, <code>max_periods_per_day</code></td>
+                    <td>Faculty roster with unique short codes and daily period constraints.</td>
+                  </tr>
+                  <tr>
+                    <td><b>Courses</b></td>
+                    <td><code>code</code>, <code>title</code>, <code>batch</code>, <code>type</code>, <code>credit</code>, <code>room_kind</code>, <code>category</code>, <code>periods_per_week</code>, <code>teacher1_short</code>, <code>teacher2_short</code></td>
+                    <td>All academic courses across terms 1-1 to 4-2, with required room kinds and assigned teacher short codes.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANE 2: TEACHERS -->
+        <div id="bulk-pane-teachers" class="bulk-tab-pane">
+          <div class="bulk-guide-card">
+            <div class="bulk-guide-title">
+              <span>👨‍🏫</span> Faculty &amp; Service Teachers Bulk Management
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+              Import teacher rosters from CSV or Excel files. Teachers are matched and updated by their unique <b>Short Code</b> (e.g., <code>SS</code>, <code>KSA</code>, <code>DD</code>).
+            </p>
+            <div class="bulk-actions-row">
+              <a href="/api/templates/teachers?format=xlsx" download class="btn btn-outline btn-sm">
+                <span>📥</span> Download Excel Template (.xlsx)
+              </a>
+              <a href="/api/templates/teachers?format=csv" download class="btn btn-outline btn-sm">
+                <span>📥</span> Download CSV Template (.csv)
+              </a>
+              <a href="/api/export/teachers?format=xlsx" download class="btn btn-outline btn-sm">
+                <span>📤</span> Export Live Teachers (.xlsx)
+              </a>
+              <a href="/api/export/teachers?format=csv" download class="btn btn-outline btn-sm">
+                <span>📄</span> Export Live Teachers (.csv)
+              </a>
+            </div>
+          </div>
+
+          <!-- Dropzone -->
+          <div class="bulk-upload-section">
+            <div class="bulk-dropzone" id="dropzone-teachers" onclick="triggerFileInput('teachers')">
+              <input type="file" id="bulk-file-teachers" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleBulkFileChosen('teachers', this)" />
+              <div class="dropzone-icon">👨‍🏫</div>
+              <div class="dropzone-text">
+                <b>Click to browse</b> or drag &amp; drop Teachers file (<code>.xlsx</code> or <code>.csv</code>)
+              </div>
+              <div class="dropzone-sub">Matches existing teachers by Short Code to update or add new faculty.</div>
+              <div id="dropzone-file-name-teachers" class="dropzone-filename" style="display:none;"></div>
+            </div>
+            <div style="display: flex; justify-content: flex-end; margin-top: 0.75rem;">
+              <button type="button" class="btn btn-primary" id="btn-upload-teachers" onclick="handleBulkUpload('teachers')" disabled>
+                <span>⚡</span> Upload &amp; Import Teachers
+              </button>
+            </div>
+            <div id="bulk-result-teachers" class="bulk-result-card" style="display:none;"></div>
+          </div>
+
+          <!-- Teacher Specs & Preview -->
+          <div class="bulk-specs-card">
+            <div class="bulk-specs-header">
+              <span>📋</span> Teachers Format Specification
+            </div>
+            <div class="bulk-table-wrap">
+              <table class="bulk-spec-table">
+                <thead>
+                  <tr>
+                    <th>Column Header</th>
+                    <th>Required</th>
+                    <th>Allowed Values / Format</th>
+                    <th>Notes &amp; Examples</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>full_name</code></td>
+                    <td><span class="badge badge-success">Required</span></td>
+                    <td>Text</td>
+                    <td>e.g. <code>Dr. Muhammad Sheikh Sadi</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>short_code</code></td>
+                    <td><span class="badge badge-success">Required</span></td>
+                    <td>Unique text (uppercase)</td>
+                    <td>e.g. <code>SS</code>, <code>KSA</code>, <code>DD</code> (Printed on timetable)</td>
+                  </tr>
+                  <tr>
+                    <td><code>department</code></td>
+                    <td><span class="badge badge-success">Required</span></td>
+                    <td><code>CSE, ECE, EEE, ME, MATH, PHY, HUM, CHEM</code></td>
+                    <td>Academic department</td>
+                  </tr>
+                  <tr>
+                    <td><code>status</code></td>
+                    <td>Optional</td>
+                    <td><code>Active</code> or <code>On Leave</code></td>
+                    <td>Defaults to <code>Active</code> if blank</td>
+                  </tr>
+                  <tr>
+                    <td><code>max_periods_per_day</code></td>
+                    <td>Optional</td>
+                    <td>Integer <code>1</code> to <code>9</code></td>
+                    <td>Maximum teaching periods per day (default: <code>5</code>)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="bulk-preview-title">Sample Data Rows:</div>
+            <div class="bulk-table-wrap">
+              <table class="bulk-sample-table">
+                <thead>
+                  <tr>
+                    <th>full_name</th>
+                    <th>short_code</th>
+                    <th>department</th>
+                    <th>status</th>
+                    <th>max_periods_per_day</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Dr. Muhammad Sheikh Sadi</td>
+                    <td><b>SS</b></td>
+                    <td>CSE</td>
+                    <td>Active</td>
+                    <td>5</td>
+                  </tr>
+                  <tr>
+                    <td>Dr. K. S. Anderson</td>
+                    <td><b>KSA</b></td>
+                    <td>CSE</td>
+                    <td>Active</td>
+                    <td>4</td>
+                  </tr>
+                  <tr>
+                    <td>Dr. A. B. M. A. Hashem</td>
+                    <td><b>AM</b></td>
+                    <td>CHEM</td>
+                    <td>Active</td>
+                    <td>4</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANE 3: COURSES -->
+        <div id="bulk-pane-courses" class="bulk-tab-pane">
+          <div class="bulk-guide-card">
+            <div class="bulk-guide-title">
+              <span>📚</span> Courses Bulk Management (All Terms: 1-1 to 4-2)
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+              Import courses across all 8 terms simultaneously. Includes automatic teacher assignment by short code, room kind matching, credit specifications, and category tags.
+            </p>
+            <div class="bulk-actions-row">
+              <a href="/api/templates/courses?format=xlsx" download class="btn btn-outline btn-sm">
+                <span>📥</span> Download Excel Template (.xlsx)
+              </a>
+              <a href="/api/templates/courses?format=csv" download class="btn btn-outline btn-sm">
+                <span>📥</span> Download CSV Template (.csv)
+              </a>
+              <a href="/api/export/courses?format=xlsx" download class="btn btn-outline btn-sm">
+                <span>📤</span> Export Live Courses (.xlsx)
+              </a>
+              <a href="/api/export/courses?format=csv" download class="btn btn-outline btn-sm">
+                <span>📄</span> Export Live Courses (.csv)
+              </a>
+            </div>
+          </div>
+
+          <!-- Dropzone -->
+          <div class="bulk-upload-section">
+            <div class="bulk-dropzone" id="dropzone-courses" onclick="triggerFileInput('courses')">
+              <input type="file" id="bulk-file-courses" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleBulkFileChosen('courses', this)" />
+              <div class="dropzone-icon">📚</div>
+              <div class="dropzone-text">
+                <b>Click to browse</b> or drag &amp; drop Courses file (<code>.xlsx</code> or <code>.csv</code>)
+              </div>
+              <div class="dropzone-sub">Synchronizes courses, credit weights, room kinds, and teacher assignments.</div>
+              <div id="dropzone-file-name-courses" class="dropzone-filename" style="display:none;"></div>
+            </div>
+            <div style="display: flex; justify-content: flex-end; margin-top: 0.75rem;">
+              <button type="button" class="btn btn-primary" id="btn-upload-courses" onclick="handleBulkUpload('courses')" disabled>
+                <span>⚡</span> Upload &amp; Import Courses
+              </button>
+            </div>
+            <div id="bulk-result-courses" class="bulk-result-card" style="display:none;"></div>
+          </div>
+
+          <!-- Course Specs & Preview -->
+          <div class="bulk-specs-card">
+            <div class="bulk-specs-header">
+              <span>📋</span> Courses Format Specification
+            </div>
+            <div class="bulk-table-wrap">
+              <table class="bulk-spec-table">
+                <thead>
+                  <tr>
+                    <th>Column Header</th>
+                    <th>Required</th>
+                    <th>Allowed Values / Format</th>
+                    <th>Notes &amp; Examples</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>code</code></td>
+                    <td><span class="badge badge-success">Required</span></td>
+                    <td>Course Code text</td>
+                    <td>e.g. <code>CSE1203</code>, <code>CHEM1208</code>, <code>CSE3200</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>title</code></td>
+                    <td><span class="badge badge-success">Required</span></td>
+                    <td>Course Title text</td>
+                    <td>e.g. <code>Digital Logic Design</code>, <code>Chemistry Lab</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>batch</code></td>
+                    <td><span class="badge badge-success">Required</span></td>
+                    <td><code>1-1, 1-2, 2-1, 2-2, 3-1, 3-2, 4-1, 4-2</code></td>
+                    <td>Year-Term identifier</td>
+                  </tr>
+                  <tr>
+                    <td><code>type</code></td>
+                    <td><span class="badge badge-success">Required</span></td>
+                    <td><code>Theory</code> or <code>Sessional</code></td>
+                    <td>Theory lecture vs. Laboratory class</td>
+                  </tr>
+                  <tr>
+                    <td><code>credit</code></td>
+                    <td><span class="badge badge-success">Required</span></td>
+                    <td><code>3.0, 1.5, 0.75</code></td>
+                    <td>Theory: <code>3.0</code> | Weekly Lab: <code>1.5</code> | Bi-weekly Lab: <code>0.75</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>room_kind</code></td>
+                    <td><span class="badge badge-success">Required</span></td>
+                    <td><code>theory, cse_lab, hardware_lab_107, hardware_lab_108, seminar_501, chem_lab, phy_lab, hum_lab, ece_lab, eee_lab, mecha_lab, no_room</code></td>
+                    <td>Matching facility room kind for scheduling</td>
+                  </tr>
+                  <tr>
+                    <td><code>category</code></td>
+                    <td>Optional</td>
+                    <td><code>Core Course, Optional II, Optional III</code></td>
+                    <td>Defaults to <code>Core Course</code> if blank</td>
+                  </tr>
+                  <tr>
+                    <td><code>periods_per_week</code></td>
+                    <td>Optional</td>
+                    <td><code>3</code> (standard) or <code>2</code></td>
+                    <td>Number of lecture meetings per week (for Theory)</td>
+                  </tr>
+                  <tr>
+                    <td><code>teacher1_short</code></td>
+                    <td>Optional</td>
+                    <td>Teacher Short Code</td>
+                    <td>e.g. <code>IH</code>, <code>AM</code> (Primary instructor)</td>
+                  </tr>
+                  <tr>
+                    <td><code>teacher2_short</code></td>
+                    <td>Optional</td>
+                    <td>Teacher Short Code</td>
+                    <td>e.g. <code>BS</code>, <code>RA</code> (Secondary co-instructor)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="bulk-preview-title">Sample Data Rows:</div>
+            <div class="bulk-table-wrap">
+              <table class="bulk-sample-table">
+                <thead>
+                  <tr>
+                    <th>code</th>
+                    <th>title</th>
+                    <th>batch</th>
+                    <th>type</th>
+                    <th>credit</th>
+                    <th>room_kind</th>
+                    <th>category</th>
+                    <th>teacher1_short</th>
+                    <th>teacher2_short</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><b>CHEM1207</b></td>
+                    <td>Chemistry</td>
+                    <td>1-2</td>
+                    <td>Theory</td>
+                    <td>3.0</td>
+                    <td>theory</td>
+                    <td>Core Course</td>
+                    <td>MHM</td>
+                    <td>MJ</td>
+                  </tr>
+                  <tr>
+                    <td><b>CHEM1208</b></td>
+                    <td>Chemistry Laboratory</td>
+                    <td>1-2</td>
+                    <td>Sessional</td>
+                    <td>0.75</td>
+                    <td>chem_lab</td>
+                    <td>Core Course</td>
+                    <td>AM</td>
+                    <td>RA</td>
+                  </tr>
+                  <tr>
+                    <td><b>CSE1204</b></td>
+                    <td>Digital Logic Design Lab</td>
+                    <td>1-2</td>
+                    <td>Sessional</td>
+                    <td>1.5</td>
+                    <td>hardware_lab_108</td>
+                    <td>Core Course</td>
+                    <td>IH</td>
+                    <td>BS</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANE 4: ROOMS -->
+        <div id="bulk-pane-rooms" class="bulk-tab-pane">
+          <div class="bulk-guide-card">
+            <div class="bulk-guide-title">
+              <span>🏫</span> Classrooms &amp; Laboratories Bulk Management
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+              Import theory lecture halls, departmental software and hardware labs, and non-departmental service facilities from CSV or Excel files. Rooms are matched and updated by their unique <b>Room Code</b>.
+            </p>
+            <div class="bulk-actions-row">
+              <a href="/api/templates/rooms?format=xlsx" download class="btn btn-outline btn-sm">
+                <span>📥</span> Download Excel Template (.xlsx)
+              </a>
+              <a href="/api/templates/rooms?format=csv" download class="btn btn-outline btn-sm">
+                <span>📥</span> Download CSV Template (.csv)
+              </a>
+              <a href="/api/export/rooms?format=xlsx" download class="btn btn-outline btn-sm">
+                <span>📤</span> Export Live Rooms (.xlsx)
+              </a>
+              <a href="/api/export/rooms?format=csv" download class="btn btn-outline btn-sm">
+                <span>📄</span> Export Live Rooms (.csv)
+              </a>
+            </div>
+          </div>
+
+          <!-- Dropzone -->
+          <div class="bulk-upload-section">
+            <div class="bulk-dropzone" id="dropzone-rooms" onclick="triggerFileInput('rooms')">
+              <input type="file" id="bulk-file-rooms" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleBulkFileChosen('rooms', this)" />
+              <div class="dropzone-icon">🏫</div>
+              <div class="dropzone-text">
+                <b>Click to browse</b> or drag &amp; drop Rooms file (<code>.xlsx</code> or <code>.csv</code>)
+              </div>
+              <div class="dropzone-sub">Matches existing rooms by Room Code to update or add new facilities.</div>
+              <div id="dropzone-file-name-rooms" class="dropzone-filename" style="display:none;"></div>
+            </div>
+            <div style="display: flex; justify-content: flex-end; margin-top: 0.75rem;">
+              <button type="button" class="btn btn-primary" id="btn-upload-rooms" onclick="handleBulkUpload('rooms')" disabled>
+                <span>⚡</span> Upload &amp; Import Rooms
+              </button>
+            </div>
+            <div id="bulk-result-rooms" class="bulk-result-card" style="display:none;"></div>
+          </div>
+
+          <!-- Rooms Specs & Preview -->
+          <div class="bulk-specs-card">
+            <div class="bulk-specs-header">
+              <span>📋</span> Rooms Format Specification
+            </div>
+            <div class="bulk-table-wrap">
+              <table class="bulk-spec-table">
+                <thead>
+                  <tr>
+                    <th>Column Header</th>
+                    <th>Required</th>
+                    <th>Allowed Values / Format</th>
+                    <th>Notes &amp; Examples</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>room_code</code></td>
+                    <td><span class="badge badge-success">Required</span></td>
+                    <td>Unique text</td>
+                    <td>e.g. <code>CSE Room 101</code>, <code>CSE Lab 103</code>, <code>CHEM-LAB</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>name</code></td>
+                    <td><span class="badge badge-success">Required</span></td>
+                    <td>Display text</td>
+                    <td>e.g. <code>CSE Theory Room 101</code>, <code>Software Lab 103</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>category</code></td>
+                    <td><span class="badge badge-success">Required</span></td>
+                    <td><code>Theory Classrooms, Departmental Labs, Non-Departmental Labs</code></td>
+                    <td>High-level timetable section grouping</td>
+                  </tr>
+                  <tr>
+                    <td><code>kind</code></td>
+                    <td><span class="badge badge-success">Required</span></td>
+                    <td><code>theory, cse_lab, hardware_lab_107, hardware_lab_108, seminar_501, chem_lab, phy_lab, hum_lab, ece_lab, eee_lab, mecha_lab</code></td>
+                    <td>Must match course <code>room_kind</code> for scheduler allocation</td>
+                  </tr>
+                  <tr>
+                    <td><code>capacity</code></td>
+                    <td>Optional</td>
+                    <td>Integer (e.g. <code>70</code>, <code>35</code>)</td>
+                    <td>Seating capacity (defaults to 70 for theory, 35 for labs)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="bulk-preview-title">Sample Data Rows:</div>
+            <div class="bulk-table-wrap">
+              <table class="bulk-sample-table">
+                <thead>
+                  <tr>
+                    <th>room_code</th>
+                    <th>name</th>
+                    <th>category</th>
+                    <th>kind</th>
+                    <th>capacity</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><b>CSE Room 101</b></td>
+                    <td>CSE Theory Room 101</td>
+                    <td>Theory Classrooms</td>
+                    <td>theory</td>
+                    <td>70</td>
+                  </tr>
+                  <tr>
+                    <td><b>CSE Lab 103</b></td>
+                    <td>CSE Software Lab 103</td>
+                    <td>Departmental Labs</td>
+                    <td>cse_lab</td>
+                    <td>35</td>
+                  </tr>
+                  <tr>
+                    <td><b>CSE Lab 108</b></td>
+                    <td>CSE Digital Logic Lab 108</td>
+                    <td>Departmental Labs</td>
+                    <td>hardware_lab_108</td>
+                    <td>35</td>
+                  </tr>
+                  <tr>
+                    <td><b>CHEM-LAB</b></td>
+                    <td>Chemistry Laboratory</td>
+                    <td>Non-Departmental Labs</td>
+                    <td>chem_lab</td>
+                    <td>35</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer" style="background: #F8FAFC; border-top: 1px solid var(--card-border); padding: 0.85rem 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+        <div style="font-size: 0.8rem; color: var(--text-dim);">
+          💡 <b>Tip:</b> Changes to teachers, courses, or rooms take effect immediately across all timetables and constraint checks.
+        </div>
+        <button type="button" class="btn btn-primary" onclick="closeBulkImportModal()">Close Hub</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast notification -->
   <div id="toast" class="toast">
     <span id="toast-message">Notification</span>
   </div>
 
-  <script src="/static/app.js?v=3.2"></script>
+  <script src="/static/app.js?v=3.3"></script>
 </body>
 </html>

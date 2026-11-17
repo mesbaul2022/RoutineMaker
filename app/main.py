@@ -7,7 +7,7 @@ from pathlib import Path
 import re
 from typing import List, Optional
 
-from fastapi import Depends, FastAPI, HTTPException, Query, status
+from fastapi import Depends, FastAPI, HTTPException, Query, status, UploadFile, File, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -17,6 +17,19 @@ from sqlalchemy.orm import Session
 from routine.report import write_csv, write_html
 from routine.scheduler import diagnose_infeasibility, solve_routine
 from tools.verify import verify
+
+from .bulk_io import (
+    generate_csv_template,
+    generate_excel_template,
+    export_teachers,
+    export_courses,
+    export_rooms,
+    export_all_in_one,
+    import_teachers_data,
+    import_courses_data,
+    import_rooms_data,
+    import_all_in_one_workbook,
+)
 
 from .db import (
     Assignment as AssignmentModel,
@@ -156,6 +169,29 @@ class BatchOut(BaseModel):
 
 class BatchStatusUpdate(BaseModel):
     status: str  # "on" or "off"
+
+
+class RoomBase(BaseModel):
+    name: str
+    kind: str
+    capacity: int = 70
+
+
+class RoomCreate(RoomBase):
+    id: str
+
+
+class RoomUpdate(BaseModel):
+    name: Optional[str] = None
+    kind: Optional[str] = None
+    capacity: Optional[int] = None
+
+
+class RoomOut(RoomBase):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    room_code: Optional[str] = None
+    category: Optional[str] = None
 
 
 class CourseBase(BaseModel):
@@ -1494,6 +1530,177 @@ def delete_assignment(assignment_id: int, db: Session = Depends(get_db)):
     db.delete(assignment)
     db.commit()
     return {"ok": True, "message": f"Assignment {assignment_id} deleted."}
+
+
+# -----------------------------------------------------------------------------
+# Rooms API
+# -----------------------------------------------------------------------------
+
+
+def _categorize_room(r: RoomModel) -> str:
+    if r.kind == "theory":
+        return "Theory Classrooms"
+    elif "lab" in r.kind:
+        if "cse" in r.kind or "hardware" in r.kind:
+            return "Departmental Labs"
+        return "Non-Departmental Labs"
+    return "General Facilities"
+
+
+@app.get("/api/rooms", response_model=List[RoomOut])
+def list_rooms(db: Session = Depends(get_db)):
+    rooms = db.query(RoomModel).order_by(RoomModel.kind, RoomModel.id).all()
+    return [
+        RoomOut(
+            id=r.id,
+            room_code=r.id,
+            name=r.name,
+            kind=r.kind,
+            capacity=r.capacity,
+            category=_categorize_room(r),
+        )
+        for r in rooms
+    ]
+
+
+@app.post("/api/rooms", response_model=RoomOut, status_code=status.HTTP_201_CREATED)
+def create_room(payload: RoomCreate, db: Session = Depends(get_db)):
+    rid = payload.id.strip().upper()
+    if db.query(RoomModel).filter_by(id=rid).first():
+        raise HTTPException(status_code=400, detail=f"Room '{rid}' already exists.")
+    room = RoomModel(
+        id=rid,
+        name=payload.name.strip(),
+        kind=payload.kind.strip().lower(),
+        capacity=payload.capacity,
+    )
+    db.add(room)
+    db.commit()
+    db.refresh(room)
+    return RoomOut(
+        id=room.id,
+        room_code=room.id,
+        name=room.name,
+        kind=room.kind,
+        capacity=room.capacity,
+        category=_categorize_room(room),
+    )
+
+
+@app.put("/api/rooms/{room_id}", response_model=RoomOut)
+def update_room(room_id: str, payload: RoomUpdate, db: Session = Depends(get_db)):
+    room = db.query(RoomModel).filter_by(id=room_id).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found.")
+    if payload.name is not None:
+        room.name = payload.name.strip()
+    if payload.kind is not None:
+        room.kind = payload.kind.strip().lower()
+    if payload.capacity is not None:
+        room.capacity = payload.capacity
+    db.commit()
+    db.refresh(room)
+    return RoomOut(
+        id=room.id,
+        room_code=room.id,
+        name=room.name,
+        kind=room.kind,
+        capacity=room.capacity,
+        category=_categorize_room(room),
+    )
+
+
+@app.delete("/api/rooms/{room_id}")
+def delete_room(room_id: str, db: Session = Depends(get_db)):
+    room = db.query(RoomModel).filter_by(id=room_id).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found.")
+    db.delete(room)
+    db.commit()
+    return {"ok": True, "message": f"Room '{room_id}' deleted successfully."}
+
+
+# -----------------------------------------------------------------------------
+# Bulk Import & Export API
+# -----------------------------------------------------------------------------
+
+
+@app.get("/api/templates/{entity}")
+def get_sample_template(entity: str, format: str = "xlsx"):
+    ent = entity.lower().strip()
+    fmt = format.lower().strip()
+    if ent not in ("teachers", "courses", "rooms", "all"):
+        raise HTTPException(status_code=400, detail=f"Invalid template entity '{entity}'. Choose from teachers, courses, rooms, all.")
+    if fmt not in ("xlsx", "csv"):
+        fmt = "xlsx"
+
+    if fmt == "csv":
+        if ent == "all":
+            fmt = "xlsx"
+        else:
+            content = generate_csv_template(ent)
+            return Response(
+                content=content,
+                media_type="text/csv; charset=utf-8",
+                headers={"Content-Disposition": f'attachment; filename="{ent}_template.csv"'}
+            )
+
+    content = generate_excel_template(ent)
+    fn = "department_master_template.xlsx" if ent == "all" else f"{ent}_template.xlsx"
+    return Response(
+        content=content,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{fn}"'}
+    )
+
+
+@app.get("/api/export/{entity}")
+def export_entity_data(entity: str, format: str = "xlsx", batch: Optional[str] = None, db: Session = Depends(get_db)):
+    ent = entity.lower().strip()
+    fmt = format.lower().strip()
+    if fmt not in ("xlsx", "csv"):
+        fmt = "xlsx"
+
+    if ent == "teachers":
+        content, mime, fn = export_teachers(db, fmt)
+    elif ent == "courses":
+        content, mime, fn = export_courses(db, fmt, batch_id=batch)
+    elif ent == "rooms":
+        content, mime, fn = export_rooms(db, fmt)
+    elif ent == "all":
+        content, mime, fn = export_all_in_one(db)
+    else:
+        raise HTTPException(status_code=400, detail=f"Invalid export entity '{entity}'. Choose from teachers, courses, rooms, all.")
+
+    return Response(
+        content=content,
+        media_type=mime,
+        headers={"Content-Disposition": f'attachment; filename="{fn}"'}
+    )
+
+
+@app.post("/api/import/{entity}")
+async def import_entity_data(entity: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    ent = entity.lower().strip()
+    if ent not in ("teachers", "courses", "rooms", "all"):
+        raise HTTPException(status_code=400, detail=f"Invalid import entity '{entity}'. Choose from teachers, courses, rooms, all.")
+
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
+    filename = file.filename or f"uploaded_{ent}.xlsx"
+
+    if ent == "teachers":
+        result = import_teachers_data(content, filename, db)
+    elif ent == "courses":
+        result = import_courses_data(content, filename, db, sync_assignments_fn=_sync_course_assignments)
+    elif ent == "rooms":
+        result = import_rooms_data(content, filename, db)
+    elif ent == "all":
+        result = import_all_in_one_workbook(content, filename, db, sync_assignments_fn=_sync_course_assignments)
+
+    return result
 
 
 @app.get("/api/routine/scheduled-batches")

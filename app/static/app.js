@@ -10,9 +10,12 @@ const state = {
   courses: [],
   batches: [],
   assignments: [],
+  rooms: [],
   showOnLeave: false,
   editingTeacherId: null,
   editingCourseId: null,
+  editingRoomId: null,
+  activeBulkEntity: "all",
   timeGridConfig: null,
   timeGridComputed: null,
 };
@@ -57,6 +60,8 @@ function switchTab(tabId) {
     loadTeachers();
   } else if (tabId === "courses") {
     loadCourses();
+  } else if (tabId === "rooms") {
+    loadRooms();
   } else if (tabId === "assignments") {
     loadAssignmentsData();
   } else if (tabId === "master") {
@@ -99,7 +104,7 @@ function setupEventListeners() {
 }
 
 async function loadAllData() {
-  await Promise.all([loadBatches(), loadTeachers(), loadCourses(), loadAssignments(), loadTimeGrid()]);
+  await Promise.all([loadBatches(), loadTeachers(), loadCourses(), loadRooms(), loadAssignments(), loadTimeGrid()]);
 }
 
 // -----------------------------------------------------------------------------
@@ -2081,6 +2086,198 @@ async function deleteCourse(courseId) {
 }
 
 // -----------------------------------------------------------------------------
+// Rooms & Laboratories API & Management
+// -----------------------------------------------------------------------------
+
+async function loadRooms() {
+  try {
+    const res = await fetch("/api/rooms");
+    if (!res.ok) throw new Error("Failed to load rooms");
+    state.rooms = await res.json();
+    renderRooms();
+  } catch (err) {
+    showToast(`Error loading rooms: ${err.message}`, true);
+  }
+}
+
+function renderRooms() {
+  const tbody = document.getElementById("rooms-tbody");
+  if (!tbody) return;
+
+  const search = (document.getElementById("room-search-input")?.value || "").toLowerCase().trim();
+  const categoryFilter = document.getElementById("room-category-filter")?.value || "";
+  const kindFilter = document.getElementById("room-kind-filter")?.value || "";
+
+  const filtered = state.rooms.filter((r) => {
+    if (categoryFilter && r.category !== categoryFilter) return false;
+    if (kindFilter && r.kind !== kindFilter) return false;
+    if (search) {
+      const matchCode = (r.room_code || "").toLowerCase().includes(search);
+      const matchName = (r.name || "").toLowerCase().includes(search);
+      const matchKind = (r.kind || "").toLowerCase().includes(search);
+      if (!matchCode && !matchName && !matchKind) return false;
+    }
+    return true;
+  });
+
+  const countEl = document.getElementById("rooms-count");
+  if (countEl) countEl.textContent = filtered.length;
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align: center; color: var(--text-dim); padding: 2rem;">
+          No classrooms or laboratories found matching your criteria.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filtered
+    .map((room) => {
+      let catClass = "badge-cse";
+      if (room.category === "Theory Classrooms") catClass = "badge-navy";
+      else if (room.category === "Departmental Labs") catClass = "badge-primary";
+      else if (room.category === "Non-Departmental Labs") catClass = "badge-warning";
+      const roomCode = room.room_code || room.id || "";
+
+      return `
+        <tr>
+          <td><b>${escapeHtml(roomCode)}</b></td>
+          <td>${escapeHtml(room.name)}</td>
+          <td><span class="badge ${catClass}">${escapeHtml(room.category || "")}</span></td>
+          <td><code>${escapeHtml(room.kind)}</code></td>
+          <td><span style="font-weight: 600; color: #334155;">${room.capacity || 70}</span> seats</td>
+          <td style="text-align: right; white-space: nowrap;">
+            <button class="btn btn-sm btn-outline" onclick="openRoomModal('${room.id}')" title="Edit Room">
+              Edit
+            </button>
+            <button class="btn btn-sm btn-danger" onclick="deleteRoom('${room.id}', '${escapeHtml(roomCode)}')" title="Delete Room" style="margin-left: 0.35rem;">
+              Delete
+            </button>
+          </td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+function filterRooms() {
+  renderRooms();
+}
+
+function handleRoomCategoryChange() {
+  const cat = document.getElementById("room-category")?.value;
+  const kindSelect = document.getElementById("room-kind");
+  const capInput = document.getElementById("room-capacity");
+  if (!cat || !kindSelect || !capInput) return;
+
+  if (cat === "Theory Classrooms") {
+    kindSelect.value = "theory";
+    capInput.value = 70;
+  } else if (cat === "Departmental Labs") {
+    kindSelect.value = "cse_lab";
+    capInput.value = 35;
+  } else if (cat === "Non-Departmental Labs") {
+    kindSelect.value = "chem_lab";
+    capInput.value = 35;
+  }
+}
+
+function openRoomModal(roomId = null) {
+  state.editingRoomId = roomId;
+  const modal = document.getElementById("modal-room");
+  const title = document.getElementById("modal-room-title");
+  if (!modal) return;
+
+  if (roomId) {
+    const room = state.rooms.find((r) => r.id === roomId);
+    if (!room) return;
+    if (title) title.textContent = "Edit Room / Laboratory";
+    document.getElementById("room-code").value = room.room_code || room.id || "";
+    document.getElementById("room-name").value = room.name;
+    document.getElementById("room-category").value = room.category || "Theory Classrooms";
+    document.getElementById("room-kind").value = room.kind;
+    document.getElementById("room-capacity").value = room.capacity || 70;
+  } else {
+    if (title) title.textContent = "Add Classroom or Laboratory";
+    document.getElementById("room-code").value = "";
+    document.getElementById("room-name").value = "";
+    document.getElementById("room-category").value = "Theory Classrooms";
+    document.getElementById("room-kind").value = "theory";
+    document.getElementById("room-capacity").value = 70;
+  }
+
+  modal.classList.add("open");
+}
+
+function closeRoomModal() {
+  const modal = document.getElementById("modal-room");
+  if (modal) modal.classList.remove("open");
+  state.editingRoomId = null;
+}
+
+async function handleSaveRoom(event) {
+  event.preventDefault();
+  const room_code = document.getElementById("room-code").value.trim();
+  const name = document.getElementById("room-name").value.trim();
+  const category = document.getElementById("room-category").value;
+  const kind = document.getElementById("room-kind").value;
+  const capacity = parseInt(document.getElementById("room-capacity").value, 10) || 70;
+
+  if (!room_code || !name) {
+    showToast("Please enter both Room Code and Display Name", true);
+    return;
+  }
+
+  try {
+    let res;
+    if (state.editingRoomId) {
+      res = await fetch(`/api/rooms/${state.editingRoomId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, kind, capacity }),
+      });
+    } else {
+      res = await fetch("/api/rooms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: room_code, name, kind, capacity }),
+      });
+    }
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || "Failed to save room");
+    }
+
+    closeRoomModal();
+    await loadRooms();
+    showToast(`✓ Room "${room_code}" saved successfully`);
+  } catch (err) {
+    showToast(`Error: ${err.message}`, true);
+  }
+}
+
+async function deleteRoom(roomId, roomCode) {
+  if (!confirm(`Are you sure you want to delete room "${roomCode}"?`)) {
+    return;
+  }
+  try {
+    const res = await fetch(`/api/rooms/${roomId}`, { method: "DELETE" });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || "Failed to delete room");
+    }
+    await loadRooms();
+    showToast(`Room "${roomCode}" deleted successfully`);
+  } catch (err) {
+    showToast(`Error: ${err.message}`, true);
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Assignments (The Core Screen)
 // -----------------------------------------------------------------------------
 
@@ -3070,4 +3267,228 @@ function populateAllPeriodSelectDropdowns(computed) {
   const optionsHtml = buildOptions(false);
   if (teacherSelect) teacherSelect.innerHTML = optionsHtml;
   if (courseSelect) courseSelect.innerHTML = buildOptions(true);
+}
+
+// =============================================================================
+// Dropdown Menus
+// =============================================================================
+
+function toggleDropdown(menuId) {
+  const menu = document.getElementById(menuId);
+  if (!menu) return;
+  const isShown = menu.classList.contains("show");
+  // Close any other open dropdowns
+  document.querySelectorAll(".dropdown-menu").forEach((el) => el.classList.remove("show"));
+  if (!isShown) {
+    menu.classList.add("show");
+  }
+}
+
+// Global click outside listener to close dropdowns
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".dropdown")) {
+    document.querySelectorAll(".dropdown-menu").forEach((el) => el.classList.remove("show"));
+  }
+});
+
+// =============================================================================
+// Bulk Import & Export Hub
+// =============================================================================
+
+function openBulkImportModal(entity = "all") {
+  const modal = document.getElementById("modal-bulk-import");
+  if (!modal) return;
+  switchBulkTab(entity);
+  modal.classList.add("open");
+}
+
+function closeBulkImportModal() {
+  const modal = document.getElementById("modal-bulk-import");
+  if (modal) modal.classList.remove("open");
+}
+
+function switchBulkTab(entity) {
+  state.activeBulkEntity = entity;
+  const entities = ["all", "teachers", "courses", "rooms"];
+  entities.forEach((ent) => {
+    const btn = document.getElementById(`btn-bulk-tab-${ent}`);
+    const pane = document.getElementById(`bulk-pane-${ent}`);
+    if (btn) btn.classList.toggle("active", ent === entity);
+    if (pane) pane.classList.toggle("active", ent === entity);
+  });
+}
+
+function triggerFileInput(entity) {
+  const input = document.getElementById(`bulk-file-${entity}`);
+  if (input) input.click();
+}
+
+function handleBulkFileChosen(entity, input) {
+  const fileNameBadge = document.getElementById(`dropzone-file-name-${entity}`);
+  const uploadBtn = document.getElementById(`btn-upload-${entity}`);
+  const resultCard = document.getElementById(`bulk-result-${entity}`);
+
+  if (resultCard) {
+    resultCard.style.display = "none";
+    resultCard.innerHTML = "";
+  }
+
+  if (input && input.files && input.files[0]) {
+    const file = input.files[0];
+    if (fileNameBadge) {
+      fileNameBadge.textContent = `📄 Selected: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+      fileNameBadge.style.display = "inline-flex";
+    }
+    if (uploadBtn) {
+      uploadBtn.disabled = false;
+    }
+  } else {
+    if (fileNameBadge) {
+      fileNameBadge.style.display = "none";
+    }
+    if (uploadBtn) {
+      uploadBtn.disabled = true;
+    }
+  }
+}
+
+// Set up drag-and-drop on all dropzones
+function setupBulkDropzones() {
+  ["all", "teachers", "courses", "rooms"].forEach((ent) => {
+    const dropzone = document.getElementById(`dropzone-${ent}`);
+    const fileInput = document.getElementById(`bulk-file-${ent}`);
+    if (!dropzone || !fileInput) return;
+
+    ["dragenter", "dragover"].forEach((evt) => {
+      dropzone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.add("dragover");
+      });
+    });
+
+    ["dragleave", "drop"].forEach((evt) => {
+      dropzone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.remove("dragover");
+      });
+    });
+
+    dropzone.addEventListener("drop", (e) => {
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        fileInput.files = e.dataTransfer.files;
+        handleBulkFileChosen(ent, fileInput);
+      }
+    });
+  });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  setupBulkDropzones();
+});
+
+async function handleBulkUpload(entity) {
+  const fileInput = document.getElementById(`bulk-file-${entity}`);
+  const uploadBtn = document.getElementById(`btn-upload-${entity}`);
+  const resultCard = document.getElementById(`bulk-result-${entity}`);
+
+  if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+    showToast("Please choose a file to upload first.", true);
+    return;
+  }
+
+  const file = fileInput.files[0];
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const origBtnHtml = uploadBtn ? uploadBtn.innerHTML : "";
+  if (uploadBtn) {
+    uploadBtn.disabled = true;
+    uploadBtn.innerHTML = `<span>⏳</span> Uploading &amp; Validating...`;
+  }
+
+  try {
+    const res = await fetch(`/api/import/${entity}`, {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.detail || `Upload failed with status ${res.status}`);
+    }
+
+    if (resultCard) {
+      resultCard.style.display = "block";
+      const isSuccess = data.status === "success";
+      const hasErrors = data.errors && data.errors.length > 0;
+
+      resultCard.className = `bulk-result-card ${isSuccess && !hasErrors ? "bulk-result-success" : (hasErrors ? "bulk-result-warning" : "bulk-result-error")}`;
+
+      let html = `<div style="font-weight: 700; font-size: 0.95rem; margin-bottom: 0.35rem;">
+        ${isSuccess ? "✓ Import Processed Successfully" : "⚠️ Import Finished with Warnings"}
+      </div>`;
+      html += `<div style="margin-bottom: 0.5rem;">${escapeHtml(data.message || "")}</div>`;
+
+      // Stat pills
+      if (entity === "all" && data.summary) {
+        html += `<div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem;">
+          <span class="bulk-stat-pill" style="background:#DBEAFE; color:#1E40AF;">🏫 Rooms: ${data.summary.rooms?.created || 0} new, ${data.summary.rooms?.updated || 0} updated</span>
+          <span class="bulk-stat-pill" style="background:#D1FAE5; color:#065F46;">👨‍🏫 Teachers: ${data.summary.teachers?.created || 0} new, ${data.summary.teachers?.updated || 0} updated</span>
+          <span class="bulk-stat-pill" style="background:#FEF3C7; color:#92400E;">📚 Courses: ${data.summary.courses?.created || 0} new, ${data.summary.courses?.updated || 0} updated</span>
+        </div>`;
+      } else if (data.created !== undefined || data.updated !== undefined) {
+        html += `<div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem;">
+          <span class="bulk-stat-pill" style="background:#D1FAE5; color:#065F46;">Created: ${data.created || 0}</span>
+          <span class="bulk-stat-pill" style="background:#DBEAFE; color:#1E40AF;">Updated: ${data.updated || 0}</span>
+          ${data.skipped ? `<span class="bulk-stat-pill" style="background:#F3F4F6; color:#4B5563;">Skipped: ${data.skipped}</span>` : ""}
+        </div>`;
+      }
+
+      // Errors listing
+      if (hasErrors) {
+        html += `<div style="margin-top: 0.5rem; border-top: 1px dashed rgba(0,0,0,0.15); padding-top: 0.5rem;">
+          <b>⚠️ Notes & Warnings (${data.errors.length}):</b>
+          <ul style="margin: 0.25rem 0 0 1.25rem; font-size: 0.8rem;">
+            ${data.errors.slice(0, 10).map((err) => `<li>${escapeHtml(err)}</li>`).join("")}
+            ${data.errors.length > 10 ? `<li>...and ${data.errors.length - 10} more</li>` : ""}
+          </ul>
+        </div>`;
+      }
+
+      resultCard.innerHTML = html;
+    }
+
+    // Refresh live client data
+    if (entity === "all") {
+      await Promise.all([loadRooms(), loadTeachers(), loadCourses(), loadAssignments()]);
+      renderAssignments();
+    } else if (entity === "teachers") {
+      await loadTeachers();
+    } else if (entity === "courses") {
+      await loadCourses();
+      await loadAssignments();
+      renderAssignments();
+    } else if (entity === "rooms") {
+      await loadRooms();
+    }
+
+    showToast(`✓ Import successful! Records synchronized.`);
+  } catch (err) {
+    if (resultCard) {
+      resultCard.style.display = "block";
+      resultCard.className = "bulk-result-card bulk-result-error";
+      resultCard.innerHTML = `
+        <div style="font-weight: 700; font-size: 0.95rem; margin-bottom: 0.35rem;">❌ Import Failed</div>
+        <div>${escapeHtml(err.message)}</div>
+      `;
+    }
+    showToast(`Import error: ${err.message}`, true);
+  } finally {
+    if (uploadBtn) {
+      uploadBtn.disabled = false;
+      uploadBtn.innerHTML = origBtnHtml;
+    }
+  }
 }

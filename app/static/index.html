@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=3.4">
+  <link rel="stylesheet" href="/static/style.css?v=3.5.5">
 </head>
 <body>
   <!-- Navigation Header -->
@@ -1076,9 +1076,9 @@
                 <label style="font-weight: 600; font-size: 0.84rem; color: #1E293B; margin: 0; display: block;">Room Assignment Preference</label>
                 <span style="font-size: 0.74rem; color: #64748B;">Choose category default or assign specific room(s)</span>
               </div>
-              <div class="room-mode-toggle">
-                <button type="button" id="btn-room-mode-default" class="room-mode-btn active" onclick="setCourseRoomMode('default')">🏢 All Category Rooms</button>
-                <button type="button" id="btn-room-mode-custom" class="room-mode-btn" onclick="setCourseRoomMode('custom')">🎯 Specific Room(s)</button>
+              <div class="room-mode-toggle" style="display: inline-flex; background: #E2E8F0; padding: 3px; border-radius: 8px; gap: 3px;">
+                <button type="button" id="btn-room-mode-default" class="room-mode-btn active" onclick="setCourseRoomMode('default')" style="border: none !important; outline: none; background: #FFFFFF; color: #1E40AF; font-size: 0.78rem; font-weight: 700; padding: 0.38rem 0.8rem; border-radius: 6px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.12); transition: all 0.15s ease;">🏢 All Category Rooms</button>
+                <button type="button" id="btn-room-mode-custom" class="room-mode-btn" onclick="setCourseRoomMode('custom')" style="border: none !important; outline: none; background: transparent; color: #475569; font-size: 0.78rem; font-weight: 700; padding: 0.38rem 0.8rem; border-radius: 6px; cursor: pointer; transition: all 0.15s ease;">🎯 Specific Room(s)</button>
               </div>
             </div>
 
@@ -2121,6 +2121,6 @@
     <span id="toast-message">Notification</span>
   </div>
 
-  <script src="/static/app.js?v=3.4"></script>
+  <script src="/static/app.js?v=3.5.5"></script>
 </body>
 </html>

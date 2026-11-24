@@ -1926,6 +1926,16 @@ def download_html():
     return FileResponse(html_file, media_type="text/html")
 
 
+@app.middleware("http")
+async def add_no_cache_headers(request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith("/static") or request.url.path == "/" or request.url.path.endswith(".js") or request.url.path.endswith(".css"):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
+
 # Mount /out for direct file access
 app.mount("/out", StaticFiles(directory=str(OUT_DIR)), name="out")
 

@@ -3096,15 +3096,19 @@ div.working-days-pills label.day-pill.selected,
 }
 
 .room-mode-btn {
-  border: none;
+  border: none !important;
+  outline: none !important;
   background: transparent;
   color: #475569;
-  font-size: 0.76rem;
-  font-weight: 600;
-  padding: 0.3rem 0.65rem;
-  border-radius: 5px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.38rem 0.8rem;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s ease-in-out;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .room-mode-btn:hover {
@@ -3112,9 +3116,9 @@ div.working-days-pills label.day-pill.selected,
 }
 
 .room-mode-btn.active {
-  background: #FFFFFF;
-  color: var(--navy, #1E40AF);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: #FFFFFF !important;
+  color: var(--navy, #1E40AF) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12) !important;
 }
 
 .room-checkbox-pill {

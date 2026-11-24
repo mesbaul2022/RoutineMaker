@@ -1724,13 +1724,34 @@ function setCourseRoomMode(mode) {
   const customContainer = document.getElementById("room-mode-custom-container");
 
   if (mode === "custom") {
-    btnDefault?.classList.remove("active");
-    btnCustom?.classList.add("active");
+    if (btnDefault) {
+      btnDefault.classList.remove("active");
+      btnDefault.style.background = "transparent";
+      btnDefault.style.color = "#475569";
+      btnDefault.style.boxShadow = "none";
+    }
+    if (btnCustom) {
+      btnCustom.classList.add("active");
+      btnCustom.style.background = "#FFFFFF";
+      btnCustom.style.color = "#1E40AF";
+      btnCustom.style.boxShadow = "0 1px 3px rgba(0,0,0,0.12)";
+    }
     if (defaultDesc) defaultDesc.style.display = "none";
     if (customContainer) customContainer.style.display = "block";
+    renderCourseRoomSelection(document.getElementById("course-room-kind")?.value || "theory");
   } else {
-    btnCustom?.classList.remove("active");
-    btnDefault?.classList.add("active");
+    if (btnCustom) {
+      btnCustom.classList.remove("active");
+      btnCustom.style.background = "transparent";
+      btnCustom.style.color = "#475569";
+      btnCustom.style.boxShadow = "none";
+    }
+    if (btnDefault) {
+      btnDefault.classList.add("active");
+      btnDefault.style.background = "#FFFFFF";
+      btnDefault.style.color = "#1E40AF";
+      btnDefault.style.boxShadow = "0 1px 3px rgba(0,0,0,0.12)";
+    }
     if (customContainer) customContainer.style.display = "none";
     if (defaultDesc) defaultDesc.style.display = "block";
   }
@@ -1903,6 +1924,23 @@ function updateCourseRoomsSummary() {
 function getSelectedCourseRooms() {
   return Array.from(courseRoomState.selectedRooms);
 }
+
+// Ensure global accessibility for inline HTML onclick handlers
+window.courseRoomState = courseRoomState;
+window.setCourseRoomMode = setCourseRoomMode;
+window.toggleShowAllDepartmentRooms = toggleShowAllDepartmentRooms;
+window.renderCourseRoomSelection = renderCourseRoomSelection;
+window.selectAllCourseRooms = selectAllCourseRooms;
+window.onRoomCheckboxToggle = onRoomCheckboxToggle;
+window.toggleRoomPill = toggleRoomPill;
+window.getSelectedCourseRooms = getSelectedCourseRooms;
+
+document.addEventListener("DOMContentLoaded", () => {
+  const btnDef = document.getElementById("btn-room-mode-default");
+  const btnCust = document.getElementById("btn-room-mode-custom");
+  if (btnDef) btnDef.addEventListener("click", () => setCourseRoomMode("default"));
+  if (btnCust) btnCust.addEventListener("click", () => setCourseRoomMode("custom"));
+});
 
 function updateRoomKindHint() {
   const select = document.getElementById("course-room-kind");

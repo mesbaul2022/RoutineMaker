@@ -192,19 +192,18 @@ def _section_grid(problem: Problem, solution: Solution, batch_id: str, section: 
         clean_code = ev.course.code.replace(" ", "").upper()
         is_project = clean_code in ("CSE3200", "CSE4000") or clean_code.startswith("CSE4000") or ev.room_kind == "no_room" or a.room_id in ("NO_ROOM", "", None)
 
-        if ev.paired_event_id is not None:
-            key = (d, p, "paired_075_lab")
-        elif is_project:
-            key = (d, p, "project", ev.eid)
+        if is_project:
+            key = (d, p, "project")
         elif ev.is_lab:
-            key = (d, p, ev.course.code)
+            key = (d, p, "lab")
         else:
-            key = (d, p, ev.course.code, ev.eid)
+            key = (d, p, "theory", ev.course.code, ev.eid)
 
         bucket = merged.setdefault(
             key,
             {"day": d, "period": p, "span": ev.length, "lab": ev.is_lab, "entries": []},
         )
+        bucket["span"] = max(bucket.get("span", 0), ev.length)
         if is_project:
             disp_code = "CSE 3200" if "3200" in clean_code else "CSE 4000"
             bucket["entries"].append(
@@ -259,6 +258,10 @@ def _section_grid(problem: Problem, solution: Solution, batch_id: str, section: 
                 first["teachers"] = "+".join(all_t)
                 first["group"] = ""
                 bucket["entries"] = [first]
+            else:
+                # Multiple distinct lab courses or rooms running concurrently for different groups
+                # Sort entries cleanly by group name (e.g. A1 before A2, B1 before B2)
+                bucket["entries"].sort(key=lambda e: (e["group"], e["code"]))
 
         d, p = bucket["day"], bucket["period"]
         cells[d][p] = bucket
@@ -1484,6 +1487,12 @@ td.m-cell-lab {{
   color: #475569;
   font-weight: 600;
   margin-top: 0.15rem;
+}}
+
+.m-cell-lab .m-meta + .m-code {{
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px dashed rgba(146, 64, 14, 0.35);
 }}
 
 /* ------------------------------------------------------------- Teachers Section (Dropdown & Filter) */

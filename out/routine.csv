@@ -1,4 +1,5 @@
 day,start_period,start_time,end_time,periods,batch,section,group,course_code,course_title,kind,room,teachers
+Sunday,P1,08:00,10:30,3,1-2,B,B1,EEE1208,Basic Electrical Engineering Laboratory,sessional,EEE Lab,Mr. Jeesun Patra Papon + Mr. Mushfiqur Rahman Masuk
 Sunday,P4,10:40,11:30,1,1-2,A,,CHEM1207,Chemistry,theory,CSE Room 102,Dr. Mohammad Hasan Morshed
 Sunday,P4,10:40,11:30,1,1-2,B,,MATH1207,Coordinate Geometry and Differential Equations,theory,CSE Room 101,Dr. A. R. M. Jalal Uddin Jamali
 Sunday,P5,11:30,12:20,1,1-2,A,,MATH1207,Coordinate Geometry and Differential Equations,theory,CSE Room 102,Dr. A. R. M. Jalal Uddin Jamali
@@ -6,7 +7,6 @@ Sunday,P5,11:30,12:20,1,1-2,B,,CHEM1207,Chemistry,theory,CSE Room 101,Dr. Mohamm
 Sunday,P6,12:20,13:10,1,1-2,A,,CSE1203,Digital Logic Design,theory,CSE Room 102,Dr. Sk. Imran Hossain
 Sunday,P6,12:20,13:10,1,1-2,B,,CSE1205,Object Oriented Programming,theory,CSE Room 101,Ms. Dola Das
 Sunday,P7,14:30,17:00,3,1-2,A,A1/A2,CHEM1208,Chemistry Laboratory,sessional,Chemistry Lab,Dr. Md. Abdul Motin + Md. Rubel Al-Mamun
-Sunday,P7,14:30,17:00,3,1-2,B,B1,EEE1208,Basic Electrical Engineering Laboratory,sessional,EEE Lab,Mr. Jeesun Patra Papon + Mr. Mushfiqur Rahman Masuk
 Sunday,P7,14:30,17:00,3,1-2,B,B2,CSE1204,Digital Logic Design Laboratory,sessional,CSE Lab 107,Dr. Sk. Imran Hossain + Mr. Md. Badiuzzaman Shuvo
 Monday,P1,08:00,10:30,3,1-2,A,A1,CSE1204,Digital Logic Design Laboratory,sessional,CSE Lab 107,Dr. Sk. Imran Hossain + Mr. Md. Badiuzzaman Shuvo
 Monday,P3,09:40,10:30,1,1-2,B,,CHEM1207,Chemistry,theory,CSE Room 101,Dr. A. B. M. Mamun Jamal
@@ -26,7 +26,7 @@ Tuesday,P5,11:30,12:20,1,1-2,A,,EEE1207,Basic Electrical Engineering,theory,CSE 
 Tuesday,P5,11:30,12:20,1,1-2,B,,CSE1203,Digital Logic Design,theory,CSE Room 101,Mr. Md. Badiuzzaman Shuvo
 Tuesday,P7,14:30,17:00,3,1-2,A,A2,CSE1206,Object Oriented Programming Laboratory,sessional,CSE Lab 104,Ms. Dola Das + Mr. Kazi Saeed Alam
 Tuesday,P7,14:30,17:00,3,1-2,B,B1/B2,CHEM1208,Chemistry Laboratory,sessional,Chemistry Lab,Dr. Md. Abdul Motin + Md. Rubel Al-Mamun
-Wednesday,P1,08:00,10:30,3,1-2,A,A2,CSE1204,Digital Logic Design Laboratory,sessional,CSE Lab 104,Dr. Sk. Imran Hossain + Mr. Md. Badiuzzaman Shuvo
+Wednesday,P1,08:00,10:30,3,1-2,A,A2,CSE1204,Digital Logic Design Laboratory,sessional,CSE Lab 107,Dr. Sk. Imran Hossain + Mr. Md. Badiuzzaman Shuvo
 Wednesday,P1,08:00,08:50,1,1-2,B,,CSE1205,Object Oriented Programming,theory,CSE Room 101,Mr. Kazi Saeed Alam
 Wednesday,P2,08:50,09:40,1,1-2,B,,MATH1207,Coordinate Geometry and Differential Equations,theory,CSE Room 101,Dr. A. R. M. Jalal Uddin Jamali/Mr. Md. Dulal Hossain
 Wednesday,P3,09:40,10:30,1,1-2,B,,EEE1207,Basic Electrical Engineering,theory,CSE Room 101,Mr. Akash Biswas

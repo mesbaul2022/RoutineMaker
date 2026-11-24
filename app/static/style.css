@@ -1542,6 +1542,20 @@ table.data-table tr:hover td {
   color: #DC2626;
 }
 
+.avail-rule-chip.chip-blocked {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #B91C1C;
+}
+
+.avail-rule-chip.chip-blocked button {
+  color: #B91C1C;
+}
+
+.avail-rule-chip.chip-blocked button:hover {
+  color: #7F1D1D;
+}
+
 /* =============================================================================
    Time Slots & Class Schedule Customizer Styles (Standard Decorated Academic UI)
    ============================================================================= */

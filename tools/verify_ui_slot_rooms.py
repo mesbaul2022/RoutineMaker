@@ -59,6 +59,10 @@ def run():
         page.screenshot(path=str(shot2))
         print(f"Captured: {shot2}")
 
+        shot_dialog = screenshots_dir / "slot_room_modal_dialog.png"
+        page.locator("#modal-course-availability .modal-dialog").screenshot(path=str(shot_dialog))
+        print(f"Captured: {shot_dialog}")
+
         # 5. Click Save Course Slots
         print("Clicking Save Course Slots (OK)...")
         page.click("#modal-course-availability button[onclick='saveCourseAvailability()']")
@@ -93,6 +97,14 @@ def run():
 
         browser.close()
         print("Visual verification complete!")
+
+        # Copy to artifact screenshots directory
+        import shutil
+        artifact_dir = Path(r"C:\Users\Mesbaul Islam\.gemini\antigravity\brain\7fa64768-97c3-4235-84ce-7c2bb25d7a9f\screenshots")
+        artifact_dir.mkdir(parents=True, exist_ok=True)
+        for img in screenshots_dir.glob("slot_room_*.png"):
+            shutil.copy2(img, artifact_dir / img.name)
+        print("Copied screenshots to artifact directory.")
 
 if __name__ == "__main__":
     run()

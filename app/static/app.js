@@ -1472,8 +1472,9 @@ function renderCourseAvailabilityRulesList() {
 
   if (courseAvailState.rules.length === 0) {
     container.innerHTML = `
-      <div style="font-size: 0.82rem; color: #16A34A; background: #F0FDF4; padding: 0.45rem 0.75rem; border-radius: 6px; border: 1px solid #BBF7D0; width: 100%;">
-        ✓ No slot restrictions configured. Course can be placed in any feasible slot.
+      <div style="font-size: 0.82rem; color: #16A34A; background: #F0FDF4; padding: 0.55rem 0.85rem; border-radius: 6px; border: 1px solid #BBF7D0; width: 100%; display: flex; align-items: center; gap: 0.4rem;">
+        <span style="font-size: 0.95rem;">✓</span>
+        <span>No custom slot restrictions configured. Course can be placed in any feasible slot.</span>
       </div>
     `;
     return;
@@ -1481,16 +1482,38 @@ function renderCourseAvailabilityRulesList() {
 
   container.innerHTML = courseAvailState.rules
     .map((r, idx) => {
-      const desc = r.description || formatCourseRuleDesc(r);
       const isAllowed = (r.rule_type || "allowed").toLowerCase() === "allowed";
-      const chipClass = isAllowed ? "avail-rule-chip chip-allowed" : "avail-rule-chip";
+      const chipClass = isAllowed ? "avail-rule-chip chip-allowed" : "avail-rule-chip chip-blocked";
       const icon = isAllowed ? "📌" : "🚫";
-      const roomTag = r.room_id ? `<span style="background: #DBEAFE; color: #1E40AF; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 700; font-size: 0.75rem; border: 1px solid #BFDBFE;">🏢 ${escapeHtml(r.room_name || r.room_id)}</span>` : "";
+      const typeLabel = isAllowed ? "Allowed" : "Blocked";
+      const secLabel = r.section && r.section !== "ALL" ? `Sec ${r.section}` : "All Sections";
+
+      let periodLabel = r.periods;
+      if (r.periods === "P1,P2,P3") periodLabel = "08:00 – 10:30 (P1–P3)";
+      else if (r.periods === "P4,P5,P6") periodLabel = "10:40 – 01:10 (P4–P6)";
+      else if (r.periods === "P7,P8,P9") periodLabel = "02:30 – 05:00 (P7–P9)";
+      else if (r.periods === "all") periodLabel = "Full Day (P1–P9)";
+
+      const roomObj = r.room_id ? (state.rooms || []).find((x) => x.id === r.room_id) : null;
+      const roomName = roomObj ? roomObj.name : (r.room_name || r.room_id || null);
+
       return `
-      <div class="${chipClass}" style="display: inline-flex; align-items: center; gap: 0.35rem;">
-        <span>${icon} ${escapeHtml(desc)}</span>
-        ${roomTag}
-        <button type="button" onclick="handleDeleteCourseAvailabilityRule(${idx})" title="Remove this rule">&times;</button>
+      <div class="${chipClass}" style="display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.35rem 0.65rem; border-radius: 6px; font-size: 0.8rem; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
+        <span style="font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;">
+          ${icon} [${typeLabel}]
+        </span>
+        <span style="background: rgba(0,0,0,0.06); padding: 0.1rem 0.45rem; border-radius: 4px; font-weight: 700; font-size: 0.74rem;">
+          ${escapeHtml(secLabel)}
+        </span>
+        <span style="font-weight: 600;">
+          ${escapeHtml(r.day)}: ${escapeHtml(periodLabel)}
+        </span>
+        ${roomName ? `
+          <span style="background: #DBEAFE; color: #1E40AF; padding: 0.12rem 0.45rem; border-radius: 4px; font-weight: 700; font-size: 0.75rem; border: 1px solid #BFDBFE; display: inline-flex; align-items: center; gap: 0.25rem;">
+            🏢 ${escapeHtml(roomName)}
+          </span>` : ""
+        }
+        <button type="button" onclick="handleDeleteCourseAvailabilityRule(${idx})" title="Remove this rule" style="margin-left: 0.25rem; font-size: 1.15rem; line-height: 1; opacity: 0.75; cursor: pointer; border: none; background: transparent;">&times;</button>
       </div>
     `;
     })

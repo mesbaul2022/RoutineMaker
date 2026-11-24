@@ -222,6 +222,7 @@ def verify(problem: Problem, solution: Solution) -> list[str]:
             for tid in ev.teacher_ids:
                 teacher_day_slots[tid][d][p] = (clean_code, ev.eid, ev.label)
 
+    ev_by_eid = {ev.eid: ev for ev in problem.events}
     for tid, days in teacher_day_slots.items():
         tname = problem.teachers[tid].name if tid in problem.teachers else tid
         for d, pmap in days.items():
@@ -233,6 +234,17 @@ def verify(problem: Problem, solution: Solution) -> list[str]:
                     if eid1 == eid2:
                         continue  # same multi-period meeting
                     if c1 != c2:
+                        ev1 = ev_by_eid.get(eid1)
+                        ev2 = ev_by_eid.get(eid2)
+                        fixed1 = bool(ev1 and ev1.allowed_slots)
+                        fixed2 = bool(ev2 and ev2.allowed_slots)
+                        is_lab1 = ev1.is_lab if ev1 else False
+                        is_lab2 = ev2.is_lab if ev2 else False
+                        # Across Snack Break (2, 3): allow transition between lab and theory, or user-pinned slots
+                        if (p1, p2) == (2, 3) and (is_lab1 != is_lab2 or (fixed1 and fixed2)):
+                            continue
+                        if fixed1 and fixed2:
+                            continue
                         faults.append(
                             f"H10 {tname} has consecutive classes for different courses on {day_name}: "
                             f"{label1} at {grid.periods[p1].name} and {label2} at {grid.periods[p2].name}"

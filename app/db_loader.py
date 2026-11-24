@@ -781,7 +781,9 @@ def _max_teacher_capacity_under_h4_h10(
     if not lab_blocks_feasible:
         return 0, False
 
-    adjacent_pairs = [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (6, 7), (7, 8)]
+    adjacent_pairs = [(0, 1), (1, 2), (3, 4), (4, 5), (6, 7), (7, 8)]
+    if problem.options.get("teacher_consecutive_include_snack", False):
+        adjacent_pairs.append((2, 3))
     if problem.options.get("teacher_consecutive_include_lunch", False):
         adjacent_pairs.append((5, 6))
 

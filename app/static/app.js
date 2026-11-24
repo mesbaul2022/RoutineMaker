@@ -3188,9 +3188,9 @@ async function renderFreezeBatchSelector() {
   let html = "";
   for (const b of activeBatches) {
     const hasScheduled = !!b.has_routine;
-    // By default, if the batch already has a saved schedule, freeze it (checked); if not, leave unchecked
-    const isChecked = hasScheduled;
-    const badgeHtml = hasScheduled
+    // If only one active batch is running, do NOT lock it by default (default to Schedule Fresh)
+    const isChecked = activeBatches.length > 1 ? hasScheduled : false;
+    const badgeHtml = isChecked
       ? `<span class="freeze-badge-locked">🔒 Keep Unchanged</span>`
       : `<span class="freeze-badge-fresh">⚡ Schedule Fresh</span>`;
 
@@ -3216,6 +3216,16 @@ function onFreezeCheckboxToggle(batchId, isChecked) {
   if (item) {
     item.classList.toggle("frozen", isChecked);
     item.classList.toggle("unfrozen", !isChecked);
+    const badge = item.querySelector(".freeze-badge-locked, .freeze-badge-fresh");
+    if (badge) {
+      if (isChecked) {
+        badge.className = "freeze-badge-locked";
+        badge.innerHTML = "🔒 Keep Unchanged";
+      } else {
+        badge.className = "freeze-badge-fresh";
+        badge.innerHTML = "⚡ Schedule Fresh";
+      }
+    }
   }
 }
 

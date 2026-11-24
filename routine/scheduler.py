@@ -419,11 +419,13 @@ class RoutineScheduler:
         th_lits_by_t_slot: dict[str, dict[int, list]] = defaultdict(lambda: defaultdict(list))
         lab_lits_by_t_start: dict[str, dict[int, list]] = defaultdict(lambda: defaultdict(list))
 
+        var_to_ev: dict[Any, Event] = {}
         for tid, evs in teacher_events.items():
             for ev in evs:
                 clean_c = ev.course.code.replace(" ", "").upper()
                 sec = ev.section
                 for (rid, s), var in self.x[ev.eid].items():
+                    var_to_ev[var] = ev
                     if not ev.is_lab and ev.length == 1:
                         th_lits_by_t_slot[tid][s].append(var)
                     elif ev.is_lab and ev.length == self.grid.lab_periods:
@@ -450,14 +452,27 @@ class RoutineScheduler:
                             l1 = self.teacher_course_lits[(tid, c)][t1]
                             if not l1:
                                 continue
-                            other_l2 = [
-                                lit
-                                for c2 in courses
-                                if c2 != c
-                                for lit in self.teacher_course_lits[(tid, c2)][t2]
-                            ]
-                            if other_l2:
-                                self.model.AddAtMostOne(l1 + other_l2)
+                            for c2 in courses:
+                                if c2 == c:
+                                    continue
+                                for v1 in l1:
+                                    ev1 = var_to_ev.get(v1)
+                                    is_lab1 = ev1.is_lab if ev1 else False
+                                    fixed1 = bool(ev1 and ev1.allowed_slots)
+                                    for v2 in self.teacher_course_lits[(tid, c2)][t2]:
+                                        ev2 = var_to_ev.get(v2)
+                                        is_lab2 = ev2.is_lab if ev2 else False
+                                        fixed2 = bool(ev2 and ev2.allowed_slots)
+                                        # Across Break 1 (P3 -> P4, pair (2, 3)):
+                                        # Standard university schedules allow a 3-period lab session in Block 1
+                                        # to be followed by a theory class in Block 2 (or vice versa),
+                                        # and explicit user slot rules (Constraint 3) always override H10.
+                                        if (p1, p2) == (2, 3):
+                                            if (is_lab1 != is_lab2) or (fixed1 and fixed2):
+                                                continue
+                                        elif fixed1 and fixed2:
+                                            continue
+                                        self.model.AddAtMostOne([v1, v2])
 
             # Sound implied block-capacity cut (H2 + H4 + H10):
             # Inside a 3-period academic block, if no single course has >= 3 distinct

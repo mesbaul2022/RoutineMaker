@@ -1407,6 +1407,10 @@ def update_batch_status(batch_id: str, payload: BatchStatusUpdate, db: Session =
     if new_status not in ("on", "off"):
         raise HTTPException(status_code=400, detail="Status must be 'on' or 'off'")
     batch.status = new_status
+    if new_status == "off":
+        # When a term is turned OFF, clear its scheduled assignments from the routine
+        # so previously assigned classrooms, labs, and teachers are immediately freed.
+        db.query(ScheduledAssignmentModel).filter_by(batch_id=batch_id).delete()
     db.commit()
     db.refresh(batch)
     return BatchOut(
@@ -1858,6 +1862,10 @@ def generate_routine(payload: Optional[GenerateRequest] = None, db: Session = De
         return result
 
     # 5. Save solution assignments into scheduled_assignments table
+    if mode == "full":
+        # Full generation rebuilds the routine across all active batches; clear any old inactive batch data
+        db.query(ScheduledAssignmentModel).delete()
+        db.commit()
     save_solution_assignments(db, solution.assignments, batch_ids_to_replace=active_batch_ids)
 
     # 6. Independent hard constraint verification using tools/verify.py

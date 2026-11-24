@@ -1,45 +1,176 @@
 day,start_period,start_time,end_time,periods,batch,section,group,course_code,course_title,kind,room,teachers
+Sunday,P1,08:00,10:30,3,1-2,A,A2,CSE1204,Digital Logic Design Laboratory,sessional,CSE Lab 107,Ms. Dola Das + Mr. Md. Sakhawat Hossain
 Sunday,P1,08:00,10:30,3,1-2,B,B1,EEE1208,Basic Electrical Engineering Laboratory,sessional,EEE Lab,Mr. Jeesun Patra Papon + Mr. Mushfiqur Rahman Masuk
 Sunday,P4,10:40,11:30,1,1-2,A,,CHEM1207,Chemistry,theory,CSE Room 102,Dr. Mohammad Hasan Morshed
 Sunday,P4,10:40,11:30,1,1-2,B,,MATH1207,Coordinate Geometry and Differential Equations,theory,CSE Room 101,Dr. A. R. M. Jalal Uddin Jamali
 Sunday,P5,11:30,12:20,1,1-2,A,,MATH1207,Coordinate Geometry and Differential Equations,theory,CSE Room 102,Dr. A. R. M. Jalal Uddin Jamali
 Sunday,P5,11:30,12:20,1,1-2,B,,CHEM1207,Chemistry,theory,CSE Room 101,Dr. Mohammad Hasan Morshed
-Sunday,P6,12:20,13:10,1,1-2,A,,CSE1203,Digital Logic Design,theory,CSE Room 102,Dr. Sk. Imran Hossain
-Sunday,P6,12:20,13:10,1,1-2,B,,CSE1205,Object Oriented Programming,theory,CSE Room 101,Ms. Dola Das
+Sunday,P6,12:20,13:10,1,1-2,A,,CSE1203,Digital Logic Design,theory,CSE Room 102,Ms. Dola Das
 Sunday,P7,14:30,17:00,3,1-2,A,A1/A2,CHEM1208,Chemistry Laboratory,sessional,Chemistry Lab,Dr. Md. Abdul Motin + Md. Rubel Al-Mamun
-Sunday,P7,14:30,17:00,3,1-2,B,B2,CSE1204,Digital Logic Design Laboratory,sessional,CSE Lab 107,Dr. Sk. Imran Hossain + Mr. Md. Badiuzzaman Shuvo
-Monday,P1,08:00,10:30,3,1-2,A,A1,CSE1204,Digital Logic Design Laboratory,sessional,CSE Lab 107,Dr. Sk. Imran Hossain + Mr. Md. Badiuzzaman Shuvo
+Sunday,P7,14:30,17:00,3,1-2,B,B2,CSE1204,Digital Logic Design Laboratory,sessional,CSE Lab 107,Ms. Dola Das + Mr. Md. Sakhawat Hossain
+Monday,P1,08:00,10:30,3,1-2,A,A1,CSE1204,Digital Logic Design Laboratory,sessional,CSE Lab 107,Ms. Dola Das + Mr. Md. Sakhawat Hossain
 Monday,P3,09:40,10:30,1,1-2,B,,CHEM1207,Chemistry,theory,CSE Room 101,Dr. A. B. M. Mamun Jamal
-Monday,P4,10:40,11:30,1,1-2,B,,CSE1203,Digital Logic Design,theory,CSE Room 101,Dr. Sk. Imran Hossain
-Monday,P5,11:30,12:20,1,1-2,A,,CSE1205,Object Oriented Programming,theory,CSE Room 102,Ms. Dola Das
+Monday,P4,10:40,11:30,1,1-2,B,,CSE1203,Digital Logic Design,theory,CSE Room 102,Ms. Dola Das
+Monday,P5,11:30,12:20,1,1-2,A,,CSE1205,Object Oriented Programming,theory,CSE Room 102,Mr. Md. Repon Islam
 Monday,P6,12:20,13:10,1,1-2,A,,CHEM1207,Chemistry,theory,CSE Room 102,Dr. A. B. M. Mamun Jamal
+Monday,P6,12:20,13:10,1,1-2,B,,CSE1205,Object Oriented Programming,theory,CSE Room 101,Mr. Md. Repon Islam
 Monday,P7,14:30,17:00,3,1-2,A,A2,EEE1208,Basic Electrical Engineering Laboratory,sessional,EEE Lab,Mr. Jeesun Patra Papon + Mr. Mushfiqur Rahman Masuk
-Monday,P7,14:30,17:00,3,1-2,B,B1,CSE1204,Digital Logic Design Laboratory,sessional,CSE Lab 107,Dr. Sk. Imran Hossain + Mr. Md. Badiuzzaman Shuvo
-Monday,P7,14:30,17:00,3,1-2,B,B2,CSE1206,Object Oriented Programming Laboratory,sessional,CSE Lab 104,Ms. Dola Das + Mr. Kazi Saeed Alam
+Monday,P7,14:30,17:00,3,1-2,B,B1,CSE1204,Digital Logic Design Laboratory,sessional,CSE Lab 107,Ms. Dola Das + Mr. Md. Sakhawat Hossain
+Monday,P7,14:30,17:00,3,1-2,B,B2,CSE1206,Object Oriented Programming Laboratory,sessional,CSE Lab 104,Mr. Md. Repon Islam + Mr. Safin Ahmmed
 Tuesday,P2,08:50,09:40,1,1-2,A,,MATH1207,Coordinate Geometry and Differential Equations,theory,CSE Room 102,Mr. Md. Dulal Hossain
 Tuesday,P2,08:50,09:40,1,1-2,B,,EEE1207,Basic Electrical Engineering,theory,CSE Room 101,Dr. Md Rejvi Kaysir
 Tuesday,P3,09:40,10:30,1,1-2,A,,CHEM1207,Chemistry,theory,CSE Room 102,Dr. Mohammad Hasan Morshed/Dr. A. B. M. Mamun Jamal
 Tuesday,P3,09:40,10:30,1,1-2,B,,MATH1207,Coordinate Geometry and Differential Equations,theory,CSE Room 101,Mr. Md. Dulal Hossain
-Tuesday,P4,10:40,11:30,1,1-2,A,,CSE1203,Digital Logic Design,theory,CSE Room 102,Mr. Md. Badiuzzaman Shuvo
+Tuesday,P4,10:40,11:30,1,1-2,A,,CSE1203,Digital Logic Design,theory,CSE Room 102,Mr. Md. Sakhawat Hossain
 Tuesday,P4,10:40,11:30,1,1-2,B,,CHEM1207,Chemistry,theory,CSE Room 101,Dr. Mohammad Hasan Morshed/Dr. A. B. M. Mamun Jamal
 Tuesday,P5,11:30,12:20,1,1-2,A,,EEE1207,Basic Electrical Engineering,theory,CSE Room 102,Dr. Md Rejvi Kaysir
-Tuesday,P5,11:30,12:20,1,1-2,B,,CSE1203,Digital Logic Design,theory,CSE Room 101,Mr. Md. Badiuzzaman Shuvo
-Tuesday,P7,14:30,17:00,3,1-2,A,A2,CSE1206,Object Oriented Programming Laboratory,sessional,CSE Lab 104,Ms. Dola Das + Mr. Kazi Saeed Alam
+Tuesday,P5,11:30,12:20,1,1-2,B,,CSE1203,Digital Logic Design,theory,CSE Room 101,Mr. Md. Sakhawat Hossain
+Tuesday,P6,12:20,13:10,1,1-2,B,,CSE1205,Object Oriented Programming,theory,CSE Room 102,Mr. Safin Ahmmed
+Tuesday,P7,14:30,17:00,3,1-2,A,A2,CSE1206,Object Oriented Programming Laboratory,sessional,CSE Lab 104,Mr. Md. Repon Islam + Mr. Safin Ahmmed
 Tuesday,P7,14:30,17:00,3,1-2,B,B1/B2,CHEM1208,Chemistry Laboratory,sessional,Chemistry Lab,Dr. Md. Abdul Motin + Md. Rubel Al-Mamun
-Wednesday,P1,08:00,10:30,3,1-2,A,A2,CSE1204,Digital Logic Design Laboratory,sessional,CSE Lab 107,Dr. Sk. Imran Hossain + Mr. Md. Badiuzzaman Shuvo
-Wednesday,P1,08:00,08:50,1,1-2,B,,CSE1205,Object Oriented Programming,theory,CSE Room 101,Mr. Kazi Saeed Alam
 Wednesday,P2,08:50,09:40,1,1-2,B,,MATH1207,Coordinate Geometry and Differential Equations,theory,CSE Room 101,Dr. A. R. M. Jalal Uddin Jamali/Mr. Md. Dulal Hossain
 Wednesday,P3,09:40,10:30,1,1-2,B,,EEE1207,Basic Electrical Engineering,theory,CSE Room 101,Mr. Akash Biswas
-Wednesday,P4,10:40,11:30,1,1-2,A,,CSE1205,Object Oriented Programming,theory,CSE Room 102,Mr. Kazi Saeed Alam
+Wednesday,P4,10:40,11:30,1,1-2,A,,CSE1205,Object Oriented Programming,theory,CSE Room 102,Mr. Safin Ahmmed
 Wednesday,P4,10:40,13:10,3,1-2,B,B2,EEE1208,Basic Electrical Engineering Laboratory,sessional,EEE Lab,Mr. Jeesun Patra Papon + Mr. Mushfiqur Rahman Masuk
 Wednesday,P5,11:30,12:20,1,1-2,A,,MATH1207,Coordinate Geometry and Differential Equations,theory,CSE Room 102,Dr. A. R. M. Jalal Uddin Jamali/Mr. Md. Dulal Hossain
 Wednesday,P6,12:20,13:10,1,1-2,A,,EEE1207,Basic Electrical Engineering,theory,CSE Room 102,Mr. Akash Biswas
-Wednesday,P7,14:30,17:00,3,1-2,A,A1,CSE1206,Object Oriented Programming Laboratory,sessional,CSE Lab 104,Ms. Dola Das + Mr. Kazi Saeed Alam
+Wednesday,P7,14:30,17:00,3,1-2,A,A1,CSE1206,Object Oriented Programming Laboratory,sessional,CSE Lab 104,Mr. Md. Repon Islam + Mr. Safin Ahmmed
 Thursday,P3,09:40,10:30,1,1-2,A,,EEE1207,Basic Electrical Engineering,theory,CSE Room 102,Dr. Md Rejvi Kaysir/Mr. Akash Biswas
-Thursday,P4,10:40,11:30,1,1-2,A,,CSE1205,Object Oriented Programming,theory,CSE Room 102,Ms. Dola Das/Mr. Kazi Saeed Alam
-Thursday,P4,10:40,11:30,1,1-2,B,,CSE1203,Digital Logic Design,theory,CSE Room 101,Dr. Sk. Imran Hossain/Mr. Md. Badiuzzaman Shuvo
-Thursday,P5,11:30,12:20,1,1-2,A,,CSE1203,Digital Logic Design,theory,CSE Room 102,Dr. Sk. Imran Hossain/Mr. Md. Badiuzzaman Shuvo
-Thursday,P5,11:30,12:20,1,1-2,B,,CSE1205,Object Oriented Programming,theory,CSE Room 101,Ms. Dola Das/Mr. Kazi Saeed Alam
+Thursday,P4,10:40,11:30,1,1-2,A,,CSE1205,Object Oriented Programming,theory,CSE Room 102,Mr. Md. Repon Islam/Mr. Safin Ahmmed
+Thursday,P4,10:40,11:30,1,1-2,B,,CSE1203,Digital Logic Design,theory,CSE Room 101,Ms. Dola Das/Mr. Md. Sakhawat Hossain
+Thursday,P5,11:30,12:20,1,1-2,A,,CSE1203,Digital Logic Design,theory,CSE Room 102,Ms. Dola Das/Mr. Md. Sakhawat Hossain
+Thursday,P5,11:30,12:20,1,1-2,B,,CSE1205,Object Oriented Programming,theory,CSE Room 101,Mr. Md. Repon Islam/Mr. Safin Ahmmed
 Thursday,P6,12:20,13:10,1,1-2,B,,EEE1207,Basic Electrical Engineering,theory,CSE Room 101,Dr. Md Rejvi Kaysir/Mr. Akash Biswas
 Thursday,P7,14:30,17:00,3,1-2,A,A1,EEE1208,Basic Electrical Engineering Laboratory,sessional,EEE Lab,Mr. Jeesun Patra Papon + Mr. Mushfiqur Rahman Masuk
-Thursday,P7,14:30,17:00,3,1-2,B,B1,CSE1206,Object Oriented Programming Laboratory,sessional,CSE Lab 104,Ms. Dola Das + Mr. Kazi Saeed Alam
+Thursday,P7,14:30,17:00,3,1-2,B,B1,CSE1206,Object Oriented Programming Laboratory,sessional,CSE Lab 104,Mr. Md. Repon Islam + Mr. Safin Ahmmed
+Sunday,P1,08:00,10:30,3,2-2,A,A1,CSE2202,Algorithm Analysis and Design Laboratory,sessional,CSE Lab 201,Ms. Subah Nawar + Mr. Md. Mubtashim Abrar Nihal
+Sunday,P1,08:00,10:30,3,2-2,A,A2,CSE2208,Numerical Methods Laboratory,sessional,CSE Lab 305,Dr. Md. Milon Islam + Mrs. Lamisa Bintee Mizan Deya
+Sunday,P3,09:40,10:30,1,2-2,B,,ECE2213,Digital Electronics,theory,CSE Room 402,Dr. Md. Faisal Hossain
+Sunday,P4,10:40,11:30,1,2-2,A,,ECE2213,Digital Electronics,theory,CSE Room 105,Dr. Md. Faisal Hossain
+Sunday,P4,10:40,11:30,1,2-2,B,,CSE2201,Algorithm Analysis and Design,theory,CSE Room 402,Mr. Md. Sakhawat Hossain
+Sunday,P5,11:30,12:20,1,2-2,A,,CSE2201,Algorithm Analysis and Design,theory,CSE Room 105,Mr. Md. Sakhawat Hossain
+Sunday,P5,11:30,12:20,1,2-2,B,,CSE2209,Theory of Computation,theory,CSE Room 402,Mr. Md. Nazirulhasan Shawon
+Sunday,P6,12:20,13:10,1,2-2,A,,CSE2209,Theory of Computation,theory,CSE Room 105,Mr. Md. Nazirulhasan Shawon
+Sunday,P7,14:30,17:00,3,2-2,A,A1,CSE2200,Advanced Programming Laboratory,sessional,CSE Lab 305,Mr. Safin Ahmmed + Mr. Ehsanul Karim
+Monday,P1,08:00,10:30,3,2-2,B,B1,CSE2208,Numerical Methods Laboratory,sessional,CSE Lab 201,Dr. Md. Milon Islam + Mrs. Lamisa Bintee Mizan Deya
+Monday,P1,08:00,10:30,3,2-2,B,B2,CSE2202,Algorithm Analysis and Design Laboratory,sessional,CSE Lab 305,Ms. Subah Nawar + Mr. Md. Mubtashim Abrar Nihal
+Monday,P3,09:40,10:30,1,2-2,A,,HUM2207,Economics and Accounting,theory,CSE Room 105,Dr. S.M Rabiul Alam
+Monday,P4,10:40,11:30,1,2-2,A,,CSE2201,Algorithm Analysis and Design,theory,CSE Room 105,Mr. Md. Mubtashim Abrar Nihal
+Monday,P4,10:40,11:30,1,2-2,B,,HUM2207,Economics and Accounting,theory,CSE Room 402,Dr. S.M Rabiul Alam
+Monday,P5,11:30,12:20,1,2-2,A,,MATH2207,"Complex Variable, Vector Analysis and Statistics",theory,CSE Room 105,Dr. A. R. M. Jalal Uddin Jamali
+Monday,P5,11:30,12:20,1,2-2,B,,CSE2201,Algorithm Analysis and Design,theory,CSE Room 402,Mr. Md. Mubtashim Abrar Nihal
+Monday,P6,12:20,13:10,1,2-2,B,,MATH2207,"Complex Variable, Vector Analysis and Statistics",theory,CSE Room 402,Dr. A. R. M. Jalal Uddin Jamali
+Tuesday,P1,08:00,10:30,3,2-2,B,B1,CSE2202,Algorithm Analysis and Design Laboratory,sessional,CSE Lab 201,Ms. Subah Nawar + Mr. Md. Mubtashim Abrar Nihal
+Tuesday,P1,08:00,10:30,3,2-2,B,B2,CSE2200,Advanced Programming Laboratory,sessional,CSE Lab 305,Mr. Safin Ahmmed + Mr. Ehsanul Karim
+Tuesday,P3,09:40,10:30,1,2-2,A,,CSE2209,Theory of Computation,theory,CSE Room 105,Ms. Dola Das
+Tuesday,P4,10:40,11:30,1,2-2,A,,ECE2213,Digital Electronics,theory,CSE Room 105,Dr. Md. Faruque Hossain
+Tuesday,P4,10:40,11:30,1,2-2,B,,CSE2209,Theory of Computation,theory,CSE Room 402,Ms. Dola Das
+Tuesday,P5,11:30,12:20,1,2-2,A,,MATH2207,"Complex Variable, Vector Analysis and Statistics",theory,CSE Room 105,Dr. Md. Hasanuzzaman
+Tuesday,P5,11:30,12:20,1,2-2,B,,ECE2213,Digital Electronics,theory,CSE Room 402,Dr. Md. Faruque Hossain
+Tuesday,P6,12:20,13:10,1,2-2,B,,MATH2207,"Complex Variable, Vector Analysis and Statistics",theory,CSE Room 402,Dr. Md. Hasanuzzaman
+Tuesday,P7,14:30,17:00,3,2-2,B,B1/B2,ECE2214,Digital Electronics Laboratory,sessional,ECE Lab,Mr. Mushfiqur Rahman Masuk + Mr. Md. Minhajul Islam Arnab
+Wednesday,P1,08:00,10:30,3,2-2,A,A1,CSE2208,Numerical Methods Laboratory,sessional,CSE Lab 202,Dr. Md. Milon Islam + Mrs. Lamisa Bintee Mizan Deya
+Wednesday,P1,08:00,10:30,3,2-2,A,A2,CSE2200,Advanced Programming Laboratory,sessional,CSE Lab 201,Mr. Safin Ahmmed + Mr. Ehsanul Karim
+Wednesday,P3,09:40,10:30,1,2-2,B,,MATH2207,"Complex Variable, Vector Analysis and Statistics",theory,CSE Room 402,Dr. A. R. M. Jalal Uddin Jamali/Dr. Md. Hasanuzzaman
+Wednesday,P4,10:40,11:30,1,2-2,A,,MATH2207,"Complex Variable, Vector Analysis and Statistics",theory,CSE Room 105,Dr. A. R. M. Jalal Uddin Jamali/Dr. Md. Hasanuzzaman
+Wednesday,P4,10:40,11:30,1,2-2,B,,CSE2209,Theory of Computation,theory,CSE Room 402,Mr. Md. Nazirulhasan Shawon/Ms. Dola Das
+Wednesday,P5,11:30,12:20,1,2-2,A,,CSE2209,Theory of Computation,theory,CSE Room 105,Mr. Md. Nazirulhasan Shawon/Ms. Dola Das
+Wednesday,P5,11:30,12:20,1,2-2,B,,CSE2201,Algorithm Analysis and Design,theory,CSE Room 402,Mr. Md. Sakhawat Hossain/Mr. Md. Mubtashim Abrar Nihal
+Wednesday,P6,12:20,13:10,1,2-2,A,,CSE2201,Algorithm Analysis and Design,theory,CSE Room 105,Mr. Md. Sakhawat Hossain/Mr. Md. Mubtashim Abrar Nihal
+Wednesday,P7,14:30,17:00,3,2-2,A,A1/A2,ECE2214,Digital Electronics Laboratory,sessional,ECE Lab,Mr. Mushfiqur Rahman Masuk + Mr. Md. Minhajul Islam Arnab
+Thursday,P1,08:00,10:30,3,2-2,A,A2,CSE2202,Algorithm Analysis and Design Laboratory,sessional,CSE Lab 202,Ms. Subah Nawar + Mr. Md. Mubtashim Abrar Nihal
+Thursday,P1,08:00,10:30,3,2-2,B,B1,CSE2200,Advanced Programming Laboratory,sessional,CSE Lab 201,Mr. Safin Ahmmed + Mr. Ehsanul Karim
+Thursday,P1,08:00,10:30,3,2-2,B,B2,CSE2208,Numerical Methods Laboratory,sessional,CSE Lab 305,Dr. Md. Milon Islam + Mrs. Lamisa Bintee Mizan Deya
+Thursday,P4,10:40,11:30,1,2-2,A,,HUM2207,Economics and Accounting,theory,CSE Room 105,Ms. Farhana Afroj
+Thursday,P4,10:40,11:30,1,2-2,B,,ECE2213,Digital Electronics,theory,CSE Room 402,Dr. Md. Faisal Hossain/Dr. Md. Faruque Hossain
+Thursday,P5,11:30,12:20,1,2-2,A,,ECE2213,Digital Electronics,theory,CSE Room 105,Dr. Md. Faisal Hossain/Dr. Md. Faruque Hossain
+Thursday,P5,11:30,12:20,1,2-2,B,,HUM2207,Economics and Accounting,theory,CSE Room 402,Ms. Farhana Afroj
+Sunday,P1,08:00,08:50,1,3-1,B,,CSE3119,Information Systems Design,theory,CSE Room 402,Mr. Md. Badiuzzaman Shuvo
+Sunday,P2,08:50,09:40,1,3-1,A,,CSE3119,Information Systems Design,theory,CSE Room 401,Mr. Md. Badiuzzaman Shuvo
+Sunday,P2,08:50,09:40,1,3-1,B,,CSE3105,Embedded Systems and Internet of Things,theory,CSE Room 402,Dr. Muhammad Sheikh Sadi
+Sunday,P3,09:40,10:30,1,3-1,A,,CSE3105,Embedded Systems and Internet of Things,theory,CSE Room 401,Dr. Muhammad Sheikh Sadi
+Sunday,P4,10:40,13:10,3,3-1,A,A1,CSE3102,Operating Systems Laboratory,sessional,CSE Lab 201,Dr. Sk. Md. Masudul Ahsan + Dr. Kazi Md. Rokibul Alam
+Sunday,P4,10:40,13:10,3,3-1,A,A2,CSE3100,Web Programming Laboratory,sessional,CSE Lab 305,Prof. Dr. Al-Mahmud + Mr. Ehsanul Karim
+Sunday,P6,12:20,13:10,1,3-1,B,,CSE3107,Applied Statistics and Queuing Theory,theory,CSE Room 402,Dr. Md. Milon Islam
+Sunday,P7,14:30,17:00,3,3-1,B,B2,CSE3110,Database Systems Laboratory,sessional,CSE Lab 202,Dr. M. M. A. Hashem + Dr. Md. Faruque Hossain
+Monday,P1,08:00,08:50,1,3-1,B,,CSE3101,Operating Systems,theory,CSE Room 402,Dr. Sk. Md. Masudul Ahsan
+Monday,P2,08:50,09:40,1,3-1,A,,CSE3101,Operating Systems,theory,CSE Room 401,Dr. Sk. Md. Masudul Ahsan
+Monday,P2,08:50,09:40,1,3-1,B,,CSE3109,Database Systems,theory,CSE Room 402,Dr. M. M. A. Hashem
+Monday,P3,09:40,10:30,1,3-1,A,,CSE3109,Database Systems,theory,CSE Room 401,Dr. M. M. A. Hashem
+Monday,P3,09:40,10:30,1,3-1,B,,CSE3105,Embedded Systems and Internet of Things,theory,CSE Room 402,Dr. Md. Faisal Hossain
+Monday,P4,10:40,11:30,1,3-1,A,,CSE3105,Embedded Systems and Internet of Things,theory,CSE Room 401,Dr. Md. Faisal Hossain
+Monday,P4,10:40,13:10,3,3-1,B,B1,CSE3110,Database Systems Laboratory,sessional,CSE Lab 201,Dr. M. M. A. Hashem + Dr. Md. Faruque Hossain
+Monday,P4,10:40,13:10,3,3-1,B,B2,CSE3102,Operating Systems Laboratory,sessional,CSE Lab 305,Dr. Sk. Md. Masudul Ahsan + Dr. Kazi Md. Rokibul Alam
+Monday,P7,14:30,17:00,3,3-1,B,B2,CSE3100,Web Programming Laboratory,sessional,CSE Lab 202,Prof. Dr. Al-Mahmud + Mr. Ehsanul Karim
+Tuesday,P1,08:00,08:50,1,3-1,B,,CSE3109,Database Systems,theory,CSE Room 402,Dr. Md. Faruque Hossain
+Tuesday,P2,08:50,09:40,1,3-1,A,,CSE3109,Database Systems,theory,CSE Room 401,Dr. Md. Faruque Hossain
+Tuesday,P2,08:50,09:40,1,3-1,B,,CSE3101,Operating Systems,theory,CSE Room 402,Dr. Kazi Md. Rokibul Alam
+Tuesday,P3,09:40,10:30,1,3-1,A,,CSE3101,Operating Systems,theory,CSE Room 401,Dr. Kazi Md. Rokibul Alam
+Tuesday,P3,09:40,10:30,1,3-1,B,,CSE3105,Embedded Systems and Internet of Things,theory,CSE Room 402,Dr. Muhammad Sheikh Sadi/Dr. Md. Faisal Hossain
+Tuesday,P4,10:40,11:30,1,3-1,A,,CSE3105,Embedded Systems and Internet of Things,theory,CSE Room 401,Dr. Muhammad Sheikh Sadi/Dr. Md. Faisal Hossain
+Tuesday,P4,10:40,13:10,3,3-1,B,B1,CSE3102,Operating Systems Laboratory,sessional,CSE Lab 201,Dr. Sk. Md. Masudul Ahsan + Dr. Kazi Md. Rokibul Alam
+Tuesday,P5,11:30,12:20,1,3-1,A,,CSE3107,Applied Statistics and Queuing Theory,theory,CSE Room 401,Dr. Md. Milon Islam
+Tuesday,P6,12:20,13:10,1,3-1,A,,CSE3119,Information Systems Design,theory,CSE Room 401,Mst. Sadia Islam
+Tuesday,P7,14:30,17:00,3,3-1,B,B1,CSE3100,Web Programming Laboratory,sessional,CSE Lab 202,Prof. Dr. Al-Mahmud + Mr. Ehsanul Karim
+Wednesday,P1,08:00,08:50,1,3-1,B,,CSE3107,Applied Statistics and Queuing Theory,theory,CSE Room 402,Ms. Subah Nawar
+Wednesday,P2,08:50,09:40,1,3-1,A,,CSE3107,Applied Statistics and Queuing Theory,theory,CSE Room 401,Ms. Subah Nawar
+Wednesday,P2,08:50,09:40,1,3-1,B,,CSE3109,Database Systems,theory,CSE Room 402,Dr. M. M. A. Hashem/Dr. Md. Faruque Hossain
+Wednesday,P3,09:40,10:30,1,3-1,A,,CSE3109,Database Systems,theory,CSE Room 401,Dr. M. M. A. Hashem/Dr. Md. Faruque Hossain
+Wednesday,P4,10:40,13:10,3,3-1,A,A1,CSE3110,Database Systems Laboratory,sessional,CSE Lab 305,Dr. M. M. A. Hashem + Dr. Md. Faruque Hossain
+Wednesday,P4,10:40,13:10,3,3-1,A,A2,CSE3102,Operating Systems Laboratory,sessional,CSE Lab 202,Dr. Sk. Md. Masudul Ahsan + Dr. Kazi Md. Rokibul Alam
+Wednesday,P6,12:20,13:10,1,3-1,B,,CSE3119,Information Systems Design,theory,CSE Room 402,Mst. Sadia Islam
+Wednesday,P7,14:30,17:00,3,3-1,A,A1,CSE3100,Web Programming Laboratory,sessional,CSE Lab 305,Prof. Dr. Al-Mahmud + Mr. Ehsanul Karim
+Wednesday,P7,14:30,17:00,3,3-1,B,B1 (0.75cr alt),CSE3106,Embedded Systems and Internet of Things Laboratory,sessional,CSE Lab 107,Dr. Muhammad Sheikh Sadi + Dr. Md. Faisal Hossain
+Wednesday,P7,14:30,17:00,3,3-1,B,B2 (0.75cr alt),CSE3120,Information Systems Design Laboratory,sessional,CSE Lab 202,Mr. Md. Badiuzzaman Shuvo + Mst. Sadia Islam
+Thursday,P1,08:00,10:30,3,3-1,A,A1 (0.75cr alt),CSE3106,Embedded Systems and Internet of Things Laboratory,sessional,CSE Lab 107,Dr. Muhammad Sheikh Sadi + Dr. Md. Faisal Hossain
+Thursday,P1,08:00,10:30,3,3-1,A,A2 (0.75cr alt),CSE3120,Information Systems Design Laboratory,sessional,CSE Lab 104,Mr. Md. Badiuzzaman Shuvo + Mst. Sadia Islam
+Thursday,P3,09:40,10:30,1,3-1,B,,CSE3101,Operating Systems,theory,CSE Room 402,Dr. Sk. Md. Masudul Ahsan/Dr. Kazi Md. Rokibul Alam
+Thursday,P4,10:40,11:30,1,3-1,A,,CSE3101,Operating Systems,theory,CSE Room 401,Dr. Sk. Md. Masudul Ahsan/Dr. Kazi Md. Rokibul Alam
+Thursday,P5,11:30,12:20,1,3-1,A,,CSE3119,Information Systems Design,theory,CSE Room 401,Mr. Md. Badiuzzaman Shuvo/Mst. Sadia Islam
+Thursday,P6,12:20,13:10,1,3-1,A,,CSE3107,Applied Statistics and Queuing Theory,theory,CSE Room 401,Dr. Md. Milon Islam/Ms. Subah Nawar
+Thursday,P6,12:20,13:10,1,3-1,B,,CSE3119,Information Systems Design,theory,CSE Room 402,Mr. Md. Badiuzzaman Shuvo/Mst. Sadia Islam
+Thursday,P7,14:30,17:00,3,3-1,A,A2,CSE3110,Database Systems Laboratory,sessional,CSE Lab 201,Dr. M. M. A. Hashem + Dr. Md. Faruque Hossain
+Thursday,P7,14:30,15:20,1,3-1,B,,CSE3107,Applied Statistics and Queuing Theory,theory,CSE Room 402,Dr. Md. Milon Islam/Ms. Subah Nawar
+Sunday,P1,08:00,08:50,1,3-2,A,,CSE3211,Compiler Design,theory,CSE Room 306,Dr. Md. Abdul Awal
+Sunday,P2,08:50,09:40,1,3-2,A,,CSE3209,Artificial Intelligence,theory,CSE Room 306,Mr. Waliul Islam Sumon
+Sunday,P2,08:50,09:40,1,3-2,B,,CSE3211,Compiler Design,theory,CSE Room 502,Dr. Md. Abdul Awal
+Sunday,P3,09:40,10:30,1,3-2,A,,CSE3219,Software Engineering and Project Management,theory,CSE Room 306,Mr. Nabil Faiyaz Sadi
+Sunday,P3,09:40,10:30,1,3-2,B,,CSE3209,Artificial Intelligence,theory,CSE Room 502,Mr. Waliul Islam Sumon
+Sunday,P4,10:40,11:30,1,3-2,A,,HUM3247,Engineers and Society,theory,CSE Room 306,Dr. M. M. A. Hashem
+Sunday,P4,10:40,11:30,1,3-2,B,,CSE3219,Software Engineering and Project Management,theory,CSE Room 502,Mr. Nabil Faiyaz Sadi
+Sunday,P5,11:30,12:20,1,3-2,A,,CSE3217,Mobile Computing,theory,CSE Room 306,Ms. Most. Kaniz Fatema Isha
+Sunday,P5,11:30,12:20,1,3-2,B,,HUM3247,Engineers and Society,theory,CSE Room 502,Dr. M. M. A. Hashem
+Sunday,P6,12:20,13:10,1,3-2,B,,CSE3217,Mobile Computing,theory,CSE Room 502,Ms. Most. Kaniz Fatema Isha
+Sunday,P7,14:30,17:00,3,3-2,B,B1/B2,CSE3218,Mobile Computing Laboratory,sessional,CSE Lab 103,Mr. Md. Repon Islam + Ms. Most. Kaniz Fatema Isha
+Monday,P3,09:40,10:30,1,3-2,A,,CSE3219,Software Engineering and Project Management,theory,CSE Room 306,Mr. Ehsanul Karim
+Monday,P3,09:40,10:30,1,3-2,B,,CSE3209,Artificial Intelligence,theory,CSE Room 502,Mr. Md Tajmilur Rahman
+Monday,P4,10:40,11:30,1,3-2,A,,CSE3209,Artificial Intelligence,theory,CSE Room 306,Mr. Md Tajmilur Rahman
+Monday,P4,10:40,11:30,1,3-2,B,,CSE3219,Software Engineering and Project Management,theory,CSE Room 502,Mr. Ehsanul Karim
+Monday,P5,11:30,12:20,1,3-2,A,,HUM3247,Engineers and Society,theory,CSE Room 306,Mst. Sadia Islam
+Monday,P5,11:30,12:20,1,3-2,B,,CSE3211,Compiler Design,theory,CSE Room 502,Mr. Md. Badiuzzaman Shuvo
+Monday,P6,12:20,13:10,1,3-2,A,,CSE3211,Compiler Design,theory,CSE Room 306,Mr. Md. Badiuzzaman Shuvo
+Monday,P6,12:20,13:10,1,3-2,B,,HUM3247,Engineers and Society,theory,CSE Room 502,Mst. Sadia Islam
+Monday,P7,14:30,17:00,3,3-2,A,A1/A2,CSE3220,Software Engineering and Project Management Laboratory,sessional,CSE Lab 103,Mr. Md. Nazirulhasan Shawon + Mr. Nabil Faiyaz Sadi
+Monday,P7,14:30,17:00,3,3-2,B,B1,CSE3210,Artificial Intelligence Laboratory,sessional,CSE Lab 305,Mr. Waliul Islam Sumon + Mst. Sadia Islam
+Tuesday,P3,09:40,10:30,1,3-2,A,,CSE3211,Compiler Design,theory,CSE Room 306,Dr. Md. Abdul Awal/Mr. Md. Badiuzzaman Shuvo
+Tuesday,P3,09:40,10:30,1,3-2,B,,HUM3247,Engineers and Society,theory,CSE Room 502,Dr. M. M. A. Hashem/Mst. Sadia Islam
+Tuesday,P4,10:40,11:30,1,3-2,A,,HUM3247,Engineers and Society,theory,CSE Room 306,Dr. M. M. A. Hashem/Mst. Sadia Islam
+Tuesday,P4,10:40,11:30,1,3-2,B,,CSE3211,Compiler Design,theory,CSE Room 502,Dr. Md. Abdul Awal/Mr. Md. Badiuzzaman Shuvo
+Tuesday,P5,11:30,12:20,1,3-2,A,,CSE3219,Software Engineering and Project Management,theory,CSE Room 306,Mr. Nabil Faiyaz Sadi/Mr. Ehsanul Karim
+Tuesday,P5,11:30,12:20,1,3-2,B,,CSE3217,Mobile Computing,theory,CSE Room 502,Mr. Md. Repon Islam
+Tuesday,P6,12:20,13:10,1,3-2,A,,CSE3217,Mobile Computing,theory,CSE Room 306,Mr. Md. Repon Islam
+Tuesday,P6,12:20,13:10,1,3-2,B,,CSE3219,Software Engineering and Project Management,theory,CSE Room 502,Mr. Nabil Faiyaz Sadi/Mr. Ehsanul Karim
+Tuesday,P7,14:30,17:00,3,3-2,A,A1,CSE3210,Artificial Intelligence Laboratory,sessional,CSE Lab 305,Mr. Waliul Islam Sumon + Mst. Sadia Islam
+Wednesday,P1,08:00,10:30,3,3-2,A,A2,CSE3210,Artificial Intelligence Laboratory,sessional,CSE Lab 305,Mr. Waliul Islam Sumon + Mst. Sadia Islam
+Wednesday,P1,08:00,10:30,3,3-2,B,B1/B2,CSE3212,Compiler Design Laboratory,sessional,CSE Lab 103,Dr. Md. Abdul Awal + Ms. Dola Das
+Wednesday,P4,10:40,11:30,1,3-2,B,,CSE3209,Artificial Intelligence,theory,CSE Room 502,Mr. Waliul Islam Sumon/Mr. Md Tajmilur Rahman
+Wednesday,P5,11:30,12:20,1,3-2,A,,CSE3209,Artificial Intelligence,theory,CSE Room 306,Mr. Waliul Islam Sumon/Mr. Md Tajmilur Rahman
+Wednesday,P5,11:30,12:20,1,3-2,B,,CSE3217,Mobile Computing,theory,CSE Room 502,Ms. Most. Kaniz Fatema Isha/Mr. Md. Repon Islam
+Wednesday,P6,12:20,13:10,1,3-2,A,,CSE3217,Mobile Computing,theory,CSE Room 306,Ms. Most. Kaniz Fatema Isha/Mr. Md. Repon Islam
+Wednesday,P7,14:30,17:00,3,3-2,A/B,,CSE 3230,Technical Writing and Seminar,sessional,CSE Room 501,Dr. K. M. Azharul Hasan + Mr. Kazi Saeed Alam
+Thursday,P1,08:00,10:30,3,3-2,A,A1/A2,CSE3218,Mobile Computing Laboratory,sessional,CSE Lab 103,Mr. Md. Repon Islam + Ms. Most. Kaniz Fatema Isha
+Thursday,P1,08:00,10:30,3,3-2,B,,CSE 3200,System Development Project,sessional,,
+Thursday,P4,10:40,13:10,3,3-2,A,,CSE 3200,System Development Project,sessional,,
+Thursday,P4,10:40,13:10,3,3-2,B,B1/B2,CSE3220,Software Engineering and Project Management Laboratory,sessional,CSE Lab 103,Mr. Md. Nazirulhasan Shawon + Mr. Nabil Faiyaz Sadi
+Thursday,P7,14:30,17:00,3,3-2,A,A1/A2,CSE3212,Compiler Design Laboratory,sessional,CSE Lab 103,Dr. Md. Abdul Awal + Ms. Dola Das
+Thursday,P7,14:30,17:00,3,3-2,B,B2,CSE3210,Artificial Intelligence Laboratory,sessional,CSE Lab 305,Mr. Waliul Islam Sumon + Mst. Sadia Islam

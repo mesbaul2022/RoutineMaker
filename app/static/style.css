@@ -3086,6 +3086,106 @@ div.working-days-pills label.day-pill.selected,
   }
 }
 
+/* Specific Room Assignment UI in Course Modal */
+.room-mode-toggle {
+  display: inline-flex;
+  background: #E2E8F0;
+  padding: 2px;
+  border-radius: 6px;
+  gap: 2px;
+}
+
+.room-mode-btn {
+  border: none;
+  background: transparent;
+  color: #475569;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 0.3rem 0.65rem;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.room-mode-btn:hover {
+  color: #1E293B;
+}
+
+.room-mode-btn.active {
+  background: #FFFFFF;
+  color: var(--navy, #1E40AF);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.room-checkbox-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.6rem;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.12s ease-in-out;
+  user-select: none;
+  position: relative;
+}
+
+.room-checkbox-pill:hover {
+  background: #F1F5F9;
+  border-color: #CBD5E1;
+}
+
+.room-checkbox-pill.selected {
+  background: #EFF6FF;
+  border-color: #3B82F6;
+  box-shadow: 0 0 0 1px #3B82F6;
+}
+
+.room-checkbox-pill input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: #2563EB;
+  margin: 0;
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.room-pill-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+  flex: 1;
+}
+
+.room-pill-name {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #0F172A;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.room-pill-sub {
+  font-size: 0.68rem;
+  color: #64748B;
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.room-cap-badge {
+  background: #E2E8F0;
+  color: #334155;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: 600;
+  font-size: 0.65rem;
+}
+
+
 
 
 

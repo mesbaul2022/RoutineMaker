@@ -1070,6 +1070,41 @@
             </select>
             <div id="course-room-hint" class="form-hint" style="margin-top: 5px; font-size: 0.8rem; line-height: 1.4;"></div>
           </div>
+          <div class="form-group" id="group-course-room-selection" style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: var(--radius); padding: 0.85rem; margin-top: -0.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+              <div>
+                <label style="font-weight: 600; font-size: 0.84rem; color: #1E293B; margin: 0; display: block;">Room Assignment Preference</label>
+                <span style="font-size: 0.74rem; color: #64748B;">Choose category default or assign specific room(s)</span>
+              </div>
+              <div class="room-mode-toggle">
+                <button type="button" id="btn-room-mode-default" class="room-mode-btn active" onclick="setCourseRoomMode('default')">🏢 All Category Rooms</button>
+                <button type="button" id="btn-room-mode-custom" class="room-mode-btn" onclick="setCourseRoomMode('custom')">🎯 Specific Room(s)</button>
+              </div>
+            </div>
+
+            <div id="room-mode-default-desc" style="font-size: 0.78rem; color: #475569; line-height: 1.45; background: #FFFFFF; padding: 0.5rem 0.65rem; border-radius: 6px; border: 1px dashed #CBD5E1;">
+              Default: The routine engine uses section homerooms for theory classes and matches software labs dynamically across departmental labs.
+            </div>
+
+            <div id="room-mode-custom-container" style="display: none; margin-top: 0.5rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem; flex-wrap: wrap; gap: 0.35rem;">
+                <span id="course-specific-rooms-heading" style="font-size: 0.78rem; font-weight: 600; color: #334155;">Available Category Rooms:</span>
+                <div style="display: flex; gap: 0.35rem;">
+                  <button type="button" class="btn btn-sm btn-outline" style="font-size: 0.72rem; padding: 0.15rem 0.5rem;" onclick="selectAllCourseRooms(true)">✓ Select All</button>
+                  <button type="button" class="btn btn-sm btn-outline" style="font-size: 0.72rem; padding: 0.15rem 0.5rem;" onclick="selectAllCourseRooms(false)">✕ Clear All</button>
+                  <button type="button" id="btn-toggle-all-rooms" class="btn btn-sm btn-outline" style="font-size: 0.72rem; padding: 0.15rem 0.5rem;" onclick="toggleShowAllDepartmentRooms()">🌐 Show All Rooms</button>
+                </div>
+              </div>
+
+              <div id="course-specific-rooms-grid" class="rooms-checkbox-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 0.45rem; max-height: 180px; overflow-y: auto; padding: 0.5rem; background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 6px;">
+                <!-- Populated dynamically via JS -->
+              </div>
+
+              <div id="course-rooms-selection-summary" style="margin-top: 0.5rem; font-size: 0.78rem; color: #1D4ED8; font-weight: 600; display: flex; align-items: center; gap: 0.35rem;">
+                <!-- Live summary text -->
+              </div>
+            </div>
+          </div>
           <div class="form-group" id="group-periods">
             <label for="course-periods">Periods per Week (Theory) *</label>
             <input type="number" id="course-periods" min="1" max="5" value="3" />

@@ -1706,6 +1706,204 @@ function getRoomKindMeta(kind) {
   );
 }
 
+// -----------------------------------------------------------------------------
+// Specific Room Assignment State & UI for Course Modal
+// -----------------------------------------------------------------------------
+
+let courseRoomState = {
+  mode: "default", // "default" or "custom"
+  showAll: false,
+  selectedRooms: new Set(),
+};
+
+function setCourseRoomMode(mode) {
+  courseRoomState.mode = mode;
+  const btnDefault = document.getElementById("btn-room-mode-default");
+  const btnCustom = document.getElementById("btn-room-mode-custom");
+  const defaultDesc = document.getElementById("room-mode-default-desc");
+  const customContainer = document.getElementById("room-mode-custom-container");
+
+  if (mode === "custom") {
+    btnDefault?.classList.remove("active");
+    btnCustom?.classList.add("active");
+    if (defaultDesc) defaultDesc.style.display = "none";
+    if (customContainer) customContainer.style.display = "block";
+  } else {
+    btnCustom?.classList.remove("active");
+    btnDefault?.classList.add("active");
+    if (customContainer) customContainer.style.display = "none";
+    if (defaultDesc) defaultDesc.style.display = "block";
+  }
+  updateCourseRoomsSummary();
+}
+
+function toggleShowAllDepartmentRooms() {
+  courseRoomState.showAll = !courseRoomState.showAll;
+  const btn = document.getElementById("btn-toggle-all-rooms");
+  if (btn) {
+    btn.innerHTML = courseRoomState.showAll ? "🎯 Category Only" : "🌐 Show All Rooms";
+  }
+  const heading = document.getElementById("course-specific-rooms-heading");
+  if (heading) {
+    heading.textContent = courseRoomState.showAll ? "All Department Rooms & Labs:" : "Available Category Rooms:";
+  }
+  renderCourseRoomSelection(document.getElementById("course-room-kind")?.value || "theory");
+}
+
+function renderCourseRoomSelection(roomKind = "theory", initialSelected = null) {
+  const container = document.getElementById("group-course-room-selection");
+  const grid = document.getElementById("course-specific-rooms-grid");
+  if (!grid) return;
+
+  let rk = (roomKind || "theory").toLowerCase();
+  if (rk === "seminar") rk = "seminar_501";
+  if (rk === "year1_theory") rk = "theory";
+  if (rk === "year1_cse_lab" || rk === "ai_lab" || rk === "network_lab") rk = "cse_lab";
+
+  if (rk === "no_room") {
+    if (container) container.style.display = "none";
+    return;
+  }
+  if (container) container.style.display = "block";
+
+  if (initialSelected !== null) {
+    courseRoomState.selectedRooms = new Set(initialSelected);
+  }
+
+  const allRooms = (state.rooms || []).filter((r) => r.id !== "NO_ROOM");
+  let filteredRooms = [];
+
+  if (courseRoomState.showAll) {
+    filteredRooms = allRooms;
+  } else {
+    if (rk === "theory") {
+      filteredRooms = allRooms.filter((r) => r.kind === "theory");
+    } else if (rk === "seminar_501") {
+      filteredRooms = allRooms.filter((r) => r.id === "CSE-501" || r.kind === "theory");
+    } else if (rk === "cse_lab") {
+      filteredRooms = allRooms.filter((r) =>
+        ["CSE-103", "CSE-104", "CSE-201", "CSE-202", "CSE-305", "CSE-306"].includes(r.id) || r.kind === "cse_lab"
+      );
+    } else if (rk === "hardware_lab_107" || rk === "hardware_lab_108") {
+      filteredRooms = allRooms.filter((r) =>
+        ["CSE-107", "CSE-108"].includes(r.id) || (r.kind && r.kind.includes("hardware"))
+      );
+    } else if (["chem_lab", "hum_lab", "phy_lab", "ece_lab", "eee_lab", "mecha_lab"].includes(rk)) {
+      filteredRooms = allRooms.filter((r) => r.kind === rk || (r.kind && r.kind.includes("lab")));
+    } else {
+      filteredRooms = allRooms.filter((r) => r.kind === rk);
+    }
+    if (filteredRooms.length === 0) {
+      filteredRooms = allRooms;
+    }
+  }
+
+  // Preserve any currently selected rooms in display even if not in the category filter
+  const currentSelectedSet = courseRoomState.selectedRooms;
+  const roomMap = new Map();
+  filteredRooms.forEach((r) => roomMap.set(r.id, r));
+  allRooms.forEach((r) => {
+    if (currentSelectedSet.has(r.id) && !roomMap.has(r.id)) {
+      roomMap.set(r.id, r);
+    }
+  });
+
+  const displayRooms = Array.from(roomMap.values());
+  displayRooms.sort((a, b) => a.id.localeCompare(b.id));
+
+  grid.innerHTML = displayRooms
+    .map((r) => {
+      const isSel = currentSelectedSet.has(r.id);
+      return `
+        <div class="room-checkbox-pill ${isSel ? "selected" : ""}" id="room-pill-${r.id}" onclick="toggleRoomPill(event, '${r.id}')">
+          <input type="checkbox" id="cr-room-${r.id}" value="${r.id}" ${isSel ? "checked" : ""} onclick="event.stopPropagation(); onRoomCheckboxToggle('${r.id}', this.checked)">
+          <div class="room-pill-info">
+            <div class="room-pill-name" title="${escapeHtml(r.name)}">${escapeHtml(r.name)}</div>
+            <div class="room-pill-sub">
+              <span class="room-cap-badge">Cap: ${r.capacity}</span>
+              <span>${escapeHtml(r.id)}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+
+  updateCourseRoomsSummary();
+}
+
+function toggleRoomPill(event, roomId) {
+  const cb = document.getElementById(`cr-room-${roomId}`);
+  if (!cb) return;
+  cb.checked = !cb.checked;
+  onRoomCheckboxToggle(roomId, cb.checked);
+}
+
+function onRoomCheckboxToggle(roomId, isChecked) {
+  if (isChecked) {
+    courseRoomState.selectedRooms.add(roomId);
+  } else {
+    courseRoomState.selectedRooms.delete(roomId);
+  }
+  const pill = document.getElementById(`room-pill-${roomId}`);
+  if (pill) {
+    if (isChecked) pill.classList.add("selected");
+    else pill.classList.remove("selected");
+  }
+  updateCourseRoomsSummary();
+}
+
+function selectAllCourseRooms(checkAll) {
+  const cbs = document.querySelectorAll("#course-specific-rooms-grid input[type='checkbox']");
+  cbs.forEach((cb) => {
+    cb.checked = checkAll;
+    const rid = cb.value;
+    if (checkAll) courseRoomState.selectedRooms.add(rid);
+    else courseRoomState.selectedRooms.delete(rid);
+    const pill = document.getElementById(`room-pill-${rid}`);
+    if (pill) {
+      if (checkAll) pill.classList.add("selected");
+      else pill.classList.remove("selected");
+    }
+  });
+  updateCourseRoomsSummary();
+}
+
+function updateCourseRoomsSummary() {
+  const summaryEl = document.getElementById("course-rooms-selection-summary");
+  if (!summaryEl) return;
+
+  if (courseRoomState.mode !== "custom") {
+    summaryEl.innerHTML = "";
+    return;
+  }
+
+  const selectedIds = Array.from(courseRoomState.selectedRooms);
+  if (selectedIds.length === 0) {
+    summaryEl.innerHTML = `
+      <span style="color: #DC2626; display: inline-flex; align-items: center; gap: 0.25rem;">
+        ⚠️ No rooms selected! Please select at least 1 room, or switch back to "All Category Rooms".
+      </span>
+    `;
+    return;
+  }
+
+  const names = selectedIds.map((id) => {
+    const r = (state.rooms || []).find((rm) => rm.id === id);
+    return r ? r.name : id;
+  });
+
+  summaryEl.innerHTML = `
+    <span style="color: #1D4ED8; display: inline-flex; align-items: center; gap: 0.25rem;">
+      ✓ Assigned (${selectedIds.length} room${selectedIds.length > 1 ? "s" : ""}): <b>${escapeHtml(names.join(", "))}</b>
+    </span>
+  `;
+}
+
+function getSelectedCourseRooms() {
+  return Array.from(courseRoomState.selectedRooms);
+}
+
 function updateRoomKindHint() {
   const select = document.getElementById("course-room-kind");
   const hintEl = document.getElementById("course-room-hint");
@@ -1716,6 +1914,7 @@ function updateRoomKindHint() {
     <span style="font-weight: 600; color: var(--navy-deep);">Type:</span> <b>${escapeHtml(meta.type)}</b><br>
     <span style="color: var(--text-muted);">${escapeHtml(meta.hint)}</span>
   `;
+  renderCourseRoomSelection(select.value);
 }
 
 function renderCourses() {
@@ -1902,10 +2101,30 @@ function renderCourseRow(batch, course) {
       <td>${teachersStr}</td>
       <td>${availBtn}</td>
       <td>
-        <span class="badge" style="background: ${meta.badgeBg}; color: ${meta.badgeColor}; border: 1px solid ${meta.badgeBorder}; font-weight: 600;" title="${escapeHtml(meta.category)} • ${escapeHtml(meta.type)} (${escapeHtml(meta.rooms)})">
-          ${escapeHtml(meta.shortLabel)}
-        </span>
-        <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 3px; font-weight: 500;">${escapeHtml(meta.category)}</div>
+        ${(() => {
+          if (course.allowed_rooms && course.allowed_rooms.length > 0) {
+            const roomNames = course.allowed_rooms.map((rid) => {
+              const r = (state.rooms || []).find((rm) => rm.id === rid);
+              return r ? r.name : rid;
+            });
+            let shortDisplay = roomNames.join(", ");
+            if (shortDisplay.length > 32) {
+              shortDisplay = `${roomNames[0]} +${roomNames.length - 1} more`;
+            }
+            return `
+              <span class="badge" style="background: #EEF2FF; color: #3730A3; border: 1px solid #C7D2FE; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;" title="Specific Assigned Rooms: ${escapeHtml(roomNames.join(', '))}">
+                🎯 ${escapeHtml(shortDisplay)}
+              </span>
+              <div style="font-size: 0.72rem; color: #4F46E5; margin-top: 3px; font-weight: 600;">Specific Room Assignment</div>
+            `;
+          }
+          return `
+            <span class="badge" style="background: ${meta.badgeBg}; color: ${meta.badgeColor}; border: 1px solid ${meta.badgeBorder}; font-weight: 600;" title="${escapeHtml(meta.category)} • ${escapeHtml(meta.type)} (${escapeHtml(meta.rooms)})">
+              ${escapeHtml(meta.shortLabel)}
+            </span>
+            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 3px; font-weight: 500;">${escapeHtml(meta.category)}</div>
+          `;
+        })()}
       </td>
       <td style="color: var(--text-muted); font-size: 0.85rem;">${loadStr}</td>
       <td style="text-align: right;">
@@ -2036,6 +2255,14 @@ function openCourseModal(courseId = null) {
       populatePairedCourseOptions(course.paired_course_id);
       handleModalBatchChange();
 
+      if (course.allowed_rooms && course.allowed_rooms.length > 0) {
+        setCourseRoomMode("custom");
+        renderCourseRoomSelection(rk, course.allowed_rooms);
+      } else {
+        setCourseRoomMode("default");
+        renderCourseRoomSelection(rk, []);
+      }
+
       if (t1Select) t1Select.innerHTML = '<option value="">-- Select Teacher 1 --</option>' + buildTeacherOptionsHtml(course.teacher1_id);
       if (t2Select) t2Select.innerHTML = '<option value="">-- Select Teacher 2 --</option>' + buildTeacherOptionsHtml(course.teacher2_id);
     }
@@ -2056,6 +2283,9 @@ function openCourseModal(courseId = null) {
     updateRoomKindHint();
     populatePairedCourseOptions("");
     handleModalBatchChange();
+
+    setCourseRoomMode("default");
+    renderCourseRoomSelection("theory", []);
 
     if (t1Select) t1Select.innerHTML = '<option value="">-- Select Teacher 1 --</option>' + buildTeacherOptionsHtml("");
     if (t2Select) t2Select.innerHTML = '<option value="">-- Select Teacher 2 --</option>' + buildTeacherOptionsHtml("");
@@ -2099,6 +2329,19 @@ async function handleCourseSubmit(e) {
   const teacher1_id = isOff ? null : (document.getElementById("course-teacher1")?.value || null);
   const teacher2_id = isOff ? null : (document.getElementById("course-teacher2")?.value || null);
 
+  let allowed_rooms = null;
+  if (room_kind === "no_room") {
+    allowed_rooms = [];
+  } else if (courseRoomState.mode === "custom") {
+    allowed_rooms = getSelectedCourseRooms();
+    if (allowed_rooms.length === 0) {
+      showToast("Please select at least one specific room or switch to 'All Category Rooms' mode.", true);
+      return;
+    }
+  } else {
+    allowed_rooms = [];
+  }
+
   const payload = {
     id,
     title,
@@ -2106,6 +2349,7 @@ async function handleCourseSubmit(e) {
     category,
     kind,
     room_kind,
+    allowed_rooms,
     periods_per_week,
     blocks_per_week,
     credit,

@@ -369,6 +369,8 @@ def load_problem_from_db(db: Session, options_override: Optional[dict] = None) -
                 else:
                     c_sec_blocked.setdefault(sec, set()).update(rule_slots)
 
+        c_allowed_rooms = [r.strip() for r in (c.allowed_rooms or "").split(",") if r.strip()]
+
         courses.append(
             RoutineCourse(
                 code=course_code,
@@ -387,6 +389,7 @@ def load_problem_from_db(db: Session, options_override: Optional[dict] = None) -
                 blocked_slots=c_blocked,
                 section_allowed_slots=c_sec_allowed,
                 section_blocked_slots=c_sec_blocked,
+                allowed_rooms=c_allowed_rooms,
             )
         )
 

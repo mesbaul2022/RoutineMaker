@@ -8,3 +8,4 @@ if match:
         line = line.strip()
         if "optgroup" in line or "option" in line:
             print(line)
+

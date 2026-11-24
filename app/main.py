@@ -203,6 +203,7 @@ class CourseBase(BaseModel):
     blocks_per_week: Optional[int] = None
     credit: Optional[float] = 3.0
     category: Optional[str] = None  # "core", "optional_ii", "optional_iii"
+    allowed_rooms: Optional[List[str]] = None  # Specific assigned room codes/IDs
     paired_course_id: Optional[str] = None
     teacher1_id: Optional[str] = None
     teacher2_id: Optional[str] = None
@@ -221,6 +222,7 @@ class CourseUpdate(BaseModel):
     blocks_per_week: Optional[int] = None
     credit: Optional[float] = None
     category: Optional[str] = None
+    allowed_rooms: Optional[List[str]] = None
     paired_course_id: Optional[str] = None
     teacher1_id: Optional[str] = None
     teacher2_id: Optional[str] = None
@@ -885,6 +887,7 @@ def _course_to_out(c: CourseModel, db: Session) -> CourseOut:
         disp = c.id
 
     rule_count, summary, _, _, _, _, _ = compute_course_slot_rules_info(c, db)
+    allowed_rooms_list = [r.strip() for r in (c.allowed_rooms or "").split(",") if r.strip()] or None
 
     return CourseOut(
         id=c.id,
@@ -893,6 +896,7 @@ def _course_to_out(c: CourseModel, db: Session) -> CourseOut:
         batch_id=c.batch_id,
         kind=c.kind,
         room_kind=c.room_kind,
+        allowed_rooms=allowed_rooms_list,
         periods_per_week=c.periods_per_week,
         blocks_per_week=c.blocks_per_week,
         credit=c.credit,
@@ -974,12 +978,15 @@ def create_course(payload: CourseCreate, db: Session = Depends(get_db)):
     if t1_val and t2_val == t1_val:
         t2_val = None
 
+    allowed_rooms_str = ",".join([r.strip() for r in payload.allowed_rooms if r.strip()]) if payload.allowed_rooms else None
+
     course = CourseModel(
         id=cid,
         title=payload.title.strip(),
         batch_id=payload.batch_id,
         kind=kind,
         room_kind=room_kind,
+        allowed_rooms=allowed_rooms_str,
         periods_per_week=payload.periods_per_week if kind == "theory" else None,
         blocks_per_week=payload.blocks_per_week if kind == "sessional" else None,
         credit=payload.credit or (3.0 if kind == "theory" else 1.5),
@@ -1038,6 +1045,8 @@ def update_course(course_id: str, payload: CourseUpdate, db: Session = Depends(g
         course.credit = payload.credit
     if payload.category is not None:
         course.category = payload.category or None
+    if payload.allowed_rooms is not None:
+        course.allowed_rooms = ",".join([r.strip() for r in payload.allowed_rooms if r.strip()]) if payload.allowed_rooms else None
     if payload.paired_course_id is not None:
         course.paired_course_id = payload.paired_course_id or None
         if payload.paired_course_id:

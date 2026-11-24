@@ -136,7 +136,7 @@ class RoutineScheduler:
             rooms = self.p.feasible_rooms(ev)
             clean_c = ev.course.code.replace(" ", "").upper()
             is_proj = clean_c in ("CSE3200", "CSE4000") or clean_c.startswith("CSE4000") or ev.room_kind in ("no_room", "none", "")
-            if not ev.is_lab and not is_proj:
+            if not ev.is_lab and not is_proj and not ev.allowed_rooms:
                 home = home_rooms.get(f"{ev.batch_id}|{ev.section}")
                 if home:
                     match = [r for r in rooms if r.id == home]
@@ -303,9 +303,10 @@ class RoutineScheduler:
         skipped: set[str] = set()
         for evs in groups.values():
             kind = evs[0].room_kind
-            if room_supply.get(kind, 0) < len(evs):
+            feasible = self.p.feasible_rooms(evs[0])
+            if len(feasible) < len(evs) or room_supply.get(kind, 0) < len(evs):
                 skipped.add(f"{evs[0].course.code} ({kind}: only "
-                            f"{room_supply.get(kind, 0)} room(s) for {len(evs)} groups)")
+                            f"{len(feasible)} feasible room(s) for {len(evs)} groups)")
                 continue
             # Groups sharing any teacher cannot physically run simultaneously in two rooms.
             all_teachers: set[str] = set()

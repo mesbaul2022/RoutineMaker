@@ -144,6 +144,12 @@ COURSE_COLUMNS = [
         "sample": "theory",
     },
     {
+        "key": "allowed_rooms",
+        "header": "Allowed Specific Rooms",
+        "desc": "Comma-separated specific room codes/IDs (e.g. 'CSE-101, CSE-102') or blank to use category default.",
+        "sample": "CSE-101, CSE-102",
+    },
+    {
         "key": "category",
         "header": "Course Category",
         "desc": "Core Course, Optional II, Optional III. Default: Core Course.",
@@ -525,6 +531,7 @@ def export_courses(db: Session, fmt: str = "xlsx", batch_id: Optional[str] = Non
             c.kind.title(),
             c.credit,
             c.room_kind,
+            c.allowed_rooms or "",
             cat_disp,
             c.periods_per_week if c.kind == "theory" else "",
             t1_short,
@@ -611,6 +618,7 @@ def export_all_in_one(db: Session) -> Tuple[bytes, str, str]:
             c.kind.title(),
             c.credit,
             c.room_kind,
+            c.allowed_rooms or "",
             cat_disp,
             c.periods_per_week if c.kind == "theory" else "",
             t1_short,
@@ -876,6 +884,10 @@ def import_courses_data(file_bytes: bytes, filename: str, db: Session, sync_assi
         except (ValueError, TypeError):
             credit = 3.0 if kind == "theory" else 1.5
 
+        # Specific allowed rooms (if specified)
+        allowed_rooms_raw = (r.get("allowed_specific_rooms") or r.get("allowed_rooms") or r.get("specific_rooms") or "").strip()
+        allowed_rooms = ",".join([r_id.strip() for r_id in allowed_rooms_raw.split(",") if r_id.strip()]) if allowed_rooms_raw else None
+
         # Category
         cat_raw = (r.get("course_category") or r.get("category") or "core").lower().strip()
         if "opt" in cat_raw and "3" in cat_raw:
@@ -910,6 +922,8 @@ def import_courses_data(file_bytes: bytes, filename: str, db: Session, sync_assi
             course.room_kind = room_kind
             course.credit = credit
             course.category = category
+            if allowed_rooms is not None or "allowed_rooms" in r or "allowed_specific_rooms" in r:
+                course.allowed_rooms = allowed_rooms
             course.periods_per_week = periods_per_week
             course.blocks_per_week = blocks_per_week
             if t1_id or t1_raw == "":
@@ -927,6 +941,7 @@ def import_courses_data(file_bytes: bytes, filename: str, db: Session, sync_assi
                 room_kind=room_kind,
                 credit=credit,
                 category=category,
+                allowed_rooms=allowed_rooms,
                 periods_per_week=periods_per_week,
                 blocks_per_week=blocks_per_week,
                 teacher1_id=t1_id,
@@ -1045,3 +1060,4 @@ def import_all_in_one_workbook(file_bytes: bytes, filename: str, db: Session, sy
         "errors": all_errors,
         "message": f"Master Workbook Imported: {teachers_res.get('created',0) + teachers_res.get('updated',0)} Teachers, {courses_res.get('created',0) + courses_res.get('updated',0)} Courses, and {rooms_res.get('created',0) + rooms_res.get('updated',0)} Rooms processed.",
     }
+

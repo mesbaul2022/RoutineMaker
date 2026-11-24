@@ -62,6 +62,8 @@ class Course:
     blocked_slots: set[int] = field(default_factory=set)
     section_allowed_slots: dict[str, set[int]] = field(default_factory=dict)
     section_blocked_slots: dict[str, set[int]] = field(default_factory=dict)
+    # Specific assigned rooms (overrides default room category matching if specified)
+    allowed_rooms: list[str] = field(default_factory=list)
 
     @property
     def is_theory(self) -> bool:
@@ -103,6 +105,11 @@ class Event:
     paired_event_id: int | None = None
     allowed_slots: set[int] = field(default_factory=set)
     blocked_slots: set[int] = field(default_factory=set)
+    allowed_rooms: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        if not self.allowed_rooms and self.course and hasattr(self.course, "allowed_rooms") and self.course.allowed_rooms:
+            self.allowed_rooms = list(self.course.allowed_rooms)
 
     @property
     def is_lab(self) -> bool:
@@ -164,6 +171,37 @@ class Problem:
         clean_code = event.course.code.replace(" ", "").upper()
         if clean_code in ("CSE3200", "CSE4000") or clean_code.startswith("CSE4000") or event.room_kind in ("no_room", "none", ""):
             return [self.rooms["NO_ROOM"]]
+
+        # Specific user-selected rooms take highest priority
+        if event.allowed_rooms:
+            cand = []
+            for r_raw in event.allowed_rooms:
+                r_key = r_raw.strip()
+                if not r_key:
+                    continue
+                # 1. Match room ID directly
+                if r_key in self.rooms:
+                    r = self.rooms[r_key]
+                    if r.capacity >= event.size and r not in cand:
+                        cand.append(r)
+                    continue
+                # 2. Match room ID or Room Name case-insensitively
+                matches = [
+                    r for r in self.rooms.values()
+                    if r.id.lower() == r_key.lower() or r.name.lower() == r_key.lower()
+                ]
+                for r in matches:
+                    if r.capacity >= event.size and r not in cand:
+                        cand.append(r)
+            if cand:
+                return cand
+            # If all assigned rooms exist but capacity was slightly below threshold, return them anyway
+            lenient = [
+                r for r in self.rooms.values()
+                if any(r.id.lower() == r_raw.strip().lower() or r.name.lower() == r_raw.strip().lower() for r_raw in event.allowed_rooms if r_raw.strip())
+            ]
+            if lenient:
+                return lenient
 
         if not event.is_lab:
             home_rooms = self.options.get("home_rooms", {})

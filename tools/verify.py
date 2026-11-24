@@ -48,6 +48,10 @@ def verify(problem: Problem, solution: Solution) -> list[str]:
 
         if is_project:
             pass
+        elif ev.allowed_rooms:
+            allowed_set = {ar.strip().lower() for ar in ev.allowed_rooms if ar.strip()}
+            if a.room_id.lower() not in allowed_set and room.name.lower() not in allowed_set:
+                faults.append(f"H5 {ev.label} must be placed in one of {ev.allowed_rooms} (got {room.name} [{a.room_id}])")
         elif not ev.is_lab and room.kind in theory_kinds and ev.room_kind in theory_kinds:
             pass
         elif clean_code in ("CSE3106", "CSE2104"):

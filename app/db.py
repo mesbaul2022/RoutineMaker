@@ -66,6 +66,7 @@ class Course(Base):
 
     credit = Column(Float, nullable=True, default=3.0)
     category = Column(String, nullable=True, default=None)  # "core", "optional_ii", "optional_iii"
+    allowed_rooms = Column(String, nullable=True, default=None)  # comma-separated room IDs, or NULL for category default
     paired_course_id = Column(String, ForeignKey("courses.id"), nullable=True)
     teacher1_id = Column(String, ForeignKey("teachers.id"), nullable=True)
     teacher2_id = Column(String, ForeignKey("teachers.id"), nullable=True)
@@ -186,6 +187,8 @@ def _migrate_schema():
             cur.execute("ALTER TABLE courses ADD COLUMN teacher1_id TEXT")
         if "teacher2_id" not in existing_cols:
             cur.execute("ALTER TABLE courses ADD COLUMN teacher2_id TEXT")
+        if "allowed_rooms" not in existing_cols:
+            cur.execute("ALTER TABLE courses ADD COLUMN allowed_rooms TEXT DEFAULT NULL")
 
         # Backfill teacher1_id and teacher2_id from assignments where not yet populated
         cur.execute("SELECT id, kind, blocks_per_week FROM courses")

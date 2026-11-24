@@ -46,7 +46,11 @@ def verify(problem: Problem, solution: Solution) -> list[str]:
         software_lab_rooms = {"CSE-103", "CSE-104", "CSE-201", "CSE-202", "CSE-305", "CSE-306"}
         software_kinds = {"cse_lab", "year1_cse_lab", "ai_lab", "network_lab"}
 
+        has_slot_room = hasattr(ev, "slot_room_rules") and any(s in ev.slot_room_rules for s in a.slots)
         if is_project:
+            pass
+        elif has_slot_room:
+            # Slot-specific room rule is verified strictly in H11 below
             pass
         elif ev.allowed_rooms:
             allowed_set = {ar.strip().lower() for ar in ev.allowed_rooms if ar.strip()}
@@ -234,7 +238,7 @@ def verify(problem: Problem, solution: Solution) -> list[str]:
                             f"{label1} at {grid.periods[p1].name} and {label2} at {grid.periods[p2].name}"
                         )
 
-    # H11 (Constraint 3): Course slot availability & fixed slots
+    # H11 (Constraint 3): Course slot availability, fixed slots, and specific room assignment
     for a in solution.assignments:
         ev = a.event
         clean_code = ev.course.code.replace(" ", "").upper()
@@ -254,6 +258,17 @@ def verify(problem: Problem, solution: Solution) -> list[str]:
                         f"H11 {ev.label} scheduled at non-allowed slot {grid.describe(s)} "
                         f"(allowed slots: {[grid.describe(x) for x in sorted(ev.allowed_slots)]})"
                     )
+
+        if hasattr(ev, "slot_room_rules") and ev.slot_room_rules:
+            for s in a.slots:
+                if s in ev.slot_room_rules:
+                    req_r = ev.slot_room_rules[s]
+                    r_obj = problem.rooms.get(a.room_id)
+                    if a.room_id != req_r and (not r_obj or r_obj.name.lower() != req_r.lower()):
+                        faults.append(
+                            f"H11 {ev.label} at slot {grid.describe(s)} placed in room {a.room_id} "
+                            f"but rule requires room {req_r}"
+                        )
 
     # H12: At most `max_teacher_labs_per_day` (default 2) lab sessions per day per teacher (not students)
     max_labs_per_day = problem.options.get("max_teacher_labs_per_day", 2)

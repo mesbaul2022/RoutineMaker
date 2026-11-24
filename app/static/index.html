@@ -1400,6 +1400,15 @@
           </div>
         </div>
 
+        <!-- Assigned Rooms Information Bar (from Edit Course interface) -->
+        <div style="background: #F8FAFC; border: 1px solid #CBD5E1; border-radius: var(--radius); padding: 0.6rem 0.9rem; margin-bottom: 0.9rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem;">
+            <span style="font-weight: 700; color: #1E293B;">🏢 Assigned Course Room(s):</span>
+            <span id="modal-course-avail-assigned-rooms" style="font-weight: 600; color: #0284C7;">Loading...</span>
+          </div>
+          <span id="modal-course-avail-assigned-rooms-type" class="badge" style="background: #E2E8F0; color: #334155; font-size: 0.72rem;">Category Default</span>
+        </div>
+
         <!-- Mode Toggle & Guidance -->
         <div style="background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: var(--radius); padding: 0.75rem 1rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
           <div>
@@ -1468,7 +1477,7 @@
         <!-- Rule Builder / Custom Rule -->
         <div class="avail-section" style="background: #F8FAFC; padding: 0.85rem; border-radius: var(--radius); border: 1px solid #E2E8F0;">
           <div class="avail-section-title">➕ Add Slot Assignment Rule:</div>
-          <div style="display: grid; grid-template-columns: 1fr 1.2fr 1.2fr 1fr auto; gap: 0.6rem; align-items: flex-end;">
+          <div style="display: grid; grid-template-columns: 0.95fr 1.2fr 1fr 0.85fr 1.35fr auto; gap: 0.6rem; align-items: flex-end;">
             <div class="form-group" style="margin-bottom: 0;">
               <label for="course-rule-select-day" style="font-size: 0.78rem;">Day *</label>
               <select id="course-rule-select-day" style="font-size: 0.85rem;">
@@ -1511,6 +1520,12 @@
                 <option value="ALL">All Sections</option>
                 <option value="A">Section A</option>
                 <option value="B">Section B</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="course-rule-select-room" style="font-size: 0.78rem;">Room (Optional)</label>
+              <select id="course-rule-select-room" style="font-size: 0.85rem;">
+                <option value="">-- Default / Any Room --</option>
               </select>
             </div>
             <button type="button" class="btn btn-primary" onclick="handleAddCourseAvailabilityRule()" style="white-space: nowrap; height: 38px;">
@@ -2121,6 +2136,6 @@
     <span id="toast-message">Notification</span>
   </div>
 
-  <script src="/static/app.js?v=3.5.5"></script>
+  <script src="/static/app.js?v=3.6.0"></script>
 </body>
 </html>

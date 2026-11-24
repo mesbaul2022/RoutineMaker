@@ -144,11 +144,33 @@ class RoutineScheduler:
                         rooms = match
                     elif home in self.p.rooms:
                         rooms = [self.p.rooms[home]]
+
+            # Ensure any specific room in ev.slot_room_rules is included in candidate rooms
+            if hasattr(ev, "slot_room_rules") and ev.slot_room_rules:
+                for rid in ev.slot_room_rules.values():
+                    if rid in self.p.rooms and self.p.rooms[rid] not in rooms:
+                        rooms.append(self.p.rooms[rid])
+                    else:
+                        for r in self.p.rooms.values():
+                            if (r.id.lower() == rid.lower() or r.name.lower() == rid.lower()) and r not in rooms:
+                                rooms.append(r)
+
             starts = self.p.feasible_starts(ev)
 
             cells: dict[tuple[str, int], cp_model.IntVar] = {}
             for r in rooms:
                 for s in starts:
+                    if hasattr(ev, "slot_room_rules") and ev.slot_room_rules:
+                        # Check if this start slot covers a slot constrained to a specific room
+                        covered = self.grid.covered_slots(s, ev.length)
+                        req_room = None
+                        for c_slot in covered:
+                            if c_slot in ev.slot_room_rules:
+                                req_room = ev.slot_room_rules[c_slot]
+                                break
+                        if req_room and r.id != req_room and r.name.lower() != req_room.lower():
+                            continue
+
                     cells[(r.id, s)] = self.model.NewBoolVar(f"x_{ev.eid}_{r.id}_{s}")
             if not cells:
                 raise ValueError(

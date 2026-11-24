@@ -246,6 +246,7 @@ class CourseSlotRuleIn(BaseModel):
     periods: str
     rule_type: str = "allowed"  # "allowed" or "blocked"
     section: Optional[str] = None  # None/empty for all sections, or "A", "B"
+    room_id: Optional[str] = None  # Target room ID (e.g. "CSE-101") or None for default
     note: Optional[str] = None
 
 
@@ -256,6 +257,8 @@ class CourseSlotRuleOut(BaseModel):
     periods: str
     rule_type: str  # "allowed" or "blocked"
     section: Optional[str] = None
+    room_id: Optional[str] = None
+    room_name: Optional[str] = None
     note: Optional[str] = None
     description: Optional[str] = None
 
@@ -269,7 +272,9 @@ class CourseAvailabilityOut(BaseModel):
     course_title: str
     batch_id: str
     kind: str
+    room_kind: Optional[str] = None
     credit: float
+    allowed_rooms: Optional[List[str]] = None
     sections: List[str] = []
     rules: List[CourseSlotRuleOut] = []
     allowed_slots: List[int] = []
@@ -767,6 +772,7 @@ def compute_course_slot_rules_info(course: CourseModel, db: Session, grid=None):
         grid, _ = _load_config()
 
     rules = get_course_slot_rules(db, course.id)
+    rooms_map = {r.id: r.name for r in db.query(RoomModel).all()}
     day_name_map = {d.lower(): i for i, d in enumerate(grid.days)}
     period_name_map = {p.name.lower(): i for i, p in enumerate(grid.periods)}
 
@@ -819,9 +825,12 @@ def compute_course_slot_rules_info(course: CourseModel, db: Session, grid=None):
 
         rtype = (r.rule_type or "allowed").strip().lower()
         sec = (r.section or "").strip()
+        room_id = getattr(r, "room_id", None)
+        room_name = rooms_map.get(room_id, room_id) if room_id else None
+        room_suffix = f" in {room_name}" if room_name else ""
         sec_prefix = f"Sec {sec}: " if sec and sec.upper() != "ALL" else ""
         type_prefix = "Allowed" if rtype == "allowed" else "Blocked"
-        desc = f"[{type_prefix}] {sec_prefix}{day_label} ({period_label})"
+        desc = f"[{type_prefix}] {sec_prefix}{day_label} ({period_label}){room_suffix}"
 
         rule_outs.append(
             CourseSlotRuleOut(
@@ -831,6 +840,8 @@ def compute_course_slot_rules_info(course: CourseModel, db: Session, grid=None):
                 periods=r.periods,
                 rule_type=rtype,
                 section=sec or None,
+                room_id=room_id,
+                room_name=room_name,
                 note=r.note,
                 description=desc,
             )
@@ -854,7 +865,9 @@ def compute_course_slot_rules_info(course: CourseModel, db: Session, grid=None):
         short_descs = []
         for r in rules:
             sec_p = f"{r.section} " if r.section and r.section.upper() != "ALL" else ""
-            short_descs.append(f"{sec_p}{r.day} {r.periods}")
+            r_rm = getattr(r, "room_id", None)
+            rm_lbl = f" in {rooms_map.get(r_rm, r_rm)}" if r_rm else ""
+            short_descs.append(f"{sec_p}{r.day} {r.periods}{rm_lbl}")
         summary = "Fixed: " + ", ".join(short_descs)
     elif all((r.rule_type or "allowed").lower() == "blocked" for r in rules):
         summary = f"Blocked ({len(rules)} rules)"
@@ -1123,12 +1136,15 @@ def get_course_availability(course_id: str, db: Session = Depends(get_db)):
         sec_blocked,
     ) = compute_course_slot_rules_info(course, db, grid)
 
+    c_allowed_rooms = [rm.strip() for rm in (course.allowed_rooms or "").split(",") if rm.strip()] if course.allowed_rooms else []
     return CourseAvailabilityOut(
         course_id=course.id,
         course_title=course.title,
         batch_id=course.batch_id,
         kind=course.kind,
+        room_kind=course.room_kind,
         credit=course.credit or 3.0,
+        allowed_rooms=c_allowed_rooms,
         sections=sections,
         rules=rule_outs,
         allowed_slots=allowed_slots,
@@ -1154,6 +1170,7 @@ def update_course_availability(
             "periods": r.periods,
             "rule_type": r.rule_type,
             "section": r.section,
+            "room_id": r.room_id,
             "note": r.note,
         }
         for r in payload.rules
@@ -1174,12 +1191,15 @@ def update_course_availability(
         sec_blocked,
     ) = compute_course_slot_rules_info(course, db, grid)
 
+    c_allowed_rooms = [rm.strip() for rm in (course.allowed_rooms or "").split(",") if rm.strip()] if course.allowed_rooms else []
     return CourseAvailabilityOut(
         course_id=course.id,
         course_title=course.title,
         batch_id=course.batch_id,
         kind=course.kind,
+        room_kind=course.room_kind,
         credit=course.credit or 3.0,
+        allowed_rooms=c_allowed_rooms,
         sections=sections,
         rules=rule_outs,
         allowed_slots=allowed_slots,
@@ -1206,6 +1226,7 @@ def add_course_availability_rule(
             "periods": r.periods,
             "rule_type": r.rule_type,
             "section": r.section,
+            "room_id": r.room_id,
             "note": r.note,
         }
         for r in current_rules
@@ -1216,6 +1237,7 @@ def add_course_availability_rule(
             "periods": payload.periods,
             "rule_type": payload.rule_type,
             "section": payload.section,
+            "room_id": payload.room_id,
             "note": payload.note,
         }
     )
@@ -1235,12 +1257,15 @@ def add_course_availability_rule(
         sec_blocked,
     ) = compute_course_slot_rules_info(course, db, grid)
 
+    c_allowed_rooms = [rm.strip() for rm in (course.allowed_rooms or "").split(",") if rm.strip()] if course.allowed_rooms else []
     return CourseAvailabilityOut(
         course_id=course.id,
         course_title=course.title,
         batch_id=course.batch_id,
         kind=course.kind,
+        room_kind=course.room_kind,
         credit=course.credit or 3.0,
+        allowed_rooms=c_allowed_rooms,
         sections=sections,
         rules=rule_outs,
         allowed_slots=allowed_slots,
@@ -1276,12 +1301,15 @@ def remove_course_availability_rule(
         sec_blocked,
     ) = compute_course_slot_rules_info(course, db, grid)
 
+    c_allowed_rooms = [rm.strip() for rm in (course.allowed_rooms or "").split(",") if rm.strip()] if course.allowed_rooms else []
     return CourseAvailabilityOut(
         course_id=course.id,
         course_title=course.title,
         batch_id=course.batch_id,
         kind=course.kind,
+        room_kind=course.room_kind,
         credit=course.credit or 3.0,
+        allowed_rooms=c_allowed_rooms,
         sections=sections,
         rules=rule_outs,
         allowed_slots=allowed_slots,
@@ -1315,12 +1343,15 @@ def clear_all_course_rules(course_id: str, db: Session = Depends(get_db)):
         sec_blocked,
     ) = compute_course_slot_rules_info(course, db, grid)
 
+    c_allowed_rooms = [rm.strip() for rm in (course.allowed_rooms or "").split(",") if rm.strip()] if course.allowed_rooms else []
     return CourseAvailabilityOut(
         course_id=course.id,
         course_title=course.title,
         batch_id=course.batch_id,
         kind=course.kind,
+        room_kind=course.room_kind,
         credit=course.credit or 3.0,
+        allowed_rooms=c_allowed_rooms,
         sections=sections,
         rules=rule_outs,
         allowed_slots=allowed_slots,

@@ -831,7 +831,12 @@ const courseAvailState = {
 function formatCourseRuleDesc(r) {
   const rtype = (r.rule_type || "allowed").toLowerCase() === "allowed" ? "Allowed" : "Blocked";
   const sec = r.section && r.section !== "ALL" ? `Sec ${r.section}: ` : "";
-  return `[${rtype}] ${sec}${r.day} (${r.periods})`;
+  let rmStr = "";
+  if (r.room_id) {
+    const rm = (state.rooms || []).find((x) => x.id === r.room_id);
+    rmStr = ` in ${rm ? rm.name : (r.room_name || r.room_id)}`;
+  }
+  return `[${rtype}] ${sec}${r.day} (${r.periods})${rmStr}`;
 }
 
 async function openCourseAvailabilityModal(courseId) {
@@ -891,12 +896,70 @@ async function openCourseAvailabilityModal(courseId) {
     if (!res.ok) throw new Error("Failed to load course availability");
     const data = await res.json();
 
+    // Populate assigned rooms display bar (from Edit Course modal settings)
+    const assignedRoomsEl = document.getElementById("modal-course-avail-assigned-rooms");
+    const assignedRoomsTypeEl = document.getElementById("modal-course-avail-assigned-rooms-type");
+    if (assignedRoomsEl) {
+      if (data.allowed_rooms && data.allowed_rooms.length > 0) {
+        const roomNames = data.allowed_rooms.map((rid) => {
+          const rObj = (state.rooms || []).find((rm) => rm.id === rid);
+          return rObj ? rObj.name : rid;
+        });
+        assignedRoomsEl.textContent = `🎯 ${roomNames.join(", ")}`;
+        if (assignedRoomsTypeEl) {
+          assignedRoomsTypeEl.textContent = "Custom Specific Room(s)";
+          assignedRoomsTypeEl.style.background = "#EFF6FF";
+          assignedRoomsTypeEl.style.color = "#1D4ED8";
+        }
+      } else {
+        if (course && course.kind === "theory") {
+          assignedRoomsEl.textContent = "🏢 Category Default (Section Homeroom: CSE Room 101, 102, 105, 306, 401, 402, 501, 502)";
+        } else if (course && course.room_kind === "cse_lab") {
+          assignedRoomsEl.textContent = "🏢 Category Default (Departmental Software Labs: CSE Lab 103, 104, 201, 202, 305)";
+        } else {
+          const rk = course ? course.room_kind : (data.room_kind || "theory");
+          const rkMeta = getRoomKindMeta(rk);
+          assignedRoomsEl.textContent = `🏢 Category Default (${rkMeta ? rkMeta.label : rk})`;
+        }
+        if (assignedRoomsTypeEl) {
+          assignedRoomsTypeEl.textContent = "Category Default";
+          assignedRoomsTypeEl.style.background = "#E2E8F0";
+          assignedRoomsTypeEl.style.color = "#334155";
+        }
+      }
+    }
+
+    // Populate room dropdown for adding slot rules
+    const ruleRoomSelect = document.getElementById("course-rule-select-room");
+    if (ruleRoomSelect) {
+      let roomOpts = `<option value="">-- Default / Any Feasible Room --</option>`;
+      if (data.allowed_rooms && data.allowed_rooms.length > 0) {
+        roomOpts += `<optgroup label="⭐ Course Assigned Specific Room(s)">`;
+        data.allowed_rooms.forEach((rid) => {
+          const rObj = (state.rooms || []).find((rm) => rm.id === rid);
+          const rName = rObj ? rObj.name : rid;
+          roomOpts += `<option value="${escapeHtml(rid)}">${escapeHtml(rName)} (${escapeHtml(rid)})</option>`;
+        });
+        roomOpts += `</optgroup>`;
+      }
+      roomOpts += `<optgroup label="🏢 All Department Classrooms & Labs">`;
+      const sortedRooms = [...(state.rooms || [])].sort((a, b) => a.name.localeCompare(b.name));
+      sortedRooms.forEach((rm) => {
+        roomOpts += `<option value="${escapeHtml(rm.id)}">${escapeHtml(rm.name)} (${escapeHtml(rm.id)})</option>`;
+      });
+      roomOpts += `</optgroup>`;
+      ruleRoomSelect.innerHTML = roomOpts;
+      ruleRoomSelect.value = "";
+    }
+
     courseAvailState.rules = (data.rules || []).map((r) => ({
       id: r.id,
       day: r.day,
       periods: r.periods,
       rule_type: (r.rule_type || "allowed").toLowerCase(),
       section: r.section || "ALL",
+      room_id: r.room_id || null,
+      room_name: r.room_name || null,
       note: r.note,
       description: r.description || formatCourseRuleDesc(r),
     }));
@@ -1134,10 +1197,17 @@ function toggleCoursePeriod(periodIdx) {
 }
 
 function synthesizeCourseRules() {
-  const newRules = [];
+  const customRoomRules = (courseAvailState.rules || []).filter((r) => r.room_id);
+  const newRules = [...customRoomRules];
 
   function rulesForSets(sec, allowedSet, blockedSet) {
     for (let d = 0; d < 5; d++) {
+      const hasCustomForDay = customRoomRules.some(
+        (cr) => cr.day.toLowerCase() === GRID_DAYS[d].toLowerCase() &&
+                (cr.section || "ALL") === (sec || "ALL")
+      );
+      if (hasCustomForDay) continue;
+
       const dSlots = [0, 1, 2, 3, 4, 5, 6, 7, 8].filter((p) => allowedSet.has(d * 9 + p));
       if (dSlots.length === 9) {
         newRules.push({
@@ -1145,6 +1215,7 @@ function synthesizeCourseRules() {
           periods: "all",
           rule_type: "allowed",
           section: sec === "ALL" ? null : sec,
+          room_id: null,
           description: `[Allowed] ${sec !== "ALL" ? `Sec ${sec}: ` : ""}${GRID_DAYS[d]} (All Periods)`,
         });
       } else if (dSlots.length > 0) {
@@ -1154,12 +1225,19 @@ function synthesizeCourseRules() {
           periods: pNames.join(","),
           rule_type: "allowed",
           section: sec === "ALL" ? null : sec,
+          room_id: null,
           description: `[Allowed] ${sec !== "ALL" ? `Sec ${sec}: ` : ""}${GRID_DAYS[d]} (${pNames.join(",")})`,
         });
       }
     }
 
     for (let d = 0; d < 5; d++) {
+      const hasCustomForDay = customRoomRules.some(
+        (cr) => cr.day.toLowerCase() === GRID_DAYS[d].toLowerCase() &&
+                (cr.section || "ALL") === (sec || "ALL")
+      );
+      if (hasCustomForDay) continue;
+
       const dSlots = [0, 1, 2, 3, 4, 5, 6, 7, 8].filter((p) => blockedSet.has(d * 9 + p));
       if (dSlots.length === 9) {
         newRules.push({
@@ -1167,6 +1245,7 @@ function synthesizeCourseRules() {
           periods: "all",
           rule_type: "blocked",
           section: sec === "ALL" ? null : sec,
+          room_id: null,
           description: `[Blocked] ${sec !== "ALL" ? `Sec ${sec}: ` : ""}${GRID_DAYS[d]} (All Periods)`,
         });
       } else if (dSlots.length > 0) {
@@ -1176,6 +1255,7 @@ function synthesizeCourseRules() {
           periods: pNames.join(","),
           rule_type: "blocked",
           section: sec === "ALL" ? null : sec,
+          room_id: null,
           description: `[Blocked] ${sec !== "ALL" ? `Sec ${sec}: ` : ""}${GRID_DAYS[d]} (${pNames.join(",")})`,
         });
       }
@@ -1207,6 +1287,7 @@ function applyCourseAvailabilityPreset(presetName) {
   if (presetName === "clear_all") {
     allowedSet.clear();
     blockedSet.clear();
+    courseAvailState.rules = [];
     showToast("Cleared all restrictions for selected section");
   } else if (presetName === "sunday_morning") {
     setCourseAvailMode("allowed");
@@ -1255,6 +1336,8 @@ function handleAddCourseAvailabilityRule() {
   const periods = document.getElementById("course-rule-select-period").value;
   const ruleType = document.getElementById("course-rule-select-type").value;
   const section = document.getElementById("course-rule-select-section").value;
+  const roomSelect = document.getElementById("course-rule-select-room");
+  const roomId = (roomSelect ? roomSelect.value : "").trim();
 
   const dayMap = {};
   GRID_DAYS.forEach((d, idx) => { dayMap[d.toLowerCase()] = idx; });
@@ -1297,11 +1380,40 @@ function handleAddCourseAvailabilityRule() {
     });
   });
 
-  synthesizeCourseRules();
+  const rmObj = roomId ? (state.rooms || []).find((x) => x.id === roomId) : null;
+  const newRule = {
+    day,
+    periods,
+    rule_type: ruleType,
+    section: section === "ALL" ? null : section,
+    room_id: roomId || null,
+    room_name: rmObj ? rmObj.name : (roomId || null),
+    note: null,
+    description: formatCourseRuleDesc({
+      day,
+      periods,
+      rule_type: ruleType,
+      section: section === "ALL" ? null : section,
+      room_id: roomId || null,
+    }),
+  };
+
+  const existingIdx = courseAvailState.rules.findIndex(
+    (r) => r.day.toLowerCase() === day.toLowerCase() &&
+           r.periods.toLowerCase() === periods.toLowerCase() &&
+           (r.section || "ALL") === (section || "ALL")
+  );
+  if (existingIdx >= 0) {
+    courseAvailState.rules[existingIdx] = newRule;
+  } else {
+    courseAvailState.rules.push(newRule);
+  }
+
   renderCourseAvailabilityGrid();
   renderCourseAvailabilityRulesList();
   updateCourseAvailabilityStats();
-  showToast(`Added rule: ${ruleType.toUpperCase()} ${section !== 'ALL' ? `Sec ${section}: ` : ''}${day} (${periods})`);
+  const roomMsg = roomId ? ` in ${rmObj ? rmObj.name : roomId}` : "";
+  showToast(`Added rule: ${ruleType.toUpperCase()} ${section !== 'ALL' ? `Sec ${section}: ` : ''}${day} (${periods})${roomMsg}`);
 }
 
 function handleDeleteCourseAvailabilityRule(index) {
@@ -1346,7 +1458,6 @@ function handleDeleteCourseAvailabilityRule(index) {
   });
 
   courseAvailState.rules.splice(index, 1);
-  synthesizeCourseRules();
   renderCourseAvailabilityGrid();
   renderCourseAvailabilityRulesList();
   updateCourseAvailabilityStats();
@@ -1374,9 +1485,11 @@ function renderCourseAvailabilityRulesList() {
       const isAllowed = (r.rule_type || "allowed").toLowerCase() === "allowed";
       const chipClass = isAllowed ? "avail-rule-chip chip-allowed" : "avail-rule-chip";
       const icon = isAllowed ? "📌" : "🚫";
+      const roomTag = r.room_id ? `<span style="background: #DBEAFE; color: #1E40AF; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 700; font-size: 0.75rem; border: 1px solid #BFDBFE;">🏢 ${escapeHtml(r.room_name || r.room_id)}</span>` : "";
       return `
-      <div class="${chipClass}">
+      <div class="${chipClass}" style="display: inline-flex; align-items: center; gap: 0.35rem;">
         <span>${icon} ${escapeHtml(desc)}</span>
+        ${roomTag}
         <button type="button" onclick="handleDeleteCourseAvailabilityRule(${idx})" title="Remove this rule">&times;</button>
       </div>
     `;
@@ -1387,14 +1500,13 @@ function renderCourseAvailabilityRulesList() {
 async function saveCourseAvailability() {
   if (!courseAvailState.courseId) return;
 
-  synthesizeCourseRules();
-
   const payload = {
     rules: courseAvailState.rules.map((r) => ({
       day: r.day,
       periods: r.periods,
       rule_type: r.rule_type,
       section: r.section === "ALL" ? null : r.section,
+      room_id: r.room_id || null,
       note: r.note || null,
     })),
   };

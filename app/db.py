@@ -110,6 +110,7 @@ class CourseSlotRule(Base):
     periods = Column(String, nullable=False)  # comma-separated e.g. "P1,P2,P3" or "all"
     rule_type = Column(String, nullable=False, default="allowed")  # "allowed" (fixed/only available) or "blocked"
     section = Column(String, nullable=True, default=None)  # None / "" (All sections), "A", "B"
+    room_id = Column(String, nullable=True, default=None)  # Target room ID (e.g. "CSE-101") or None for default
     note = Column(String, nullable=True, default=None)  # description / reason
 
     course = relationship("Course", back_populates="slot_rules")
@@ -189,6 +190,12 @@ def _migrate_schema():
             cur.execute("ALTER TABLE courses ADD COLUMN teacher2_id TEXT")
         if "allowed_rooms" not in existing_cols:
             cur.execute("ALTER TABLE courses ADD COLUMN allowed_rooms TEXT DEFAULT NULL")
+
+        # 3b. Course slot rules migration: add room_id column
+        cur.execute("PRAGMA table_info(course_slot_rules)")
+        slot_rule_cols = {row[1] for row in cur.fetchall()}
+        if "room_id" not in slot_rule_cols:
+            cur.execute("ALTER TABLE course_slot_rules ADD COLUMN room_id TEXT DEFAULT NULL")
 
         # Backfill teacher1_id and teacher2_id from assignments where not yet populated
         cur.execute("SELECT id, kind, blocks_per_week FROM courses")
@@ -622,6 +629,7 @@ def set_course_slot_rules(db: Session, course_id: str, rules: list[dict]) -> lis
         periods = (r.get("periods") or "").strip()
         rule_type = (r.get("rule_type") or "allowed").strip().lower()
         section = (r.get("section") or "").strip() or None
+        room_id = (r.get("room_id") or "").strip() or None
         note = (r.get("note") or "").strip() or None
         if not day or not periods:
             continue
@@ -631,6 +639,7 @@ def set_course_slot_rules(db: Session, course_id: str, rules: list[dict]) -> lis
             periods=periods,
             rule_type=rule_type,
             section=section,
+            room_id=room_id,
             note=note,
         )
         db.add(rec)

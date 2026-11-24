@@ -62,6 +62,8 @@ class Course:
     blocked_slots: set[int] = field(default_factory=set)
     section_allowed_slots: dict[str, set[int]] = field(default_factory=dict)
     section_blocked_slots: dict[str, set[int]] = field(default_factory=dict)
+    slot_room_rules: dict[int, str] = field(default_factory=dict)  # slot -> room_id
+    section_slot_room_rules: dict[str, dict[int, str]] = field(default_factory=dict)  # sec -> slot -> room_id
     # Specific assigned rooms (overrides default room category matching if specified)
     allowed_rooms: list[str] = field(default_factory=list)
 
@@ -106,6 +108,7 @@ class Event:
     allowed_slots: set[int] = field(default_factory=set)
     blocked_slots: set[int] = field(default_factory=set)
     allowed_rooms: list[str] = field(default_factory=list)
+    slot_room_rules: dict[int, str] = field(default_factory=dict)  # slot -> room_id
 
     def __post_init__(self) -> None:
         if not self.allowed_rooms and self.course and hasattr(self.course, "allowed_rooms") and self.course.allowed_rooms:
@@ -206,14 +209,32 @@ class Problem:
         if not event.is_lab:
             home_rooms = self.options.get("home_rooms", {})
             home_id = home_rooms.get(f"{event.batch_id}|{event.section}")
+            slot_rooms = []
+            if hasattr(event, "slot_room_rules") and event.slot_room_rules:
+                for rid in event.slot_room_rules.values():
+                    if rid in self.rooms and self.rooms[rid] not in slot_rooms:
+                        slot_rooms.append(self.rooms[rid])
+                    else:
+                        for r in self.rooms.values():
+                            if (r.id.lower() == rid.lower() or r.name.lower() == rid.lower()) and r not in slot_rooms:
+                                slot_rooms.append(r)
+
             if home_id and home_id in self.rooms:
-                return [self.rooms[home_id]]
+                h_room = self.rooms[home_id]
+                res = [h_room]
+                for sr in slot_rooms:
+                    if sr not in res:
+                        res.append(sr)
+                return res
 
             cand = [
                 r
                 for r in self.rooms.values()
                 if r.kind == "theory" and r.capacity >= event.size
             ]
+            for sr in slot_rooms:
+                if sr not in cand:
+                    cand.append(sr)
             if cand:
                 return cand
 

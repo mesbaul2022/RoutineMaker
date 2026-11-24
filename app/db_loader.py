@@ -353,19 +353,30 @@ def load_problem_from_db(db: Session, options_override: Optional[dict] = None) -
         c_blocked: set[int] = set()
         c_sec_allowed: dict[str, set[int]] = {}
         c_sec_blocked: dict[str, set[int]] = {}
+        c_slot_rooms: dict[int, str] = {}
+        c_sec_slot_rooms: dict[str, dict[int, str]] = {}
 
         for rule in slot_rules_by_course.get(c.id, []):
             rule_slots = _parse_slots_from_rule(rule.day, rule.periods, grid)
             rtype = (rule.rule_type or "allowed").strip().lower()
             sec = (rule.section or "").strip()
+            room_id = (getattr(rule, "room_id", None) or "").strip() or None
+
             if not sec or sec.upper() == "ALL":
                 if rtype == "allowed":
                     c_allowed.update(rule_slots)
+                    if room_id:
+                        for s in rule_slots:
+                            c_slot_rooms[s] = room_id
                 else:
                     c_blocked.update(rule_slots)
             else:
                 if rtype == "allowed":
                     c_sec_allowed.setdefault(sec, set()).update(rule_slots)
+                    if room_id:
+                        c_sec_slot_rooms.setdefault(sec, {})
+                        for s in rule_slots:
+                            c_sec_slot_rooms[sec][s] = room_id
                 else:
                     c_sec_blocked.setdefault(sec, set()).update(rule_slots)
 
@@ -389,6 +400,8 @@ def load_problem_from_db(db: Session, options_override: Optional[dict] = None) -
                 blocked_slots=c_blocked,
                 section_allowed_slots=c_sec_allowed,
                 section_blocked_slots=c_sec_blocked,
+                slot_room_rules=c_slot_rooms,
+                section_slot_room_rules=c_sec_slot_rooms,
                 allowed_rooms=c_allowed_rooms,
             )
         )
@@ -628,15 +641,42 @@ def _build_events(
         ev.blocked_slots = blocked
 
         sec_allowed = ev.course.section_allowed_slots.get(ev.section)
+        effective_allowed: set[int] | None = None
         if sec_allowed:
             if ev.course.allowed_slots:
-                ev.allowed_slots = set(sec_allowed).intersection(ev.course.allowed_slots)
+                effective_allowed = set(sec_allowed).intersection(ev.course.allowed_slots)
             else:
-                ev.allowed_slots = set(sec_allowed)
+                effective_allowed = set(sec_allowed)
         elif ev.course.allowed_slots:
-            ev.allowed_slots = set(ev.course.allowed_slots)
+            effective_allowed = set(ev.course.allowed_slots)
+
+        slot_rooms: dict[int, str] = dict(ev.course.slot_room_rules)
+        if ev.section and ev.section in ev.course.section_slot_room_rules:
+            slot_rooms.update(ev.course.section_slot_room_rules[ev.section])
+
+        if effective_allowed:
+            sorted_allowed = sorted(list(effective_allowed))
+            n_meetings = ev.course.periods_per_week or 3
+            if ev.course.is_theory and 0 < len(sorted_allowed) <= n_meetings:
+                if ev.meeting_index < len(sorted_allowed):
+                    chosen_slot = sorted_allowed[ev.meeting_index]
+                    ev.allowed_slots = {chosen_slot}
+                    if chosen_slot in slot_rooms:
+                        ev.slot_room_rules = {chosen_slot: slot_rooms[chosen_slot]}
+                else:
+                    ev.blocked_slots.update(sorted_allowed)
+                    ev.allowed_slots = set()
+            else:
+                ev.allowed_slots = set(effective_allowed)
+                ev.slot_room_rules = slot_rooms
         else:
             ev.allowed_slots = set()
+            ev.slot_room_rules = slot_rooms
+
+        if ev.slot_room_rules and ev.allowed_rooms:
+            for s_rm in ev.slot_room_rules.values():
+                if s_rm not in ev.allowed_rooms:
+                    ev.allowed_rooms.append(s_rm)
 
     for ev in events:
         _apply_course_slot_rules(ev)

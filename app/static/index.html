@@ -1386,11 +1386,11 @@
           </div>
           <div class="avail-stats-box" style="gap: 1rem;">
             <div class="avail-stat-item">
-              <span class="avail-stat-label">Section Scope</span>
+              <span class="avail-stat-label" id="modal-course-avail-scope-label">Section Scope</span>
               <select id="course-avail-section-select" onchange="onCourseAvailSectionChange()" style="font-size: 0.82rem; padding: 0.25rem 0.5rem; height: auto;">
                 <option value="ALL">All Sections (Default)</option>
-                <option value="A">Section A only</option>
-                <option value="B">Section B only</option>
+                <option value="A">Section A</option>
+                <option value="B">Section B</option>
               </select>
             </div>
             <div class="avail-stat-item">
@@ -1519,7 +1519,7 @@
               </div>
 
               <div class="form-group" style="margin-bottom: 0;">
-                <label for="course-rule-select-section" style="font-size: 0.78rem; font-weight: 600; color: #334155; margin-bottom: 0.25rem; display: block;">Section Scope</label>
+                <label for="course-rule-select-section" id="course-rule-select-section-label" style="font-size: 0.78rem; font-weight: 600; color: #334155; margin-bottom: 0.25rem; display: block;">Section Scope</label>
                 <select id="course-rule-select-section" style="width: 100%; height: 38px; font-size: 0.84rem; border-radius: 6px; border: 1px solid #CBD5E1; background: #FFF; padding: 0.35rem 0.65rem;">
                   <option value="ALL">All Sections (A & B)</option>
                   <option value="A">Section A</option>
@@ -2154,6 +2154,6 @@
     <span id="toast-message">Notification</span>
   </div>
 
-  <script src="/static/app.js?v=3.6.2"></script>
+  <script src="/static/app.js?v=3.6.4"></script>
 </body>
 </html>

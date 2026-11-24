@@ -830,7 +830,10 @@ const courseAvailState = {
 
 function formatCourseRuleDesc(r) {
   const rtype = (r.rule_type || "allowed").toLowerCase() === "allowed" ? "Allowed" : "Blocked";
-  const sec = r.section && r.section !== "ALL" ? `Sec ${r.section}: ` : "";
+  let sec = "";
+  if (r.section && r.section !== "ALL") {
+    sec = r.section.length > 1 ? `Group ${r.section}: ` : `Sec ${r.section}: `;
+  }
   let rmStr = "";
   if (r.room_id) {
     const rm = (state.rooms || []).find((x) => x.id === r.room_id);
@@ -867,23 +870,58 @@ async function openCourseAvailabilityModal(courseId) {
     }
   }
 
-  // Populate sections dropdown
+  // Populate sections and groups dropdown
   const secSelect = document.getElementById("course-avail-section-select");
   const ruleSecSelect = document.getElementById("course-rule-select-section");
+  const scopeLabelEl = document.getElementById("modal-course-avail-scope-label");
+  const ruleScopeLabelEl = document.getElementById("course-rule-select-section-label");
+
   if (secSelect && batch) {
     const secList = (batch.sections || []).filter((s) => s);
-    let secOpts = `<option value="ALL">All Sections (Default)</option>`;
-    secList.forEach((s) => {
-      secOpts += `<option value="${s}">Section ${s}</option>`;
-    });
+    const isSessional = course && course.kind !== "theory";
+
+    if (scopeLabelEl) scopeLabelEl.textContent = isSessional ? "Section / Group Scope" : "Section Scope";
+    if (ruleScopeLabelEl) ruleScopeLabelEl.textContent = isSessional ? "Section / Group Scope" : "Section Scope";
+
+    let secOpts = "";
+    let rOpts = "";
+
+    if (isSessional) {
+      secOpts = `<option value="ALL">All Sections & Groups (Default)</option>`;
+      rOpts = `<option value="ALL">All Sections & Groups</option>`;
+
+      secOpts += `<optgroup label="Sections (All Groups)">`;
+      rOpts += `<optgroup label="Sections (All Groups)">`;
+      secList.forEach((s) => {
+        secOpts += `<option value="${s}">Section ${s} (All Groups)</option>`;
+        rOpts += `<option value="${s}">Section ${s} (All Groups)</option>`;
+      });
+      secOpts += `</optgroup>`;
+      rOpts += `</optgroup>`;
+
+      secOpts += `<optgroup label="Specific Lab Groups (e.g. 1.5 cr)">`;
+      rOpts += `<optgroup label="Specific Lab Groups (e.g. 1.5 cr)">`;
+      secList.forEach((s) => {
+        secOpts += `<option value="${s}1">🎯 Group ${s}1 (Sec ${s}, Group 1)</option>`;
+        secOpts += `<option value="${s}2">🎯 Group ${s}2 (Sec ${s}, Group 2)</option>`;
+        rOpts += `<option value="${s}1">🎯 Group ${s}1 (Sec ${s}, Group 1)</option>`;
+        rOpts += `<option value="${s}2">🎯 Group ${s}2 (Sec ${s}, Group 2)</option>`;
+      });
+      secOpts += `</optgroup>`;
+      rOpts += `</optgroup>`;
+    } else {
+      secOpts = `<option value="ALL">All Sections (Default)</option>`;
+      rOpts = `<option value="ALL">All Sections</option>`;
+      secList.forEach((s) => {
+        secOpts += `<option value="${s}">Section ${s}</option>`;
+        rOpts += `<option value="${s}">Section ${s}</option>`;
+      });
+    }
+
     secSelect.innerHTML = secOpts;
     secSelect.value = "ALL";
 
     if (ruleSecSelect) {
-      let rOpts = `<option value="ALL">All Sections</option>`;
-      secList.forEach((s) => {
-        rOpts += `<option value="${s}">Section ${s}</option>`;
-      });
       ruleSecSelect.innerHTML = rOpts;
       ruleSecSelect.value = "ALL";
     }
@@ -1216,7 +1254,7 @@ function synthesizeCourseRules() {
           rule_type: "allowed",
           section: sec === "ALL" ? null : sec,
           room_id: null,
-          description: `[Allowed] ${sec !== "ALL" ? `Sec ${sec}: ` : ""}${GRID_DAYS[d]} (All Periods)`,
+          description: `[Allowed] ${sec !== "ALL" ? (sec.length > 1 ? `Group ${sec}: ` : `Sec ${sec}: `) : ""}${GRID_DAYS[d]} (All Periods)`,
         });
       } else if (dSlots.length > 0) {
         const pNames = dSlots.map((p) => GRID_PERIODS[p].name);
@@ -1226,7 +1264,7 @@ function synthesizeCourseRules() {
           rule_type: "allowed",
           section: sec === "ALL" ? null : sec,
           room_id: null,
-          description: `[Allowed] ${sec !== "ALL" ? `Sec ${sec}: ` : ""}${GRID_DAYS[d]} (${pNames.join(",")})`,
+          description: `[Allowed] ${sec !== "ALL" ? (sec.length > 1 ? `Group ${sec}: ` : `Sec ${sec}: `) : ""}${GRID_DAYS[d]} (${pNames.join(",")})`,
         });
       }
     }
@@ -1246,7 +1284,7 @@ function synthesizeCourseRules() {
           rule_type: "blocked",
           section: sec === "ALL" ? null : sec,
           room_id: null,
-          description: `[Blocked] ${sec !== "ALL" ? `Sec ${sec}: ` : ""}${GRID_DAYS[d]} (All Periods)`,
+          description: `[Blocked] ${sec !== "ALL" ? (sec.length > 1 ? `Group ${sec}: ` : `Sec ${sec}: `) : ""}${GRID_DAYS[d]} (All Periods)`,
         });
       } else if (dSlots.length > 0) {
         const pNames = dSlots.map((p) => GRID_PERIODS[p].name);
@@ -1256,7 +1294,7 @@ function synthesizeCourseRules() {
           rule_type: "blocked",
           section: sec === "ALL" ? null : sec,
           room_id: null,
-          description: `[Blocked] ${sec !== "ALL" ? `Sec ${sec}: ` : ""}${GRID_DAYS[d]} (${pNames.join(",")})`,
+          description: `[Blocked] ${sec !== "ALL" ? (sec.length > 1 ? `Group ${sec}: ` : `Sec ${sec}: `) : ""}${GRID_DAYS[d]} (${pNames.join(",")})`,
         });
       }
     }
@@ -1413,7 +1451,8 @@ function handleAddCourseAvailabilityRule() {
   renderCourseAvailabilityRulesList();
   updateCourseAvailabilityStats();
   const roomMsg = roomId ? ` in ${rmObj ? rmObj.name : roomId}` : "";
-  showToast(`Added rule: ${ruleType.toUpperCase()} ${section !== 'ALL' ? `Sec ${section}: ` : ''}${day} (${periods})${roomMsg}`);
+  const secMsg = section !== 'ALL' ? (section.length > 1 ? `Group ${section}: ` : `Sec ${section}: `) : '';
+  showToast(`Added rule: ${ruleType.toUpperCase()} ${secMsg}${day} (${periods})${roomMsg}`);
 }
 
 function handleDeleteCourseAvailabilityRule(index) {
@@ -1486,7 +1525,7 @@ function renderCourseAvailabilityRulesList() {
       const chipClass = isAllowed ? "avail-rule-chip chip-allowed" : "avail-rule-chip chip-blocked";
       const icon = isAllowed ? "📌" : "🚫";
       const typeLabel = isAllowed ? "Allowed" : "Blocked";
-      const secLabel = r.section && r.section !== "ALL" ? `Sec ${r.section}` : "All Sections";
+      const secLabel = r.section && r.section !== "ALL" ? (r.section.length > 1 ? `Group ${r.section}` : `Sec ${r.section}`) : "All Sections";
 
       let periodLabel = r.periods;
       if (r.periods === "P1,P2,P3") periodLabel = "08:00 – 10:30 (P1–P3)";

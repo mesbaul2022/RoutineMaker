@@ -635,14 +635,38 @@ def _build_events(
                             eid += 1
 
     def _apply_course_slot_rules(ev: Event) -> None:
+        # Determine specific group code (e.g. "A1", "A2", "B1", "B2") for lab events
+        grp_code = ""
+        if ev.group and ev.section:
+            g = str(ev.group).strip().upper()
+            s = str(ev.section).strip().upper()
+            if g in ("G1", "1"):
+                grp_code = f"{s}1"
+            elif g in ("G2", "2"):
+                grp_code = f"{s}2"
+            else:
+                grp_code = g
+
         blocked = set(ev.course.blocked_slots)
         if ev.section and ev.section in ev.course.section_blocked_slots:
             blocked.update(ev.course.section_blocked_slots[ev.section])
+        if grp_code and grp_code in ev.course.section_blocked_slots:
+            blocked.update(ev.course.section_blocked_slots[grp_code])
         ev.blocked_slots = blocked
 
-        sec_allowed = ev.course.section_allowed_slots.get(ev.section)
+        # Determine effective allowed slots:
+        # Group-specific rule is the most specific, then section rule, then course-wide rule
+        grp_allowed = ev.course.section_allowed_slots.get(grp_code) if grp_code else None
+        sec_allowed = ev.course.section_allowed_slots.get(ev.section) if ev.section else None
+
         effective_allowed: set[int] | None = None
-        if sec_allowed:
+        if grp_allowed:
+            effective_allowed = set(grp_allowed)
+            if sec_allowed:
+                effective_allowed = effective_allowed.intersection(sec_allowed)
+            if ev.course.allowed_slots:
+                effective_allowed = effective_allowed.intersection(ev.course.allowed_slots)
+        elif sec_allowed:
             if ev.course.allowed_slots:
                 effective_allowed = set(sec_allowed).intersection(ev.course.allowed_slots)
             else:
@@ -653,6 +677,8 @@ def _build_events(
         slot_rooms: dict[int, str] = dict(ev.course.slot_room_rules)
         if ev.section and ev.section in ev.course.section_slot_room_rules:
             slot_rooms.update(ev.course.section_slot_room_rules[ev.section])
+        if grp_code and grp_code in ev.course.section_slot_room_rules:
+            slot_rooms.update(ev.course.section_slot_room_rules[grp_code])
 
         if effective_allowed:
             sorted_allowed = sorted(list(effective_allowed))

@@ -341,6 +341,23 @@ class RoutineScheduler:
             if has_shared_teacher:
                 skipped.add(f"{evs[0].course.code} (groups share teacher, staggered)")
                 continue
+
+            # Check if groups have independent or conflicting slot constraints
+            has_slot_conflict = False
+            for a, b in zip(evs, evs[1:]):
+                if a.allowed_slots and b.allowed_slots and not (a.allowed_slots & b.allowed_slots):
+                    has_slot_conflict = True
+                    break
+                if a.allowed_slots and any(s in b.blocked_slots for s in a.allowed_slots):
+                    has_slot_conflict = True
+                    break
+                if b.allowed_slots and any(s in a.blocked_slots for s in b.allowed_slots):
+                    has_slot_conflict = True
+                    break
+            if has_slot_conflict:
+                skipped.add(f"{evs[0].course.code} (groups have independent fixed slots, staggered)")
+                continue
+
             for a, b in zip(evs, evs[1:]):
                 self.model.Add(self.slot_var[a.eid] == self.slot_var[b.eid])
         self.unsynced_courses = sorted(skipped)

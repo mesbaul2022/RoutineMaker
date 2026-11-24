@@ -828,7 +828,10 @@ def compute_course_slot_rules_info(course: CourseModel, db: Session, grid=None):
         room_id = getattr(r, "room_id", None)
         room_name = rooms_map.get(room_id, room_id) if room_id else None
         room_suffix = f" in {room_name}" if room_name else ""
-        sec_prefix = f"Sec {sec}: " if sec and sec.upper() != "ALL" else ""
+        if sec and sec.upper() != "ALL":
+            sec_prefix = f"Group {sec}: " if len(sec) > 1 else f"Sec {sec}: "
+        else:
+            sec_prefix = ""
         type_prefix = "Allowed" if rtype == "allowed" else "Blocked"
         desc = f"[{type_prefix}] {sec_prefix}{day_label} ({period_label}){room_suffix}"
 
@@ -864,7 +867,10 @@ def compute_course_slot_rules_info(course: CourseModel, db: Session, grid=None):
     elif all((r.rule_type or "allowed").lower() == "allowed" for r in rules):
         short_descs = []
         for r in rules:
-            sec_p = f"{r.section} " if r.section and r.section.upper() != "ALL" else ""
+            if r.section and r.section.upper() != "ALL":
+                sec_p = f"Group {r.section} " if len(r.section) > 1 else f"Sec {r.section} "
+            else:
+                sec_p = ""
             r_rm = getattr(r, "room_id", None)
             rm_lbl = f" in {rooms_map.get(r_rm, r_rm)}" if r_rm else ""
             short_descs.append(f"{sec_p}{r.day} {r.periods}{rm_lbl}")
